@@ -395,44 +395,23 @@ def plot_lever_map(df: pd.DataFrame, out_path: Path) -> None:
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="A11 Lever Map simulation and visualization.")
+    parser.add_argument(
+        "--plot-only",
+        action="store_true",
+        help="Only redraw figures from existing results/heatmap.csv without simulating.",
+    )
+    args = parser.parse_args()
+
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     csv_path = RESULTS_DIR / "heatmap.csv"
 
-    if csv_path.exists():
+    if args.plot_only:
+        if not csv_path.exists():
+            raise FileNotFoundError(f"Cannot --plot-only: {csv_path} does not exist.")
         summary_df = pd.read_csv(csv_path)
-        # Ensure reactive CIs are present
-        if "reactive_serviceability_ci_lo" not in summary_df.columns:
-            reactive_ci_map = {
-                0.5: (0.8764, 0.8979),
-                0.75: (0.8138, 0.8420),
-                1.0: (0.7430, 0.7805),
-                1.5: (0.6435, 0.6915),
-                1.9: (0.5826, 0.6322),
-            }
-            summary_df["reactive_serviceability_ci_lo"] = summary_df["pipeline_mult"].map(
-                lambda pm: reactive_ci_map.get(round(pm, 2), (0.0, 0.0))[0]
-            )
-            summary_df["reactive_serviceability_ci_hi"] = summary_df["pipeline_mult"].map(
-                lambda pm: reactive_ci_map.get(round(pm, 2), (0.0, 0.0))[1]
-            )
-
-        gap_captured_map = {
-            0.5: (0.7770, 0.7067, 0.8427),
-            0.75: (0.6639, 0.5498, 0.7797),
-            1.0: (0.7270, 0.5862, 0.8911),
-            1.5: ("n/a", "n/a", "n/a"),
-            1.9: ("n/a", "n/a", "n/a"),
-        }
-        summary_df["gap_captured"] = summary_df["pipeline_mult"].map(
-            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[0]
-        )
-        summary_df["gap_captured_ci_lo"] = summary_df["pipeline_mult"].map(
-            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[1]
-        )
-        summary_df["gap_captured_ci_hi"] = summary_df["pipeline_mult"].map(
-            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[2]
-        )
-        summary_df.to_csv(csv_path, index=False)
     else:
         summary_df = generate_heatmap_data()
         summary_df.to_csv(csv_path, index=False)
@@ -447,3 +426,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
