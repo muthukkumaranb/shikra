@@ -152,7 +152,7 @@ def compute_params() -> dict:
             if miss < best_miss:
                 best_miss = miss
                 best_R = R
-        print(f"WARNING: no R in 5-60 achieves ≤5% miss rate. Using R={best_R} (miss={best_miss:.3f})")
+        print(f"WARNING: no R in 5-60 achieves <=5% miss rate. Using R={best_R} (miss={best_miss:.3f})")
     else:
         print(f"R_star = {best_R}  miss_rate = {best_miss:.3f}")
 

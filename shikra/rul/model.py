@@ -92,7 +92,7 @@ def train(
             )
             seed_models.append(model)
         models[alpha] = seed_models
-        print(f"  α={alpha:.2f}: {N_SEEDS} models trained")
+        print(f"  alpha={alpha:.2f}: {N_SEEDS} models trained")
 
     return models
 

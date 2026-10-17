@@ -129,7 +129,7 @@ if __name__ == "__main__":
         existing = json.loads(SPLITS_PATH.read_text())
         fresh = make_split()
         assert existing == fresh, "FATAL: split file differs from freshly computed split!"
-        print("  OK — split is deterministic.")
+        print("  OK - split is deterministic.")
     else:
         split = make_split()
         SPLITS_PATH.write_text(json.dumps(split, indent=2))
