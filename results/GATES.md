@@ -29,6 +29,6 @@
 
 > **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.5% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 >
-> **A12 Supply Shock:** Under a 180-day halt of foreign supply, the wing loses 8.9 pp availability; the ranking is driven by failure frequency × thin stock (top: apu_start (7.6 pp), ecs_valve (2.2 pp)). Parameters are synthetic; the method is the claim.
+> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 29 extra aircraft of 54 (15.7 pp over the halt); recovery takes 95 days after supply resumes. Ranking: apu_start (13.6 pp), ecs_valve (3.7 pp). Parameters are synthetic; the method is the claim.
 >
-> **Systematic Bias Robustness (§3.2b):** Optimistic bias ≥ the R* margin (5 cycles) disables predictive removal (unscheduled removals rise to 94.8); pessimistic bias wastes 1993 cycles of engine life. Best performance at zero bias, so deployment needs a bias monitor.
+> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes 1993 cycles; +10 raises unscheduled removals from 0 to 94.8.

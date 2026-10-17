@@ -69,13 +69,17 @@ def generate_table() -> str:
         shock_path = RESULTS_DIR / "supply_shock.csv"
         if shock_path.exists():
             shock_df = pd.read_csv(shock_path)
-            all_loss = shock_df[shock_df["lru_id"] == "all_foreign"]["availability_loss_pp"].iloc[0]
+            af_row = shock_df[shock_df["lru_id"] == "all_foreign"].iloc[0]
+            peak_ac = af_row["peak_extra_grounded"]
+            loss_sw = af_row["loss_pp_shock_window"]
+            rec_days = af_row["recovery_days"]
             top_lrus = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values("rank")
-            top_str = ", ".join([f"{row['lru_id']} ({row['availability_loss_pp']:.1f} pp)" for _, row in top_lrus.head(2).iterrows()])
+            ranking_items = [f"{row['lru_id']} ({row['loss_pp_shock_window']:.1f} pp)" for _, row in top_lrus.head(2).iterrows()]
+            ranking_str = ", ".join(ranking_items)
             lines.append(
-                f"> **A12 Supply Shock:** Under a 180-day halt of foreign supply, the wing loses {all_loss:.1f} pp availability; "
-                f"the ranking is driven by failure frequency × thin stock (top: {top_str}). "
-                f"Parameters are synthetic; the method is the claim.\n"
+                f"> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to {peak_ac:.0f} extra aircraft of 54 "
+                f"({loss_sw:.1f} pp over the halt); recovery takes {rec_days:.0f} days after supply resumes. "
+                f"Ranking: {ranking_str}. Parameters are synthetic; the method is the claim.\n"
             )
 
         # Bias interpretation
@@ -87,9 +91,8 @@ def generate_table() -> str:
             pess_sub = bias_df[bias_df["bias_cycles"] == -10]
             m_wasted = pess_sub["wasted_life_cycles_mean"].iloc[0] if not pess_sub.empty else 1993.0
             lines.append(
-                f"> **Systematic Bias Robustness (§3.2b):** Optimistic bias ≥ the R* margin (5 cycles) disables predictive removal "
-                f"(unscheduled removals rise to {n_uns:.1f}); pessimistic bias wastes {m_wasted:.0f} cycles of engine life. "
-                f"Best performance at zero bias, so deployment needs a bias monitor.\n"
+                f"> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes {m_wasted:.0f} cycles; "
+                f"+10 raises unscheduled removals from 0 to {n_uns:.1f}.\n"
             )
 
     return "\n".join(lines)
