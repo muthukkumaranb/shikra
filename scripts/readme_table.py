@@ -22,15 +22,44 @@ def generate_table() -> str:
 
     # ── RUL model table ──────────────────────────────────────────────────
     rul_path = RESULTS_DIR / "rul_cmapss.csv"
+    multi_path = RESULTS_DIR / "rul_cmapss_multi.csv"
+    cov_path = RESULTS_DIR / "coverage.csv"
+
+    babu_cnn = {
+        "FD001": 18.45,
+        "FD002": 30.29,
+        "FD003": 19.82,
+        "FD004": 29.16,
+    }
+
     if rul_path.exists():
-        rul = pd.read_csv(rul_path)
+        dfs = [pd.read_csv(rul_path)]
+        if multi_path.exists():
+            dfs.append(pd.read_csv(multi_path))
+        all_rul = pd.concat(dfs, ignore_index=True).sort_values("subset").reset_index(drop=True)
+
+        cov_lookup: dict[str, float] = {}
+        if cov_path.exists():
+            cov_df = pd.read_csv(cov_path)
+            for _, r in cov_df[(cov_df["split"] == "test") & (cov_df["nominal"] == 0.8) & (~cov_df["calibrated"])].iterrows():
+                cov_lookup[r["subset"]] = float(r["empirical"])
+
         lines.append("### RUL Model (LightGBM quantile ensemble, 5 seeds)\n")
-        lines.append("| Subset | RMSE | MAE | NASA Score | RMSE (RUL≤30) | n units |")
-        lines.append("|--------|------|-----|-----------|---------------|---------|")
-        for _, row in rul.iterrows():
+        lines.append("| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |")
+        lines.append("|--------|---------------|-------------|-----|------------|---------------|-----------------------------|---------|")
+        for _, row in all_rul.iterrows():
+            sub = str(row["subset"])
+            babu_val = f"{babu_cnn[sub]:.2f}" if sub in babu_cnn else "—"
+            if "coverage_80" in row and pd.notna(row["coverage_80"]):
+                cov_str = f"{row['coverage_80']:.1%}"
+            elif sub in cov_lookup:
+                cov_str = f"{cov_lookup[sub]:.1%}"
+            else:
+                cov_str = "—"
+
             lines.append(
-                f"| {row['subset']} | {row['rmse']:.2f} | {row['mae']:.2f} | "
-                f"{row['nasa_score']:.1f} | {row['rmse_critical']:.2f} | {int(row['n_units'])} |"
+                f"| {sub} | {babu_val} | {row['rmse']:.2f} | {row['mae']:.2f} | "
+                f"{row['nasa_score']:.1f} | {row['rmse_critical']:.2f} | {cov_str} | {int(row['n_units'])} |"
             )
         lines.append("")
 

@@ -29,3 +29,13 @@
   - Created `Dockerfile` (based on `python:3.11-slim`, installs `make` and `git`, copies codebase, default command reproduces and checks results).
   - Created `docker-compose.yml` (`network_mode: none`, `./data` mounted read-only at `/app/data`).
   - Docker daemon check: Docker CLI 29.8.0 is present, but Docker Desktop service is stopped and cannot be started without administrative privileges. Logged: `Docker build not run locally (Docker not installed); verified by CI only`.
+
+## Block 2: FD002 / FD004 Multi-Condition RUL (T1.5)
+- **Clustering & Normalisation:** Fitted KMeans ($k=6$, seed 2026) on `op1, op2, op3` using training units only. Standardized sensors per cluster using training statistics.
+- **Causal History Feature:** Added cumulative cycle counts per operating condition (`cycles_in_cond_0` .. `cycles_in_cond_5`), verified strictly causal (depends only on cycles $\le c$).
+- **Frozen Multi-Split:** Generated engine-disjoint 80/20 train/validation split (seed 2026) in `artifacts/splits_multi.json` (FD002: 208 train, 52 val; FD004: 199 train, 50 val). Frozen `splits.json` was kept untouched.
+- **Evaluation on Official Test Sets (Last Cycle Only):**
+  - **FD002:** RMSE = 13.45 (vs Babu 2016 CNN: 30.29), MAE = 9.47, NASA score = 7291.7, critical RMSE ($\le 30$) = 3.49, $n=259$, uncalibrated 80% coverage = 66.8%.
+  - **FD004:** RMSE = 14.33 (vs Babu 2016 CNN: 29.16), MAE = 9.48, NASA score = 4446.0, critical RMSE ($\le 30$) = 7.39, $n=248$, uncalibrated 80% coverage = 55.6%.
+  - Both subsets outperformed the Babu (2016) CNN benchmark on a single hyperparameter set chosen on validation only, without test set tuning.
+- **Output:** Created `results/rul_cmapss_multi.csv` and updated `scripts/readme_table.py` to publish the combined 4-subset table in `README.md`.

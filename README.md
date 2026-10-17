@@ -21,10 +21,12 @@ against a synthetic 54-aircraft wing.
 
 ### RUL Model (LightGBM quantile ensemble, 5 seeds)
 
-| Subset | RMSE | MAE | NASA Score | RMSE (RUL≤30) | n units |
-|--------|------|-----|-----------|---------------|---------|
-| FD001 | 11.43 | 8.29 | 227.4 | 3.47 | 100 |
-| FD003 | 14.34 | 9.66 | 588.7 | 2.63 | 100 |
+| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |
+|--------|---------------|-------------|-----|------------|---------------|-----------------------------|---------|
+| FD001 | 18.45 | 11.43 | 8.29 | 227.4 | 3.47 | 62.0% | 100 |
+| FD002 | 30.29 | 13.45 | 9.47 | 7291.7 | 3.49 | 66.8% | 259 |
+| FD003 | 19.82 | 14.34 | 9.66 | 588.7 | 2.63 | 55.0% | 100 |
+| FD004 | 29.16 | 14.33 | 9.48 | 4446.0 | 7.39 | 55.6% | 248 |
 
 ### Fleet Simulation (synthetic wing, 30 replications)
 
