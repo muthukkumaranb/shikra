@@ -1,0 +1,8 @@
+services:
+  shikra:
+    build: .
+    image: shikra:latest
+    network_mode: none
+    volumes:
+      - ./data:/app/data:ro
+    command: ["sh", "-c", "make reproduce-sim PY=python && python scripts/check_reproduce.py"]
