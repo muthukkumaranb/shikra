@@ -98,3 +98,24 @@ Pre-positioning horizon h = (depot→base transfer days + planned change days) �
 | Seeds per quantile | 5 (seeds 0–4) |
 | Conformal coverage | 80% and 90% bands |
 | Rolling windows | 5, 10, 20, 30 cycles |
+
+---
+
+## 4. Spares Allocation (VARI-METRIC, T1.6) — Synthetic Wing
+
+### Rupee Budget
+The total optimisation budget is fixed at **₹2508.0 lakh**, exactly matching the procurement cost of the baseline `wing.yaml` LRU stock:
+$$\text{Budget} = \sum_{i=1}^{10} \text{cost\_lakh}_i \times (3 \times \text{stock\_base}_i + \text{stock\_depot}_i) = 2508.0\text{ lakh}$$
+
+### Core Assumptions
+1. **Installed base**: Exactly one installed unit per aircraft tail across all 54 tails ($3 \times 18$) for each of the 10 LRU types.
+2. **Engines not optimised**: Spare engines remain fixed at current baseline stock (1 per squadron base, 3 at depot). Engine acquisition and overhaul cost parameters are not defined in the synthetic configuration, which is documented as a known scope boundary.
+3. **Stationary Poisson demand**: Daily demand is approximated by stationary Poisson processes with parameter $\lambda_i = N_{\text{tails}} \times \text{sortie\_demand} / \text{mean\_life}_i$, where $\text{mean\_life}_i = \eta_i \cdot \Gamma(1 + 1/\beta_i)$.
+4. **Symmetric squadrons**: The fleet's 3 operational squadrons (S1, S2, S3) share identical operational demand and flying tempo ($\lambda_{ij} = \lambda_i / 3$).
+
+### Mapping between Simulation Mechanics and Two-Echelon METRIC Quantities
+- **Depot repair pipeline**: All failed LRU carcasses in the simulation are routed to depot repair (100% depot repair, zero base repair). The depot repair turnaround time is $T_{\text{depot},i} = \text{repair\_tat\_days}_i \times \text{pipeline\_mult}$, giving depot pipeline mean $\mu_{0,i} = \lambda_i \cdot T_{\text{depot},i}$.
+- **Depot delay**: Expected backorders at the depot $\text{EBO}_{0,i}(s_{0,i}) = E[(X - s_{0,i})^+]$ for $X \sim \text{Poisson}(\mu_{0,i})$. By Little's law, average requisition delay at depot is $\text{Delay}_i = \text{EBO}_{0,i}(s_{0,i}) / \lambda_i$.
+- **Base resupply pipeline**: The effective base lead time is $T_{\text{base},i} = T_{\text{transfer}} + \text{Delay}_i$, where $T_{\text{transfer}} = \text{depot\_to\_base\_days} \times \text{pipeline\_mult}$. Base pipeline mean for squadron $j$ is $\mu_{ij} = \lambda_{ij} \cdot T_{\text{base},i}$.
+- **Objective function**: Minimise total base expected backorders $\sum_i \sum_{j=1}^3 \text{EBO}_{ij}(s_{ij})$. Approximate expected NMCS aircraft per squadron is $\sum_i \text{EBO}_{ij}(s_{ij})$ (since 1 installed unit per tail).
+
