@@ -316,6 +316,7 @@ class FleetSim:
         lru_in_repair: list[dict] = []
         lru_inbound_transfers: list[dict] = []
         lru_waiting: dict[str, list[tuple[int, int]]] = {lru["id"]: [] for lru in self.lru_list}
+        lru_failures_shock_window: dict[str, int] = {lru["id"]: 0 for lru in self.lru_list}
 
         # lru_state[tail][lru_id] = {sorties_until_fail, missing, queue_ptr, has_lru, maint_type}
         lru_state: dict[int, dict[str, dict]] = {}
@@ -595,6 +596,8 @@ class FleetSim:
                         if ls["sorties_flown"] >= ls["sorties_until_fail"]:
                             ls["missing"] = True
                             ls["has_lru"] = False
+                            if 90 <= day < 270:
+                                lru_failures_shock_window[lid] += 1
                             # Failed unit goes to repair and returns to depot stock
                             repair_tat = max(1, int(lru["repair_tat_days"] * self.pm))
                             if self.shock_lrus and lid in self.shock_lrus and self.shock_start <= day < self.shock_end:
@@ -743,6 +746,7 @@ class FleetSim:
             "flying_task_pct": (
                 sorties_flown / sorties_demanded if sorties_demanded > 0 else 0.0
             ),
+            "lru_failures_shock_window": lru_failures_shock_window,
         }
 
         return SimResult(
