@@ -21,4 +21,5 @@ artifacts/*
 
 # Tooling
 scripts/visualizer_server.py
+scripts/terminal_visualizer.py
 visualizer/

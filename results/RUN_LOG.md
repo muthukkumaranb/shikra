@@ -56,4 +56,4 @@
   - Empirical failure of Gate G0.5 (oracle − reactive $\le 1.3$ pp, $+0.0$ pp nominal) due to the engine-spare pipeline bottleneck;
   - Dependence of foreign supply-shock rankings on synthetic initial buffers;
   - Distinction between the C-MAPSS simulator and Su-30MKI / AL-31FP operational flight regimes.
-- **Vocabulary Compliance:** Confirmed absence of forbidden terms ("P(meet)", "readiness-at-risk", "readiness-backward", "ops room").
+- **Vocabulary check: passed.**
