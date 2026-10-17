@@ -124,12 +124,13 @@ def compute_params() -> dict:
             mask |= (df["subset"] == s) & (df["unit"] == u)
         return df[mask].copy()
 
-    df_calib = _filter(df_all, calib_pairs)
+    df_calib = _filter(df_all, calib_pairs).reset_index(drop=True)
     X_calib, _, meta_calib = build_features(df_calib, scaler)
     preds_raw = predict(models, X_calib)
     preds_adj = adjust(preds_raw, Q_dict)
 
-    calib_traj = meta_calib[["subset", "unit", "cycle", "rul_true"]].copy()
+    calib_traj = meta_calib[["subset", "unit", "cycle"]].copy()
+    calib_traj["rul_true"] = df_calib["rul_true"].values
     calib_traj["q10"] = preds_adj[0.10]
 
     # R_star search
