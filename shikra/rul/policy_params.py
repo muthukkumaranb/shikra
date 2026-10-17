@@ -60,12 +60,12 @@ def _miss_rate_at_R(
         n_units += 1
         removed = False
         for _, row in traj.iterrows():
-            if row["q10"] <= R:
-                removed = True
-                break
             if row["rul_true"] <= 0:
                 # Failed before removal
                 n_fail += 1
+                removed = True
+                break
+            if row["q10"] <= R:
                 removed = True
                 break
         if not removed:
