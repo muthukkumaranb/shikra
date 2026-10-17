@@ -111,32 +111,30 @@ def run_pipeline() -> None:
     df_calib = _filter(df_all, calib_pairs)
     df_replay = _filter(df_all, replay_pairs)
 
-    print(f"  train rows: {len(df_train):,}  calib: {len(df_calib):,}  replay: {len(df_replay):,}")
+    # Internal val split for early stopping: last 20% of train units (by index)
+    n_val = max(1, int(0.2 * len(train_pairs)))
+    fit_pairs = train_pairs[:-n_val]
+    val_pairs = train_pairs[-n_val:]
 
-    # ── Fit scaler on train only ───────────────────────────────────────────
+    df_fit = _filter(df_all, fit_pairs)
+    df_val_raw = _filter(df_all, val_pairs)
+
+    print(f"  fit rows: {len(df_fit):,}  val rows: {len(df_val_raw):,}  calib: {len(df_calib):,}  replay: {len(df_replay):,}")
+
+    # ── Fit scaler on fit units only ───────────────────────────────────────
     print("\n[2/6] Fitting scaler and building features …")
-    scaler = fit_scaler(df_train)
+    scaler = fit_scaler(df_fit)
     with SCALER_PATH.open("wb") as f:
         pickle.dump(scaler, f)
 
-    X_train, y_train, meta_train = build_features(df_train, scaler)
-
-    # Internal val split for early stopping: last 20% of train units (by index)
-    n_val = max(1, int(0.2 * len(train_pairs)))
-    val_pairs = train_pairs[-n_val:]
-    df_val_raw = _filter(df_all, val_pairs)
+    X_train, y_train, meta_train = build_features(df_fit, scaler)
     X_val, y_val, _ = build_features(df_val_raw, scaler)
     print(f"  X_train: {X_train.shape}  X_val: {X_val.shape}")
 
     # ── Train model ────────────────────────────────────────────────────────
-    models_file = ARTIFACTS_DIR / "rul_models.pkl"
-    if models_file.exists():
-        print("\n[3/6] Loading existing models …")
-        models = load_models(MODEL_PREFIX)
-    else:
-        print("\n[3/6] Training LightGBM quantile ensemble …")
-        models = train(X_train, y_train, X_val, y_val)
-        save_models(models, MODEL_PREFIX)
+    print("\n[3/6] Training LightGBM quantile ensemble …")
+    models = train(X_train, y_train, X_val, y_val)
+    save_models(models, MODEL_PREFIX)
 
     # ── Conformal calibration on calib units ──────────────────────────────
     print("\n[4/6] Conformal calibration on calib units …")
