@@ -30,23 +30,14 @@ against a synthetic 54-aircraft wing.
 
 | Policy | Serviceability | 95% CI | Unscheduled removals |
 |--------|---------------|--------|---------------------|
-| Reactive | 61.6% | [61.0%, 62.1%] | 80.2 |
-| Preventive | 52.7% | [52.2%, 53.2%] | 13.7 |
-| Shikra | 61.3% | [60.8%, 61.8%] | 0.0 |
-| Oracle | 61.6% | [61.1%, 62.2%] | 0.0 |
+| Reactive | 60.9% | [60.4%, 61.4%] | 79.6 |
+| Preventive | 51.8% | [51.4%, 52.3%] | 13.5 |
+| Shikra | 60.5% | [59.9%, 61.0%] | 0.0 |
+| Oracle | 60.9% | [60.4%, 61.4%] | 0.0 |
+| Shikra_v2 | 60.5% | [60.0%, 61.1%] | 0.0 |
+| Oracle_v2 | 60.9% | [60.4%, 61.5%] | 0.0 |
 
---------|------|-----|-----------|---------------|---------|
-| FD001 | 11.61 | 8.30 | 237.0 | 3.62 | 100 |
-| FD003 | 14.16 | 9.71 | 490.8 | 2.41 | 100 |
-
-### Fleet Simulation (synthetic wing, 30 replications)
-
-| Policy | Serviceability | 95% CI | Unscheduled removals |
-|--------|---------------|--------|---------------------|
-| Reactive | 80.1% | [79.8%, 80.4%] | 94.6 |
-| Preventive | 80.1% | [79.8%, 80.4%] | 19.4 |
-| Shikra | 80.1% | [79.8%, 80.4%] | 0.0 |
-| Oracle | 80.1% | [79.8%, 80.4%] | 0.0 |
+> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 
 ---
 

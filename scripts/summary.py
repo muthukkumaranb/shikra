@@ -175,6 +175,8 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
   {gc_str}
+
+> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 """
 
     if "## Simulation Gates" in existing:

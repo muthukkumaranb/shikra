@@ -54,6 +54,7 @@ def generate_table() -> str:
                     f"[{row['ci_lo']:.1%}, {row['ci_hi']:.1%}] | {ur_str} |"
                 )
         lines.append("")
+        lines.append("> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).\n")
 
     return "\n".join(lines)
 
@@ -61,19 +62,19 @@ def generate_table() -> str:
 def update_readme(table: str) -> None:
     content = README_PATH.read_text(encoding="utf-8")
     start_marker = "<!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->"
-    end_marker = "---"
+    end_marker = "\n## Quickstart"
 
     start_idx = content.find(start_marker)
     if start_idx == -1:
         print("Marker not found in README.md.")
         return
 
-    # Find the next --- after the marker
+    # Find the next section (## Quickstart) after the marker
     end_idx = content.find(end_marker, start_idx + len(start_marker))
     if end_idx == -1:
         end_idx = len(content)
 
-    new_content = content[:start_idx] + start_marker + "\n\n" + table + "\n" + content[end_idx:]
+    new_content = content[:start_idx] + start_marker + "\n\n" + table + "\n---\n" + content[end_idx:]
     README_PATH.write_text(new_content, encoding="utf-8")
     print("README.md updated with results table.")
 
