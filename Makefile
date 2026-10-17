@@ -1,59 +1,77 @@
-.PHONY: setup data split rul replay params sim summary figures test lint reproduce
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme test lint reproduce reproduce-sim
 
-PYTHON := .venv/Scripts/python
-PIP    := .venv/Scripts/pip
+PY     ?= python
+PIP    ?= pip
+PYTEST ?= pytest
+RUFF   ?= ruff
 
 # ── Environment ──────────────────────────────────────────────────────────────
 setup:
-	python -m venv .venv
+	$(PY) -m venv .venv
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
 	@echo "Virtual environment ready."
 
 # ── Data download & verification ─────────────────────────────────────────────
 data:
-	$(PYTHON) scripts/download_cmapss.py
+	$(PY) scripts/download_cmapss.py
 
 # ── Frozen unit split ────────────────────────────────────────────────────────
 split:
-	$(PYTHON) -m shikra.data.split
+	$(PY) -m shikra.data.split
 
 # ── RUL model training + evaluation ──────────────────────────────────────────
 rul:
-	$(PYTHON) -m shikra.rul.evaluate
+	$(PY) -m shikra.rul.evaluate
 
 # ── Replay RUL table ─────────────────────────────────────────────────────────
 replay:
-	$(PYTHON) -m shikra.rul.replay
+	$(PY) -m shikra.rul.replay
 
 # ── Policy parameters ────────────────────────────────────────────────────────
 params:
-	$(PYTHON) -m shikra.rul.policy_params
+	$(PY) -m shikra.rul.policy_params
 
 # ── Fleet simulation ─────────────────────────────────────────────────────────
 sim:
-	$(PYTHON) -m shikra.sim.runner
+	$(PY) -m shikra.sim.runner
 
 # ── Summary statistics and gates ─────────────────────────────────────────────
 summary:
-	$(PYTHON) scripts/summary.py
+	$(PY) scripts/summary.py
+
+# ── Heatmap (lever map) ──────────────────────────────────────────────────────
+heatmap:
+	$(PY) scripts/heatmap.py
+
+# ── Bias sweep ───────────────────────────────────────────────────────────────
+bias:
+	$(PY) scripts/bias_experiment.py
+
+# ── Supply shock ─────────────────────────────────────────────────────────────
+shock:
+	$(PY) scripts/supply_shock.py
 
 # ── Figures ──────────────────────────────────────────────────────────────────
 figures:
-	$(PYTHON) scripts/figures.py
-
-# ── Tests ────────────────────────────────────────────────────────────────────
-test:
-	.venv/Scripts/pytest -q --ignore=tests/fixtures
-
-# ── Lint ─────────────────────────────────────────────────────────────────────
-lint:
-	.venv/Scripts/ruff check .
-
-# ── Full reproduction (after data) ───────────────────────────────────────────
-reproduce: split rul replay params sim summary figures
-	@echo "Full pipeline complete. Results are in results/"
+	$(PY) scripts/figures.py
 
 # ── README table ─────────────────────────────────────────────────────────────
 readme:
-	$(PYTHON) scripts/readme_table.py
+	$(PY) scripts/readme_table.py
+
+# ── Tests ────────────────────────────────────────────────────────────────────
+test:
+	$(PY) -m pytest -q -m "not data"
+
+# ── Lint ─────────────────────────────────────────────────────────────────────
+lint:
+	$(PY) -m ruff check .
+
+# ── Full reproduction (after data) ───────────────────────────────────────────
+reproduce: split rul replay params sim summary heatmap bias shock figures readme
+	@echo "Full pipeline complete. Results are in results/"
+
+# ── Simulation reproduction (no raw data needed) ─────────────────────────────
+reproduce-sim: sim summary heatmap bias shock figures readme
+	@echo "Simulation reproduction complete. Results are in results/"
