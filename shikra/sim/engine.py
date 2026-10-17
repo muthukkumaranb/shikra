@@ -190,6 +190,18 @@ class FleetSim:
 
         self.lru_list = self.cfg["lrus"]
 
+        self.shock = self.cfg.get("shock")
+        if self.shock:
+            self.shock_start = int(self.shock.get("start", 90))
+            self.shock_duration = int(self.shock.get("duration", 180))
+            self.shock_end = self.shock_start + self.shock_duration
+            self.shock_lrus = set(self.shock.get("lrus", []))
+        else:
+            self.shock_start = -1
+            self.shock_duration = 0
+            self.shock_end = -1
+            self.shock_lrus = set()
+
     # ── CRN draws (seed determines everything) ─────────────────────────────
 
     def _make_rng(self, stream: int) -> np.random.Generator:
@@ -356,8 +368,18 @@ class FleetSim:
                 base_serviceable[sqn] += 1
 
             # --- Process LRU returns from repair → depot -------------------
-            lru_returned = [r for r in lru_in_repair if r["return_day"] <= day]
-            lru_in_repair = [r for r in lru_in_repair if r["return_day"] > day]
+            if self.shock_lrus and self.shock_start <= day < self.shock_end:
+                lru_returned = [
+                    r for r in lru_in_repair
+                    if r["return_day"] <= day and r["id"] not in self.shock_lrus
+                ]
+                lru_in_repair = [
+                    r for r in lru_in_repair
+                    if r["return_day"] > day or (r["return_day"] <= day and r["id"] in self.shock_lrus)
+                ]
+            else:
+                lru_returned = [r for r in lru_in_repair if r["return_day"] <= day]
+                lru_in_repair = [r for r in lru_in_repair if r["return_day"] > day]
             transfer_days = max(1, int(self.transfer_days * self.pm))
             for r in lru_returned:
                 lid = r["id"]
@@ -575,7 +597,11 @@ class FleetSim:
                             ls["has_lru"] = False
                             # Failed unit goes to repair and returns to depot stock
                             repair_tat = max(1, int(lru["repair_tat_days"] * self.pm))
-                            lru_in_repair.append({"return_day": day + repair_tat, "id": lid})
+                            if self.shock_lrus and lid in self.shock_lrus and self.shock_start <= day < self.shock_end:
+                                return_day = max(day + repair_tat, self.shock_end)
+                            else:
+                                return_day = day + repair_tat
+                            lru_in_repair.append({"return_day": return_day, "id": lid})
 
                             if lru_base_stock[sqn][lid] > 0:
                                 # Take base stock (1-day change, 1 day NMCM)
@@ -604,10 +630,20 @@ class FleetSim:
                                 lead_days = max(1, int(lru["lead_time_days"] * self.pm))
                                 transfer_days = max(1, int(self.transfer_days * self.pm))
                                 repairs = [r["return_day"] for r in lru_in_repair if r["id"] == lid]
-                                if repairs:
-                                    wait_days = max(1, min(repairs) - day) + transfer_days
+                                if self.shock_lrus and lid in self.shock_lrus and self.shock_start <= day < self.shock_end:
+                                    available_repairs = [
+                                        r["return_day"] for r in lru_in_repair
+                                        if r["id"] == lid and r["return_day"] >= self.shock_end
+                                    ]
+                                    if available_repairs:
+                                        wait_days = max(1, min(available_repairs) - day) + transfer_days
+                                    else:
+                                        wait_days = max(1, self.shock_end + lead_days - day) + transfer_days
                                 else:
-                                    wait_days = lead_days + transfer_days
+                                    if repairs:
+                                        wait_days = max(1, min(repairs) - day) + transfer_days
+                                    else:
+                                        wait_days = lead_days + transfer_days
                                 ls["missing_until"] = day + wait_days
 
                             # Advance to next lifetime draw
@@ -669,6 +705,12 @@ class FleetSim:
                     "nmcs": nmcs,
                     "total_engines": total_engines,
                     "total_lrus": total_lrus,
+                    "lru_missing": {
+                        lru["id"]: sum(
+                            1 for t in range(N_AC) if lru_state[t][lru["id"]]["missing"]
+                        )
+                        for lru in self.lru_list
+                    },
                 }
             )
 
