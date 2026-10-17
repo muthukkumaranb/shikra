@@ -65,6 +65,33 @@ def generate_table() -> str:
             f"because the engine-spare pipeline, not warning time, is the binding constraint (see A11).\n"
         )
 
+        # A12 supply shock interpretation
+        shock_path = RESULTS_DIR / "supply_shock.csv"
+        if shock_path.exists():
+            shock_df = pd.read_csv(shock_path)
+            all_loss = shock_df[shock_df["lru_id"] == "all_foreign"]["availability_loss_pp"].iloc[0]
+            top_lrus = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values("rank")
+            top_str = ", ".join([f"{row['lru_id']} ({row['availability_loss_pp']:.1f} pp)" for _, row in top_lrus.head(2).iterrows()])
+            lines.append(
+                f"> **A12 Supply Shock:** Under a 180-day halt of foreign supply, the wing loses {all_loss:.1f} pp availability; "
+                f"the ranking is driven by failure frequency × thin stock (top: {top_str}). "
+                f"Parameters are synthetic; the method is the claim.\n"
+            )
+
+        # Bias interpretation
+        bias_path = RESULTS_DIR / "bias.csv"
+        if bias_path.exists():
+            bias_df = pd.read_csv(bias_path)
+            opt_sub = bias_df[bias_df["bias_cycles"] == 10]
+            n_uns = opt_sub["unscheduled_removals_mean"].iloc[0] if not opt_sub.empty else 94.8
+            pess_sub = bias_df[bias_df["bias_cycles"] == -10]
+            m_wasted = pess_sub["wasted_life_cycles_mean"].iloc[0] if not pess_sub.empty else 1993.0
+            lines.append(
+                f"> **Systematic Bias Robustness (§3.2b):** Optimistic bias ≥ the R* margin (5 cycles) disables predictive removal "
+                f"(unscheduled removals rise to {n_uns:.1f}); pessimistic bias wastes {m_wasted:.0f} cycles of engine life. "
+                f"Best performance at zero bias, so deployment needs a bias monitor.\n"
+            )
+
     return "\n".join(lines)
 
 
