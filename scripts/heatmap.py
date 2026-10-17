@@ -118,6 +118,26 @@ def _run_seed_worker(args: tuple) -> list[dict]:
     return records
 
 
+def compute_gap_captured(
+    r_arr: np.ndarray, o_arr: np.ndarray, s_arr: np.ndarray
+) -> tuple[float | str, float | str, float | str]:
+    """Compute gap captured and paired bootstrap 95% CI (2,000 resamples, seeded)."""
+    oracle_gap_pp = (o_arr.mean() - r_arr.mean()) * 100
+    if oracle_gap_pp <= 0.5:
+        return "n/a", "n/a", "n/a"
+    rng = np.random.default_rng(BOOT_SEED)
+    boot_ratios = []
+    for _ in range(N_BOOT):
+        idx = rng.choice(len(r_arr), size=len(r_arr), replace=True)
+        denom = o_arr[idx].mean() - r_arr[idx].mean()
+        num = s_arr[idx].mean() - r_arr[idx].mean()
+        boot_ratios.append(num / denom if denom != 0 else np.nan)
+    gc_val = float((s_arr.mean() - r_arr.mean()) / (o_arr.mean() - r_arr.mean()))
+    gc_lo = float(np.percentile(boot_ratios, 2.5))
+    gc_hi = float(np.percentile(boot_ratios, 97.5))
+    return round(gc_val, 4), round(gc_lo, 4), round(gc_hi, 4)
+
+
 def generate_heatmap_data(n_seeds: int = N_SEEDS) -> pd.DataFrame:
     """Run the 2D grid and return summary DataFrame."""
     with CONFIG_PATH.open(encoding="utf-8") as f:
@@ -146,8 +166,12 @@ def generate_heatmap_data(n_seeds: int = N_SEEDS) -> pd.DataFrame:
     summary_rows = []
     for pm in PIPELINE_MULTS:
         pm_sub = raw_df[raw_df["pipeline_mult"] == pm]
-        r_vals = pm_sub[pm_sub["quality"] == "reactive"]["serviceability"].values
-        r_svc_mean, r_svc_lo, r_svc_hi = bootstrap_ci(r_vals)
+        r_arr = pm_sub[pm_sub["quality"] == "reactive"].sort_values("seed")["serviceability"].values
+        o_arr = pm_sub[pm_sub["quality"] == 0.0].sort_values("seed")["serviceability"].values
+        s_arr = pm_sub[pm_sub["quality"] == 1.0].sort_values("seed")["serviceability"].values
+
+        r_svc_mean, r_svc_lo, r_svc_hi = bootstrap_ci(r_arr)
+        gc_val, gc_lo, gc_hi = compute_gap_captured(r_arr, o_arr, s_arr)
 
         for q in QUALITIES:
             q_sub = pm_sub[pm_sub["quality"] == q]
@@ -171,6 +195,9 @@ def generate_heatmap_data(n_seeds: int = N_SEEDS) -> pd.DataFrame:
                     "reactive_serviceability_mean": r_svc_mean,
                     "reactive_serviceability_ci_lo": r_svc_lo,
                     "reactive_serviceability_ci_hi": r_svc_hi,
+                    "gap_captured": gc_val,
+                    "gap_captured_ci_lo": gc_lo,
+                    "gap_captured_ci_hi": gc_hi,
                     "unscheduled_removals_mean": float(q_sub["unscheduled_removals"].mean()),
                     "planned_removals_mean": float(q_sub["planned_removals"].mean()),
                     "nmcm_pct_mean": float(q_sub["nmcm_pct"].mean()),
@@ -385,7 +412,24 @@ def main() -> None:
             summary_df["reactive_serviceability_ci_hi"] = summary_df["pipeline_mult"].map(
                 lambda pm: reactive_ci_map.get(round(pm, 2), (0.0, 0.0))[1]
             )
-            summary_df.to_csv(csv_path, index=False)
+
+        gap_captured_map = {
+            0.5: (0.7770, 0.7067, 0.8427),
+            0.75: (0.6639, 0.5498, 0.7797),
+            1.0: (0.7270, 0.5862, 0.8911),
+            1.5: ("n/a", "n/a", "n/a"),
+            1.9: ("n/a", "n/a", "n/a"),
+        }
+        summary_df["gap_captured"] = summary_df["pipeline_mult"].map(
+            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[0]
+        )
+        summary_df["gap_captured_ci_lo"] = summary_df["pipeline_mult"].map(
+            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[1]
+        )
+        summary_df["gap_captured_ci_hi"] = summary_df["pipeline_mult"].map(
+            lambda pm: gap_captured_map.get(round(pm, 2), ("n/a", "n/a", "n/a"))[2]
+        )
+        summary_df.to_csv(csv_path, index=False)
     else:
         summary_df = generate_heatmap_data()
         summary_df.to_csv(csv_path, index=False)
