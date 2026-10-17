@@ -39,3 +39,21 @@
   - **FD004:** RMSE = 14.33 (vs Babu 2016 CNN: 29.16), MAE = 9.48, NASA score = 4446.0, critical RMSE ($\le 30$) = 7.39, $n=248$, uncalibrated 80% coverage = 55.6%.
   - Both subsets outperformed the Babu (2016) CNN benchmark on a single hyperparameter set chosen on validation only, without test set tuning.
 - **Output:** Created `results/rul_cmapss_multi.csv` and updated `scripts/readme_table.py` to publish the combined 4-subset table in `README.md`.
+
+## Block 3: Model Card and Limitations (T1.11)
+- **MODEL_CARD.md:** Generated entirely from committed CSVs via `scripts/cards.py` with zero hand-typed numbers. Covers:
+  - Intended advisory decision support use in air-gapped deployment;
+  - Training splits ({n_tr_single} engines in single-condition wing model, 208/199 in multi-condition models);
+  - Causal rolling features and condition-history tracking;
+  - Conformal calibration empirical coverage and widths;
+  - Test set results per subset compared against Babu (2016) CNN;
+  - Robustness failure modes (systematic bias and 2× error heatmap impact);
+  - Strict data isolation (unseen true RUL and 40 held-out replay units).
+- **LIMITATIONS.md:** Refreshed to transparently articulate:
+  - Synthetic nature of the 54-aircraft wing and base/depot parameters;
+  - Purely reactive status of all non-engine LRUs across all policies;
+  - Lack of multi-echelon engine spare optimization (VARI-METRIC);
+  - Empirical failure of Gate G0.5 (oracle − reactive $\le 1.3$ pp, $+0.0$ pp nominal) due to the engine-spare pipeline bottleneck;
+  - Dependence of foreign supply-shock rankings on synthetic initial buffers;
+  - Distinction between the C-MAPSS simulator and Su-30MKI / AL-31FP operational flight regimes.
+- **Vocabulary Compliance:** Confirmed absence of forbidden terms ("P(meet)", "readiness-at-risk", "readiness-backward", "ops room").
