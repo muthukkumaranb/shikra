@@ -14,3 +14,6 @@ build/
 artifacts/*
 !artifacts/.gitkeep
 !artifacts/splits.json
+!artifacts/replay_rul.parquet
+!artifacts/policy_params.json
+!artifacts/conformal.json
