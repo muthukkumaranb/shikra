@@ -153,8 +153,22 @@ class FleetSim:
         self.days = days
         self.pm = self.cfg.get("pipeline_mult", 1.0)
 
-        # Build rul lookup: (subset, unit, cycle) → {q10, q50, q90, rul_true}
-        self._rul_index = self.rul.set_index(["subset", "unit", "cycle"])
+        # Pre-build O(1) RUL lookup dictionary:
+        # (subset, unit) -> (max_cycle, q10_arr, q50_arr, q90_arr, rul_true_arr)
+        self._rul_cache: dict[tuple[str, int], tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = {}
+        self._engine_lives: dict[tuple[str, int], int] = {}
+        for (subset, unit), grp in self.rul.groupby(["subset", "unit"]):
+            grp_sorted = grp.sort_values("cycle")
+            max_c = int(grp_sorted["cycle"].max())
+            life = int(grp_sorted["life"].iloc[0]) if "life" in grp_sorted.columns else max_c
+            self._engine_lives[(str(subset), int(unit))] = life
+            self._rul_cache[(str(subset), int(unit))] = (
+                max_c,
+                grp_sorted["q10"].values.astype(np.float64),
+                grp_sorted["q50"].values.astype(np.float64),
+                grp_sorted["q90"].values.astype(np.float64),
+                grp_sorted["rul_true"].values.astype(np.float64),
+            )
 
         # Wing parameters
         m = self.cfg["maintenance"]
@@ -190,29 +204,18 @@ class FleetSim:
     def _get_rul(
         self, subset: str, unit: int, cycle: int
     ) -> dict[str, float]:
-        """Look up quantile RUL for a given (subset, unit, cycle).
-
-        If the exact cycle is not in the table, uses the nearest available cycle
-        (capped at the max cycle in the trajectory).
-        """
-        traj = self.rul[
-            (self.rul["subset"] == subset) & (self.rul["unit"] == unit)
-        ]
-        if len(traj) == 0:
+        """O(1) look up quantile RUL for a given (subset, unit, cycle)."""
+        entry = self._rul_cache.get((str(subset), int(unit)))
+        if entry is None:
             return {"q10": 0.0, "q50": 0.0, "q90": 0.0, "rul_true": 0.0}
-        max_cycle = traj["cycle"].max()
-        c = min(cycle, max_cycle)
-        row = traj[traj["cycle"] == c]
-        if len(row) == 0:
-            # Nearest cycle
-            idx = (traj["cycle"] - c).abs().argmin()
-            row = traj.iloc[[idx]]
-        r = row.iloc[0]
+        max_c, q10_arr, q50_arr, q90_arr, rul_true_arr = entry
+        c = min(max(1, cycle), max_c)
+        idx = c - 1
         return {
-            "q10": float(r["q10"]),
-            "q50": float(r["q50"]),
-            "q90": float(r["q90"]),
-            "rul_true": float(r["rul_true"]),
+            "q10": float(q10_arr[idx]),
+            "q50": float(q50_arr[idx]),
+            "q90": float(q90_arr[idx]),
+            "rul_true": float(rul_true_arr[idx]),
         }
 
     # ── Engine state ───────────────────────────────────────────────────────
@@ -258,8 +261,7 @@ class FleetSim:
         eng_state: list[dict] = []
         for pos in range(N_ENG):
             subset, unit = eng_queues[pos][0]
-            traj = self.rul[(self.rul["subset"] == subset) & (self.rul["unit"] == unit)]
-            life = int(traj["life"].iloc[0]) if len(traj) > 0 else 100
+            life = self._engine_lives.get((str(subset), int(unit)), 100)
             start_cycle = int(rng_init.uniform(0, 0.6 * life))
             eng_state.append(
                 {
@@ -406,10 +408,7 @@ class FleetSim:
                         eng_queues[pos] += eng_queues[pos]  # extend
                     subset, unit = eng_queues[pos][qptr]
                     es["queue_ptr"] = qptr + 1
-                    traj = self.rul[
-                        (self.rul["subset"] == subset) & (self.rul["unit"] == unit)
-                    ]
-                    life = int(traj["life"].iloc[0]) if len(traj) > 0 else 100
+                    life = self._engine_lives.get((str(subset), int(unit)), 100)
                     es["subset"] = subset
                     es["unit"] = unit
                     es["cycle"] = 0
