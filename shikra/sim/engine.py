@@ -596,12 +596,12 @@ class FleetSim:
                         if ls["sorties_flown"] >= ls["sorties_until_fail"]:
                             ls["missing"] = True
                             ls["has_lru"] = False
-                            if 90 <= day < 270:
+                            if self.shock_start <= day < self.shock_end:
                                 lru_failures_shock_window[lid] += 1
                             # Failed unit goes to repair and returns to depot stock
                             repair_tat = max(1, int(lru["repair_tat_days"] * self.pm))
                             if self.shock_lrus and lid in self.shock_lrus and self.shock_start <= day < self.shock_end:
-                                return_day = max(day + repair_tat, self.shock_end)
+                                return_day = max(day, self.shock_end) + repair_tat
                             else:
                                 return_day = day + repair_tat
                             lru_in_repair.append({"return_day": return_day, "id": lid})
