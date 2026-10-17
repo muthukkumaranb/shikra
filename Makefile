@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme test lint reproduce reproduce-sim reproduce-sim-quick
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards vis vis-web test lint reproduce reproduce-sim reproduce-sim-quick
 
 PY     ?= python
 PIP    ?= pip
@@ -59,6 +59,17 @@ figures:
 # ── README table ─────────────────────────────────────────────────────────────
 readme:
 	$(PY) scripts/readme_table.py
+
+# ── Model card ───────────────────────────────────────────────────────────────
+cards:
+	$(PY) scripts/cards.py
+
+# ── Visualizers ──────────────────────────────────────────────────────────────
+vis:
+	$(PY) scripts/terminal_visualizer.py
+
+vis-web:
+	$(PY) scripts/visualizer_server.py
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 test:
