@@ -17,3 +17,5 @@ artifacts/*
 !artifacts/replay_rul.parquet
 !artifacts/policy_params.json
 !artifacts/conformal.json
+!artifacts/splits_multi.json
+
