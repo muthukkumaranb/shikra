@@ -1,0 +1,7 @@
+lead_days,method,coverage_80,mae,brier,n_snapshots
+3,shikra_forecast,0.7263,0.8726,0.0376,330
+3,persistence,0.5798,0.5475,0.0338,330
+3,climatology,0.9283,4.8426,0.2041,330
+7,shikra_forecast,0.6202,1.5498,0.0741,330
+7,persistence,0.4333,0.9313,0.0596,330
+7,climatology,0.9283,4.8417,0.2031,330
