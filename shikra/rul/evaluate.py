@@ -70,19 +70,18 @@ def mean_width(q_lo: np.ndarray, q_hi: np.ndarray) -> float:
 # ---------------------------------------------------------------------------
 
 
-def run_pipeline() -> None:
+def run_pipeline(retrain: bool = False) -> None:
     """Train, calibrate, evaluate, and write all results."""
     from shikra.data.cmapss import load
     from shikra.data.split import load_split, split_to_sets
     from shikra.rul.conformal import (
-        CONFORMAL_PATH,
         adjust,
         calibrate,
-        load_conformal,
         save_conformal,
     )
     from shikra.rul.features import RUL_CAP, build_features, fit_scaler
     from shikra.rul.model import (
+        load_models,
         predict,
         save_models,
         train,
@@ -124,20 +123,28 @@ def run_pipeline() -> None:
 
     print(f"  fit rows: {len(df_fit):,}  val rows: {len(df_val_raw):,}  calib: {len(df_calib):,}  replay: {len(df_replay):,}")
 
-    # ── Fit scaler on fit units only ───────────────────────────────────────
-    print("\n[2/6] Fitting scaler and building features …")
-    scaler = fit_scaler(df_fit)
-    with SCALER_PATH.open("wb") as f:
-        pickle.dump(scaler, f)
+    model_file = Path(str(MODEL_PREFIX) + "_models.pkl")
+    if model_file.exists() and SCALER_PATH.exists() and not retrain:
+        print("\n[2-3/6] Loading existing scaler and model of record …")
+        with SCALER_PATH.open("rb") as f:
+            scaler = pickle.load(f)
+        models = load_models(MODEL_PREFIX)
+        print(f"  Loaded models from {model_file}")
+    else:
+        # ── Fit scaler on fit units only ───────────────────────────────────────
+        print("\n[2/6] Fitting scaler and building features …")
+        scaler = fit_scaler(df_fit)
+        with SCALER_PATH.open("wb") as f:
+            pickle.dump(scaler, f)
 
-    X_train, y_train, meta_train = build_features(df_fit, scaler)
-    X_val, y_val, _ = build_features(df_val_raw, scaler)
-    print(f"  X_train: {X_train.shape}  X_val: {X_val.shape}")
+        X_train, y_train, meta_train = build_features(df_fit, scaler)
+        X_val, y_val, _ = build_features(df_val_raw, scaler)
+        print(f"  X_train: {X_train.shape}  X_val: {X_val.shape}")
 
-    # ── Train model ────────────────────────────────────────────────────────
-    print("\n[3/6] Training LightGBM quantile ensemble …")
-    models = train(X_train, y_train, X_val, y_val)
-    save_models(models, MODEL_PREFIX)
+        # ── Train model ────────────────────────────────────────────────────────
+        print("\n[3/6] Training LightGBM quantile ensemble …")
+        models = train(X_train, y_train, X_val, y_val)
+        save_models(models, MODEL_PREFIX)
 
     # ── Conformal calibration on calib units ──────────────────────────────
     print("\n[4/6] Conformal calibration on calib units …")
@@ -154,11 +161,8 @@ def run_pipeline() -> None:
     X_calib = X_calib_all[calib_indices]
     y_calib = y_calib_all[calib_indices]
     preds_calib_raw = predict(models, X_calib)
-    if CONFORMAL_PATH.exists():
-        Q_dict = load_conformal(CONFORMAL_PATH)
-    else:
-        Q_dict = calibrate(y_calib, preds_calib_raw)
-        save_conformal(Q_dict)
+    Q_dict = calibrate(y_calib, preds_calib_raw)
+    save_conformal(Q_dict)
     adjust(preds_calib_raw, Q_dict)  # runs conformal adjustment
 
     # ── Evaluate on official test sets ────────────────────────────────────
@@ -363,4 +367,13 @@ def _write_gates(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    run_pipeline()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Evaluate or retrain SHIKRA RUL model.")
+    parser.add_argument(
+        "--retrain",
+        action="store_true",
+        help="Force retrain instead of loading existing model.",
+    )
+    args = parser.parse_args()
+    run_pipeline(retrain=args.retrain)
