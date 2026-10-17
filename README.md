@@ -37,7 +37,7 @@ against a synthetic 54-aircraft wing.
 | Shikra_v2 | 60.5% | [60.0%, 61.1%] | 0.0 |
 | Oracle_v2 | 60.9% | [60.4%, 61.5%] | 0.0 |
 
-> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.5% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 
 ---
 

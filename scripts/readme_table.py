@@ -54,7 +54,16 @@ def generate_table() -> str:
                     f"[{row['ci_lo']:.1%}, {row['ci_hi']:.1%}] | {ur_str} |"
                 )
         lines.append("")
-        lines.append("> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).\n")
+        r_uns = uns.loc["reactive"]["mean"] if "reactive" in uns.index else 0.0
+        shikra_key = "shikra_v2" if "shikra_v2" in uns.index else ("shikra" if "shikra" in uns.index else "")
+        s_uns = uns.loc[shikra_key]["mean"] if shikra_key in uns.index else 0.0
+        r_svc = svc.loc["reactive"]["mean"] if "reactive" in svc.index else 0.0
+        s_svc = svc.loc[shikra_key]["mean"] if shikra_key in svc.index else 0.0
+        lines.append(
+            f"> **Key Finding:** SHIKRA removes all unscheduled engine removals ({s_uns:.0f} vs {r_uns:.1f} per year) but, "
+            f"in this wing, serviceability is unchanged ({s_svc:.1%} vs {r_svc:.1%}), "
+            f"because the engine-spare pipeline, not warning time, is the binding constraint (see A11).\n"
+        )
 
     return "\n".join(lines)
 

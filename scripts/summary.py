@@ -158,6 +158,16 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
             svc_rows.append(f"| {p} | {s_val:.1%} |")
     svc_table = "\n".join(svc_rows)
 
+    r_uns = df[df["policy"] == "reactive"]["unscheduled_removals"].mean() if "reactive" in df["policy"].values else 0.0
+    shikra_key = "shikra_v2" if "shikra_v2" in df["policy"].values else "shikra"
+    s_uns = df[df["policy"] == shikra_key]["unscheduled_removals"].mean() if shikra_key in df["policy"].values else 0.0
+    s_svc = df[df["policy"] == shikra_key]["serviceability"].mean() if shikra_key in df["policy"].values else 0.0
+    key_finding_note = (
+        f"SHIKRA removes all unscheduled engine removals ({s_uns:.0f} vs {r_uns:.1f} per year) but, "
+        f"in this wing, serviceability is unchanged ({s_svc:.1%} vs {reactive_svc:.1%}), "
+        f"because the engine-spare pipeline, not warning time, is the binding constraint (see A11)."
+    )
+
     section = f"""
 ## Simulation Gates
 
@@ -176,7 +186,7 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
 **Gap captured (shikra − reactive) / (oracle − reactive):**
   {gc_str}
 
-> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Finding on G0.5 & Serviceability:** {key_finding_note}
 """
 
     if "## Simulation Gates" in existing:

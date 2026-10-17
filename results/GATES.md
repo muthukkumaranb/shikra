@@ -27,4 +27,4 @@
 **Gap captured (shikra − reactive) / (oracle − reactive):**
   mean = -0.594  95% CI [-3.134, 1.479]
 
-> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 80.2 per year) but, in this wing, serviceability is unchanged (61.3% vs 61.6%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.5% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
