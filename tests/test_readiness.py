@@ -6,15 +6,38 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import yaml
 
 from shikra.rul.variants import apply
 from shikra.sim.engine import run
+from shikra.spares.demand import inverse_removal_prob, removal_prob
 
 ROOT = Path(__file__).parent.parent
 CONFIG_PATH = ROOT / "config" / "wing.yaml"
 PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
 REPLAY_PATH = ROOT / "artifacts" / "replay_rul.parquet"
+
+
+def test_inverse_removal_prob():
+    """Verify that inverse_removal_prob correctly inverts removal_prob piecewise linear CDF."""
+    q10, q50, q90 = 20.0, 50.0, 90.0
+
+    # Knot checks
+    assert pytest.approx(inverse_removal_prob(q10, q50, q90, 0.10)) == 20.0
+    assert pytest.approx(inverse_removal_prob(q10, q50, q90, 0.50)) == 50.0
+    assert pytest.approx(inverse_removal_prob(q10, q50, q90, 0.90)) == 90.0
+    assert inverse_removal_prob(q10, q50, q90, 0.0) == 0.0
+
+    # Round trip checks across u in [0.01, 0.99]
+    for u in [0.05, 0.15, 0.30, 0.50, 0.70, 0.85, 0.95]:
+        h = inverse_removal_prob(q10, q50, q90, u)
+        p = removal_prob(q10, q50, q90, h)
+        assert pytest.approx(p, abs=1e-6) == u
+
+    # Degenerate case
+    assert inverse_removal_prob(50.0, 50.0, 50.0, 0.4) == 50.0
+    assert inverse_removal_prob(60.0, 50.0, 40.0, 0.8) == 50.0
 
 
 def test_snapshots_identical_results():

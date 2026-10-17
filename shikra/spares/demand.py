@@ -66,3 +66,47 @@ def removal_prob(q10: float, q50: float, q90: float, h: float) -> float:
             return float(np.clip(y0 + frac * (y1 - y0), 0.0, 1.0))
 
     return 1.0  # fallback
+
+
+def inverse_removal_prob(q10: float, q50: float, q90: float, u: float) -> float:
+    """Sample remaining life from predictive distribution via inverse piecewise-linear CDF.
+
+    Inverts the piecewise-linear CDF fitted through:
+        (q10 -> 0.10, q50 -> 0.50, q90 -> 0.90)
+    as implemented in ``removal_prob``.
+
+    Parameters
+    ----------
+    q10, q50, q90 : RUL quantile predictions for the current cycle
+    u             : uniform random draw in [0, 1]
+
+    Returns
+    -------
+    float sampled remaining life in cycles (non-negative)
+    """
+    u = float(np.clip(u, 0.0, 1.0))
+    q10, q50, q90 = float(q10), float(q50), float(q90)
+
+    if q90 <= q10:
+        return max(0.0, q50)
+
+    if u <= 0.10:
+        if q10 <= 0:
+            return 0.0
+        return max(0.0, (u / 0.10) * q10)
+
+    if u <= 0.50:
+        frac = (u - 0.10) / 0.40
+        return max(0.0, q10 + frac * (q50 - q10))
+
+    if u <= 0.90:
+        frac = (u - 0.50) / 0.40
+        return max(0.0, q50 + frac * (q90 - q50))
+
+    # u > 0.90
+    span = q90 - q50
+    if span <= 0:
+        return max(0.0, q90)
+    excess = (u - 0.90) * span / 0.10
+    return max(0.0, q90 + excess)
+
