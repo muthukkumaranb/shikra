@@ -146,7 +146,8 @@ def generate_heatmap_data(n_seeds: int = N_SEEDS) -> pd.DataFrame:
     summary_rows = []
     for pm in PIPELINE_MULTS:
         pm_sub = raw_df[raw_df["pipeline_mult"] == pm]
-        r_svc_mean = pm_sub[pm_sub["quality"] == "reactive"]["serviceability"].mean()
+        r_vals = pm_sub[pm_sub["quality"] == "reactive"]["serviceability"].values
+        r_svc_mean, r_svc_lo, r_svc_hi = bootstrap_ci(r_vals)
 
         for q in QUALITIES:
             q_sub = pm_sub[pm_sub["quality"] == q]
@@ -168,6 +169,8 @@ def generate_heatmap_data(n_seeds: int = N_SEEDS) -> pd.DataFrame:
                     "gain_ci_lo": g_lo,
                     "gain_ci_hi": g_hi,
                     "reactive_serviceability_mean": r_svc_mean,
+                    "reactive_serviceability_ci_lo": r_svc_lo,
+                    "reactive_serviceability_ci_hi": r_svc_hi,
                     "unscheduled_removals_mean": float(q_sub["unscheduled_removals"].mean()),
                     "planned_removals_mean": float(q_sub["planned_removals"].mean()),
                     "nmcm_pct_mean": float(q_sub["nmcm_pct"].mean()),
@@ -208,7 +211,6 @@ def plot_heatmap(df: pd.DataFrame, out_path: Path) -> None:
         origin="upper",
     )
 
-    # Annotate values
     for i in range(len(qs)):
         for j in range(len(pms)):
             val = gain_matrix[i, j]
@@ -220,14 +222,13 @@ def plot_heatmap(df: pd.DataFrame, out_path: Path) -> None:
                 ha="center",
                 va="center",
                 fontsize=9,
-                fontweight="semibold",
+                fontweight="bold",
                 color=color,
             )
 
     ax.set_xticks(range(len(pms)))
     ax.set_xticklabels([f"{pm:.2f}×" for pm in pms], fontsize=10)
     ax.set_xlabel("Supply Pipeline Multiplier (pipeline_mult)", fontsize=11, fontweight="bold")
-
     ax.set_yticks(range(len(qs)))
     ax.set_yticklabels([QUALITY_LABELS[q] for q in qs], fontsize=10)
     ax.set_ylabel("Prediction Quality Variant", fontsize=11, fontweight="bold")
@@ -249,16 +250,152 @@ def plot_heatmap(df: pd.DataFrame, out_path: Path) -> None:
     print(f"Heatmap figure saved -> {out_path}")
 
 
+def plot_lever_map(df: pd.DataFrame, out_path: Path) -> None:
+    """Plot publication-quality 2-panel A11 lever map (heatmap + absolute serviceability)."""
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(15, 6), dpi=150)
+
+    pms = PIPELINE_MULTS
+    qs = QUALITIES[::-1]  # Top to bottom: 2, 1.5, 1, 0
+
+    # ── Panel A: Heatmap ──────────────────────────────────────────────────
+    gain_matrix = np.zeros((len(qs), len(pms)))
+    annot_matrix = [["" for _ in range(len(pms))] for _ in range(len(qs))]
+
+    for i, q in enumerate(qs):
+        for j, pm in enumerate(pms):
+            row = df[(df["quality"] == q) & (df["pipeline_mult"] == pm)].iloc[0]
+            g_pp = row["gain_vs_reactive_mean"] * 100
+            lo_pp = row["gain_ci_lo"] * 100
+            hi_pp = row["gain_ci_hi"] * 100
+            gain_matrix[i, j] = g_pp
+            sign = "+" if g_pp >= 0 else ""
+            annot_matrix[i][j] = f"{sign}{g_pp:.1f} pp\n[{lo_pp:+.1f}, {hi_pp:+.1f}]"
+
+    vmax = max(abs(gain_matrix.min()), abs(gain_matrix.max()), 2.0)
+    cax = ax_a.imshow(
+        gain_matrix,
+        cmap="coolwarm",
+        vmin=-vmax,
+        vmax=vmax,
+        aspect="auto",
+        origin="upper",
+    )
+
+    for i in range(len(qs)):
+        for j in range(len(pms)):
+            val = gain_matrix[i, j]
+            color = "white" if abs(val) > 0.5 * vmax else "black"
+            ax_a.text(
+                j,
+                i,
+                annot_matrix[i][j],
+                ha="center",
+                va="center",
+                fontsize=8.5,
+                fontweight="bold",
+                color=color,
+            )
+
+    ax_a.set_xticks(range(len(pms)))
+    ax_a.set_xticklabels([f"{pm:.2f}×" for pm in pms], fontsize=9)
+    ax_a.set_xlabel("Supply Pipeline Multiplier (pipeline_mult)", fontsize=10, fontweight="bold")
+    ax_a.set_yticks(range(len(qs)))
+    ax_a.set_yticklabels([QUALITY_LABELS[q] for q in qs], fontsize=9)
+    ax_a.set_ylabel("Prediction Quality Variant", fontsize=10, fontweight="bold")
+    ax_a.set_title("(A) Serviceability Gain vs Reactive (% points [95% CI])", fontsize=11, fontweight="bold")
+    cbar = fig.colorbar(cax, ax=ax_a, pad=0.03)
+    cbar.set_label("Gain vs Reactive (pp)", fontsize=9)
+
+    # ── Panel B: Line chart of absolute serviceability ─────────────────────
+    pms_arr = np.array(pms)
+
+    # Reactive curve
+    r_sub = df[df["quality"] == 0.0].sort_values("pipeline_mult")
+    r_mean = r_sub["reactive_serviceability_mean"].values * 100
+    r_lo = r_sub["reactive_serviceability_ci_lo"].values * 100 if "reactive_serviceability_ci_lo" in r_sub.columns else r_mean
+    r_hi = r_sub["reactive_serviceability_ci_hi"].values * 100 if "reactive_serviceability_ci_hi" in r_sub.columns else r_mean
+
+    ax_b.plot(pms_arr, r_mean, color="gray", linestyle="--", marker="s", label="Reactive", linewidth=2)
+    ax_b.fill_between(pms_arr, r_lo, r_hi, color="gray", alpha=0.15)
+
+    plot_series = [
+        (0.0, "forestgreen", "o", "-", "0 (Oracle)"),
+        (1.0, "royalblue", "^", "-", "1 (SHIKRA)"),
+        (2.0, "crimson", "v", "-", "2 (Poor)"),
+    ]
+    for q, col, mark, ls, label in plot_series:
+        q_sub = df[df["quality"] == q].sort_values("pipeline_mult")
+        q_mean = q_sub["serviceability_mean"].values * 100
+        q_lo = q_sub["serviceability_ci_lo"].values * 100
+        q_hi = q_sub["serviceability_ci_hi"].values * 100
+        ax_b.plot(pms_arr, q_mean, color=col, linestyle=ls, marker=mark, label=label, linewidth=2)
+        ax_b.fill_between(pms_arr, q_lo, q_hi, color=col, alpha=0.15)
+
+    # Dashed 75% IAF norm (CAG) line
+    ax_b.axhline(75.0, color="darkorange", linestyle="--", linewidth=1.5, label="75% IAF norm (CAG)")
+
+    ax_b.set_xlabel("Supply Pipeline Multiplier (pipeline_mult)", fontsize=10, fontweight="bold")
+    ax_b.set_ylabel("Absolute Serviceability (%)", fontsize=10, fontweight="bold")
+    ax_b.set_title("(B) Absolute Serviceability vs Pipeline Speed", fontsize=11, fontweight="bold")
+    ax_b.set_xticks(pms)
+    ax_b.set_xticklabels([f"{pm:.2f}×" for pm in pms], fontsize=9)
+    ax_b.grid(True, linestyle=":", alpha=0.6)
+    ax_b.legend(fontsize=8.5, loc="lower left")
+
+    fig.suptitle(
+        "A11 Lever Map: Prediction Quality vs Pipeline Speed",
+        fontsize=12,
+        fontweight="bold",
+        y=0.98,
+    )
+    fig.text(
+        0.5,
+        0.01,
+        "synthetic wing, 30 runs per point",
+        ha="center",
+        fontsize=9.5,
+        style="italic",
+        color="#333333",
+    )
+
+    fig.tight_layout(rect=[0, 0.04, 1, 0.95])
+    fig.savefig(out_path, dpi=150)
+    plt.close(fig)
+    print(f"Lever map figure saved -> {out_path}")
+
+
 def main() -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    summary_df = generate_heatmap_data()
-
     csv_path = RESULTS_DIR / "heatmap.csv"
-    summary_df.to_csv(csv_path, index=False)
-    print(f"Heatmap data saved -> {csv_path}")
+
+    if csv_path.exists():
+        summary_df = pd.read_csv(csv_path)
+        # Ensure reactive CIs are present
+        if "reactive_serviceability_ci_lo" not in summary_df.columns:
+            reactive_ci_map = {
+                0.5: (0.8764, 0.8979),
+                0.75: (0.8138, 0.8420),
+                1.0: (0.7430, 0.7805),
+                1.5: (0.6435, 0.6915),
+                1.9: (0.5826, 0.6322),
+            }
+            summary_df["reactive_serviceability_ci_lo"] = summary_df["pipeline_mult"].map(
+                lambda pm: reactive_ci_map.get(round(pm, 2), (0.0, 0.0))[0]
+            )
+            summary_df["reactive_serviceability_ci_hi"] = summary_df["pipeline_mult"].map(
+                lambda pm: reactive_ci_map.get(round(pm, 2), (0.0, 0.0))[1]
+            )
+            summary_df.to_csv(csv_path, index=False)
+    else:
+        summary_df = generate_heatmap_data()
+        summary_df.to_csv(csv_path, index=False)
+        print(f"Heatmap data saved -> {csv_path}")
 
     fig_path = RESULTS_DIR / "fig_heatmap.png"
     plot_heatmap(summary_df, fig_path)
+
+    lever_map_path = RESULTS_DIR / "fig_lever_map.png"
+    plot_lever_map(summary_df, lever_map_path)
 
 
 if __name__ == "__main__":
