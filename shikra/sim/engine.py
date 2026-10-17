@@ -259,6 +259,7 @@ class FleetSim:
         rng_sortie = self._make_rng(2)    # sortie probability draws
         rng_repair = self._make_rng(3)    # repair TAT draws
         rng_init = self._make_rng(4)      # initial cycle offset
+        rng_fair = self._make_rng(5)      # fair squadron/tail allocation order
 
         # ── Pre-draw sortie random numbers (tail × day) ──────────────────
         sortie_draws = rng_sortie.uniform(size=(N_AC, self.days))  # (54, 365)
@@ -385,7 +386,8 @@ class FleetSim:
             for r in lru_returned:
                 lid = r["id"]
                 if lru_waiting[lid]:
-                    wait_tail, wait_sqn = lru_waiting[lid].pop(0)
+                    idx = int(rng_fair.integers(len(lru_waiting[lid])))
+                    wait_tail, wait_sqn = lru_waiting[lid].pop(idx)
                     ls = lru_state[wait_tail][lid]
                     ls["missing_until"] = day + transfer_days
                     lru_inbound_transfers.append({
@@ -497,7 +499,8 @@ class FleetSim:
                     maint_queue[sqn].append(pos)
 
             # --- Process maintenance queue (assign available hangar slots) -
-            for sqn in range(N_SQN):
+            sqn_order = rng_fair.permutation(N_SQN).tolist()
+            for sqn in sqn_order:
                 q = maint_queue[sqn]
                 while q and hangar_busy[sqn] < self.hangar_per_sqn:
                     pos = q[0]
@@ -582,11 +585,12 @@ class FleetSim:
             if self.policy in ("shikra", "oracle", "shikra_v2", "oracle_v2"):
                 depot_serviceable = self._preposition(
                     day, eng_state, base_serviceable, depot_serviceable,
-                    inbound_transfers, rng_eng
+                    inbound_transfers, rng_eng, rng_fair=rng_fair
                 )
 
             # --- LRU failures and logistics --------------------------------
-            for tail in range(N_AC):
+            tail_order = rng_fair.permutation(N_AC).tolist()
+            for tail in tail_order:
                 sqn = tail // AC_PER_SQN
                 for lru in self.lru_list:
                     lid = lru["id"]
@@ -765,6 +769,7 @@ class FleetSim:
         depot_serviceable: int,
         inbound_transfers: list[tuple[int, int]],
         rng: np.random.Generator,
+        rng_fair: np.random.Generator | None = None,
     ) -> int:
         """Pre-position spare engines from depot if expected demand exceeds supply."""
         from shikra.spares.demand import removal_prob
@@ -776,7 +781,8 @@ class FleetSim:
         else:
             h = self.transfer_days * self.sortie_p  # planning horizon in cycles
 
-        for sqn in range(N_SQN):
+        sqn_order = rng_fair.permutation(N_SQN).tolist() if rng_fair is not None else list(range(N_SQN))
+        for sqn in sqn_order:
             # Count expected removals over horizon h
             expected_removals = 0.0
             ac_start = sqn * AC_PER_SQN
@@ -846,3 +852,7 @@ def run(
     """
     sim = FleetSim(policy, config, rul, params, seed, days, overrides)
     return sim.run()
+
+
+Simulator = FleetSim
+

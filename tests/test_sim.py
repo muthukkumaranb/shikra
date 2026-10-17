@@ -319,5 +319,36 @@ def test_spare_waiting_aircraft_is_nmcs() -> None:
     )
 
 
+def test_squadron_symmetry() -> None:
+    """With identical squadron configs, per-squadron mean MC over 30 seeds differ by no more than their 95% CI."""
+    import numpy as np
+
+    from shikra.sim.engine import AC_PER_SQN, N_SQN, run
+
+    cfg = dict(_TINY_CONFIG)
+    cfg["ops"] = {"sortie_demand": 0.8, "days": 60}
+    cfg["pipeline_mult"] = 1.0
+    rul = _make_tiny_rul(n_units=10)
+
+    sqn_mc: dict[int, list[float]] = {s: [] for s in range(N_SQN)}
+    for seed in range(1, 31):
+        res = run("reactive", cfg, rul, _TINY_PARAMS, seed=seed, days=60)
+        for sqn in range(N_SQN):
+            tails = range(sqn * AC_PER_SQN, (sqn + 1) * AC_PER_SQN)
+            mc_days = sum(1 for d in range(60) for t in tails if res.tail_status[d][t] == "MC")
+            sqn_mc[sqn].append(mc_days / (60 * AC_PER_SQN))
+
+    means = [float(np.mean(sqn_mc[s])) for s in range(N_SQN)]
+    ci_half_widths = [float(1.96 * np.std(sqn_mc[s], ddof=1) / np.sqrt(30)) for s in range(N_SQN)]
+    max_diff = max(means) - min(means)
+    avg_ci = float(np.mean(ci_half_widths))
+
+    assert max_diff <= avg_ci, (
+        f"Per-squadron mean MC difference ({max_diff:.4f}) exceeds 95% CI ({avg_ci:.4f}). "
+        f"Means: {means}"
+    )
+
+
+
 
 
