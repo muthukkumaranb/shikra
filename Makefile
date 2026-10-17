@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme test lint reproduce reproduce-sim
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme test lint reproduce reproduce-sim reproduce-sim-quick
 
 PY     ?= python
 PIP    ?= pip
@@ -46,7 +46,7 @@ heatmap:
 
 # ── Bias sweep ───────────────────────────────────────────────────────────────
 bias:
-	$(PY) scripts/bias_experiment.py
+	$(PY) scripts/bias.py
 
 # ── Supply shock ─────────────────────────────────────────────────────────────
 shock:
@@ -75,3 +75,8 @@ reproduce: split rul replay params sim summary heatmap bias shock figures readme
 # ── Simulation reproduction (no raw data needed) ─────────────────────────────
 reproduce-sim: sim summary heatmap bias shock figures readme
 	@echo "Simulation reproduction complete. Results are in results/"
+
+# ── Quick simulation reproduction (CI mode) ──────────────────────────────────
+reproduce-sim-quick: sim summary bias
+	@echo "Quick simulation reproduction complete."
+
