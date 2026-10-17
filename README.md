@@ -16,7 +16,24 @@ against a synthetic 54-aircraft wing.
 ## Results
 
 <!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->
-<!-- results table will appear here after make reproduce -->
+
+## Results
+
+### RUL Model (LightGBM quantile ensemble, 5 seeds)
+
+| Subset | RMSE | MAE | NASA Score | RMSE (RUL≤30) | n units |
+|--------|------|-----|-----------|---------------|---------|
+| FD001 | 11.61 | 8.30 | 237.0 | 3.62 | 100 |
+| FD003 | 14.16 | 9.71 | 490.8 | 2.41 | 100 |
+
+### Fleet Simulation (synthetic wing, 30 replications)
+
+| Policy | Serviceability | 95% CI | Unscheduled removals |
+|--------|---------------|--------|---------------------|
+| Reactive | 80.1% | [79.8%, 80.4%] | 94.6 |
+| Preventive | 80.1% | [79.8%, 80.4%] | 19.4 |
+| Shikra | 80.1% | [79.8%, 80.4%] | 0.0 |
+| Oracle | 80.1% | [79.8%, 80.4%] | 0.0 |
 
 ---
 
