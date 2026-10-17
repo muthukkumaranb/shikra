@@ -81,6 +81,10 @@
 
 - **Iteration 1**: Set `pipeline_mult: 1.9` (previously `1.0`). Increases repair turnaround times, depot-to-base transfer times, and LRU procurement lead times by 1.9×, bringing 30-seed reactive serviceability from ~76.1% to 61.6%, satisfying Gate G0.4 (target 55%–65%).
 
+### Pre-registered SHIKRA v2 (lead-time-aware pre-positioning)
+
+Pre-positioning horizon h = (depot→base transfer days + planned change days) × pipeline_mult × sortie_demand, in cycles. Applies identically to shikra and oracle. R_star unchanged.
+
 ---
 
 ## 3. Model Parameters
