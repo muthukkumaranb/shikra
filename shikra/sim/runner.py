@@ -42,7 +42,11 @@ def _run_one(args: tuple) -> dict:
 
     result = run(policy, config, rul_use, params, seed, days)
     print(f"  [{policy}/{seed:02d}] serviceability={result.kpis['serviceability']:.3f}")
-    return result.kpis
+    scalar_kpis = {
+        k: v for k, v in result.kpis.items()
+        if not isinstance(v, dict | list | set | tuple)
+    }
+    return scalar_kpis
 
 
 def run_all(n_seeds: int = N_SEEDS, n_jobs: int | None = None) -> pd.DataFrame:
