@@ -38,7 +38,9 @@ _LGB_BASE_PARAMS: dict = {
     "min_child_samples": 20,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
-    "n_jobs": -1,
+    "deterministic": True,
+    "force_row_wise": True,
+    "num_threads": 4,
     "verbose": -1,
 }
 
@@ -78,6 +80,7 @@ def train(
             params = {
                 **_LGB_BASE_PARAMS,
                 "alpha": alpha,
+                "seed": seed,
                 "random_state": seed,
             }
             model = lgb.LGBMRegressor(**params)
