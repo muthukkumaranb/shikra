@@ -270,6 +270,7 @@ class FleetSim:
                     "queue_ptr": 1,   # next trajectory to pull
                     "in_maintenance": False,
                     "maint_done_day": None,
+                    "installed": True,
                     "removal_type": None,
                     "wasted_life": 0,  # life - cycle at removal for planned
                 }
@@ -359,10 +360,6 @@ class FleetSim:
                     es["life"] = life
                     es["removal_type"] = None
 
-                    # Assign a spare engine from base
-                    if base_serviceable[sqn] > 0:
-                        base_serviceable[sqn] -= 1
-
             # --- Check engine failures and removal triggers ---------------
             for pos in range(N_ENG):
                 es = eng_state[pos]
@@ -377,6 +374,7 @@ class FleetSim:
                 if failed:
                     es["in_maintenance"] = True
                     es["maint_done_day"] = None
+                    es["installed"] = False
                     es["removal_type"] = "unscheduled"
                     unscheduled_removals += 1
 
@@ -402,6 +400,7 @@ class FleetSim:
                     wasted = max(0, es["life"] - es["cycle"])
                     es["in_maintenance"] = True
                     es["maint_done_day"] = None
+                    es["installed"] = False
                     es["removal_type"] = "planned"
                     planned_removals += 1
                     wasted_life_cycles += wasted
@@ -428,8 +427,9 @@ class FleetSim:
                         continue
                     # Check spare availability
                     if base_serviceable[sqn] <= 0:
-                        # Request from depot
-                        if depot_serviceable > 0:
+                        inbound_sqn = sum(1 for (_, s) in inbound_transfers if s == sqn)
+                        # Request from depot if needed and not already inbound
+                        if inbound_sqn < len(q) and depot_serviceable > 0:
                             depot_serviceable -= 1
                             arrive = day + self.transfer_days
                             inbound_transfers.append((arrive, sqn))
@@ -437,6 +437,8 @@ class FleetSim:
                         break
                     q.pop(0)
                     hangar_busy[sqn] += 1
+                    base_serviceable[sqn] -= 1  # Reserve spare when change starts
+                    es["installed"] = True
                     maint_type = es["removal_type"] or "unscheduled"
                     change_days = (
                         self.planned_days if maint_type == "planned"
@@ -497,7 +499,7 @@ class FleetSim:
 
             # --- Pre-positioning (shikra and oracle only) -----------------
             if self.policy in ("shikra", "oracle"):
-                self._preposition(
+                depot_serviceable = self._preposition(
                     day, eng_state, base_serviceable, depot_serviceable,
                     inbound_transfers, rng_eng
                 )
@@ -534,8 +536,22 @@ class FleetSim:
                 )
             )
             nmcs = N_AC - mc - nmcm
+            installed_engines = sum(1 for e in eng_state if e["installed"])
+            total_engines = (
+                installed_engines
+                + sum(base_serviceable)
+                + depot_serviceable
+                + len(inbound_transfers)
+                + len(in_repair)
+            )
             daily_records.append(
-                {"day": day, "mc": mc, "nmcm": nmcm, "nmcs": nmcs}
+                {
+                    "day": day,
+                    "mc": mc,
+                    "nmcm": nmcm,
+                    "nmcs": nmcs,
+                    "total_engines": total_engines,
+                }
             )
 
         # ── Compute KPIs ─────────────────────────────────────────────────
@@ -584,7 +600,7 @@ class FleetSim:
         depot_serviceable: int,
         inbound_transfers: list[tuple[int, int]],
         rng: np.random.Generator,
-    ) -> None:
+    ) -> int:
         """Pre-position spare engines from depot if expected demand exceeds supply."""
         from shikra.spares.demand import removal_prob
 
@@ -613,6 +629,8 @@ class FleetSim:
                 depot_serviceable -= 1
                 arrive = day + self.transfer_days
                 inbound_transfers.append((arrive, sqn))
+
+        return depot_serviceable
 
     def _lru_lead_time(
         self, lru: dict, day: int, rng: np.random.Generator

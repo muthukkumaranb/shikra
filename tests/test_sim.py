@@ -170,3 +170,45 @@ def test_engine_removals_ground_aircraft_until_change_completes() -> None:
     # Assert that NMCM > 0 on some day
     assert (result.daily["nmcm"] > 0).any(), "Expected NMCM > 0 on at least one day"
 
+
+def test_engine_spares_conservation() -> None:
+    """Total engines (installed + base + depot + in transfer + in repair) is constant every day."""
+    from shikra.rul.variants import apply
+
+    def _make_short_rul() -> pd.DataFrame:
+        rows = []
+        for unit in range(1, 10):
+            life = 15
+            for cycle in range(1, life + 1):
+                rul_true = life - cycle
+                rows.append(
+                    {
+                        "subset": "FD001",
+                        "unit": unit,
+                        "cycle": cycle,
+                        "life": life,
+                        "rul_true": rul_true,
+                        "q10": max(0, rul_true - 2),
+                        "q50": rul_true,
+                        "q90": rul_true + 2,
+                        "model_id": "test",
+                        "calib_id": "test",
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    cfg = dict(_TINY_CONFIG)
+    cfg["ops"] = {"sortie_demand": 1.0, "days": 30}
+    rul = _make_short_rul()
+    rul_use = apply(rul, 1)
+
+    for pol in ("reactive", "shikra"):
+        result = run(pol, cfg, rul_use, _TINY_PARAMS, seed=1, days=30)
+        daily = result.daily
+        assert "total_engines" in daily.columns, "total_engines missing from daily records"
+        totals = daily["total_engines"].values
+        assert len(set(totals)) == 1, (
+            f"Policy {pol}: engine stock not conserved across days: {set(totals)}"
+        )
+
+
