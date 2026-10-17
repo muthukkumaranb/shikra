@@ -3,6 +3,7 @@
 Evaluates the vulnerability of the fleet to foreign supply halts:
 - Policy: shikra_v2, pipeline_mult = 1.0
 - At day 90, halt foreign new buys and foreign repairs for 180 days (days 90..269)
+- Held repairs restart at day 270 (return_day = max(day, shock_end) + repair_tat)
 - Evaluated for each foreign LRU singly and all foreign LRUs together
 - 30 seeds with Common Random Numbers (CRN) vs no-shock baseline
 - Horizon: 545 days (one full year after shock ends)
@@ -42,6 +43,7 @@ SHOCK_START = 90
 SHOCK_DURATION = 180
 SHOCK_END = SHOCK_START + SHOCK_DURATION
 HORIZON_DAYS = 545
+SUSTAINED_DAYS = 30
 
 
 def bootstrap_ci(
@@ -83,45 +85,48 @@ def _run_shock_seed_worker(args: tuple) -> dict:
     }
     res_shock = run("shikra_v2", shock_cfg, rul_shikra, params_dict, seed, days)
 
-    # Availability loss over days 90-365 (comparable with previous 365-day numbers)
-    base_svc_365 = float(res_base.daily.loc[:364, "mc"].mean() / 54)
-    shock_svc_365 = float(res_shock.daily.loc[:364, "mc"].mean() / 54)
-    loss_pp = (base_svc_365 - shock_svc_365) * 100
+    b_mc = res_base.daily["mc"]
+    s_mc = res_shock.daily["mc"]
 
-    # Availability loss over full 545-day horizon
-    base_svc_545 = float(res_base.daily["mc"].mean() / 54)
-    shock_svc_545 = float(res_shock.daily["mc"].mean() / 54)
-    loss_pp_545 = (base_svc_545 - shock_svc_545) * 100
+    # loss_pp_shock_window: mean over days 90-269 (180-day halt)
+    loss_sw = float((b_mc.loc[SHOCK_START:SHOCK_END - 1].mean() - s_mc.loc[SHOCK_START:SHOCK_END - 1].mean()) / 54 * 100)
 
-    # 3. Compute recovery days: first day after shock end (day 270) where 14-day rolling mean MC
-    # of the shock run is within 1 tail of the baseline run
-    roll_b = res_base.daily["mc"].rolling(14).mean()
-    roll_s = res_shock.daily["mc"].rolling(14).mean()
+    # loss_pp_year1: mean over days 0-364 (year 1 horizon)
+    loss_y1 = float((b_mc.loc[:364].mean() - s_mc.loc[:364].mean()) / 54 * 100)
 
-    rec_days = days - SHOCK_END  # default to remaining horizon (275)
+    # peak_extra_grounded: max of 14-day rolling mean of (baseline MC - shock MC)
+    gap = b_mc - s_mc
+    roll_gap = gap.rolling(14, min_periods=1).mean()
+    peak_grounded = float(roll_gap.max())
+
+    # recovery_days: first day after 269 from which the 14-day rolling gap
+    # stays at or below 1 aircraft for 30 consecutive days, else not recovered
+    rec_days = days - SHOCK_END  # remaining horizon default (275)
     recovered = False
-    for d in range(SHOCK_END, days):
-        if roll_b.loc[d] - roll_s.loc[d] <= 1.0:
+    for d in range(SHOCK_END, days - SUSTAINED_DAYS + 1):
+        if (roll_gap.loc[d : d + SUSTAINED_DAYS - 1] <= 1.0).all():
             rec_days = d - SHOCK_END
             recovered = True
             break
 
-    # 4. Failures in shock window (days 90..269)
+    # Failures in shock window (days 90..269)
     shock_fails_dict = res_shock.kpis.get("lru_failures_shock_window", {})
     failures_in_window = sum(shock_fails_dict.get(lid, 0) for lid in shock_lrus)
 
     return {
         "scenario": scenario,
         "seed": seed,
-        "loss_pp": loss_pp,
-        "loss_pp_545": loss_pp_545,
+        "loss_pp_shock_window": loss_sw,
+        "loss_pp_year1": loss_y1,
+        "peak_extra_grounded": peak_grounded,
         "recovery_days": rec_days,
         "recovered": recovered,
         "failures_in_window": failures_in_window,
+        "daily_roll_gap": roll_gap.values,
     }
 
 
-def run_supply_shock_experiments() -> pd.DataFrame:
+def run_supply_shock_experiments() -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
     """Execute supply shock scenarios across all foreign LRUs and seeds."""
     with CONFIG_PATH.open(encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -140,26 +145,33 @@ def run_supply_shock_experiments() -> pd.DataFrame:
             tasks.append((sc, shock_lrus, seed, config, params, HORIZON_DAYS))
 
     n_workers = max(1, mp.cpu_count() - 1)
-    print(f"Running uncensored supply shock experiments ({len(tasks)} runs to 545d) on {n_workers} workers …")
+    print(f"Running A12 supply shock experiments ({len(tasks)} runs to 545d) on {n_workers} workers …")
 
     with mp.Pool(processes=n_workers) as pool:
         records = pool.map(_run_shock_seed_worker, tasks)
 
     df_raw = pd.DataFrame(records)
-
     lru_map = {lru["id"]: lru for lru in config["lrus"]}
 
+    # Mean daily rolling gap per scenario across 30 seeds
+    daily_gaps: dict[str, np.ndarray] = {}
     summary_rows = []
+
     for sc in scenarios:
         sub = df_raw[df_raw["scenario"] == sc]
-        loss_vals = sub["loss_pp"].values
-        loss_545_vals = sub["loss_pp_545"].values
+        gaps_matrix = np.array(sub["daily_roll_gap"].tolist())
+        daily_gaps[sc] = np.nanmean(gaps_matrix, axis=0)
+
+        l_sw_vals = sub["loss_pp_shock_window"].values
+        l_y1_vals = sub["loss_pp_year1"].values
+        peak_vals = sub["peak_extra_grounded"].values
         rec_vals = sub["recovery_days"].values
         recov_vals = sub["recovered"].values
         fail_vals = sub["failures_in_window"].values
 
-        l_mean, l_lo, l_hi = bootstrap_ci(loss_vals)
-        l545_mean, _, _ = bootstrap_ci(loss_545_vals)
+        sw_mean, sw_lo, sw_hi = bootstrap_ci(l_sw_vals)
+        y1_mean = float(l_y1_vals.mean())
+        peak_mean = float(peak_vals.mean())
         r_mean = float(rec_vals.mean())
         all_recov = bool(all(recov_vals))
         f_mean = float(fail_vals.mean())
@@ -176,10 +188,11 @@ def run_supply_shock_experiments() -> pd.DataFrame:
             {
                 "lru_id": sc,
                 "source": "foreign",
-                "availability_loss_pp": l_mean,
-                "ci_lo": l_lo,
-                "ci_hi": l_hi,
-                "availability_loss_pp_545": l545_mean,
+                "loss_pp_shock_window": sw_mean,
+                "ci_lo": sw_lo,
+                "ci_hi": sw_hi,
+                "loss_pp_year1": y1_mean,
+                "peak_extra_grounded": round(peak_mean, 1),
                 "recovery_days": round(r_mean, 1),
                 "recovered": all_recov,
                 "failures_in_shock_window_mean": round(f_mean, 1),
@@ -190,39 +203,39 @@ def run_supply_shock_experiments() -> pd.DataFrame:
 
     summary_df = pd.DataFrame(summary_rows)
 
-    # Sort and rank: highest availability loss first, then recovery days
+    # Rank by loss_pp_shock_window descending
     summary_df = summary_df.sort_values(
-        by=["availability_loss_pp", "recovery_days"], ascending=[False, False]
+        by=["loss_pp_shock_window", "recovery_days"], ascending=[False, False]
     ).reset_index(drop=True)
     summary_df["rank"] = range(1, len(summary_df) + 1)
 
-    return summary_df
+    return summary_df, daily_gaps
 
 
-def plot_supply_shock(df: pd.DataFrame, out_path: Path) -> None:
-    """Plot publication-quality ranked indigenisation priority bar chart."""
+def plot_supply_shock(df: pd.DataFrame, daily_gaps: dict[str, np.ndarray], out_path: Path) -> None:
+    """Plot publication-quality 2-panel figure: ranked priority bar chart + daily gap curves."""
+    fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(15, 6), dpi=150)
+
+    # ── Panel A: Ranked bar chart ──────────────────────────────────────────
     plot_df = df.iloc[::-1].reset_index(drop=True)
-
     y_pos = np.arange(len(plot_df))
-    losses = plot_df["availability_loss_pp"].values
+    losses = plot_df["loss_pp_shock_window"].values
     ci_lo = plot_df["ci_lo"].values
     ci_hi = plot_df["ci_hi"].values
     err_low = np.maximum(0, losses - ci_lo)
     err_high = np.maximum(0, ci_hi - losses)
 
     labels = [
-        f"#{row['rank']} {row['lru_id']} (rec: {row['recovery_days']:.1f}d | fails: {row['failures_in_shock_window_mean']:.0f})"
+        f"#{row['rank']} {row['lru_id']} (peak: {row['peak_extra_grounded']:.0f} ac | rec: {row['recovery_days']:.0f}d)"
         for _, row in plot_df.iterrows()
     ]
 
-    fig, ax = plt.subplots(figsize=(10.5, 5.5), dpi=150)
-
     colors = [
-        "#b22222" if lid == "all_foreign" else ("#e65100" if val > 1.0 else "#1976d2")
+        "#b22222" if lid == "all_foreign" else ("#e65100" if val > 2.0 else "#1976d2")
         for lid, val in zip(plot_df["lru_id"], losses)
     ]
 
-    bars = ax.barh(
+    bars = ax_a.barh(
         y_pos,
         losses,
         xerr=[err_low, err_high],
@@ -233,33 +246,58 @@ def plot_supply_shock(df: pd.DataFrame, out_path: Path) -> None:
         height=0.6,
     )
 
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=9.5, fontweight="bold")
-    ax.set_xlabel("Availability Loss vs Baseline (percentage points, 95% CI)", fontsize=11, fontweight="bold")
-    ax.set_title(
-        "A12 Supply Shock: Indigenisation Priority List (Contract §6)\n"
-        "180-Day Foreign Halt (Days 90–270) | 30 Seeds, CRN vs No-Shock Baseline",
-        fontsize=12,
-        fontweight="bold",
-        pad=12,
-    )
-    ax.grid(True, linestyle=":", alpha=0.6, axis="x")
+    ax_a.set_yticks(y_pos)
+    ax_a.set_yticklabels(labels, fontsize=9.5, fontweight="bold")
+    ax_a.set_xlabel("Availability Loss in Shock Window (pp, 95% CI)", fontsize=10, fontweight="bold")
+    ax_a.set_title("(A) Indigenisation Priority Ranking (180-day halt)", fontsize=11, fontweight="bold")
+    ax_a.grid(True, linestyle=":", alpha=0.6, axis="x")
 
     for bar, val, lo, hi in zip(bars, losses, ci_lo, ci_hi):
         width = bar.get_width()
-        ax.text(
-            max(width + 0.3, hi + 0.3),
+        ax_a.text(
+            max(width + 0.4, hi + 0.4),
             bar.get_y() + bar.get_height() / 2,
-            f"{val:.2f} pp [{lo:.2f}, {hi:.2f}]",
+            f"{val:.1f} pp [{lo:.1f}, {hi:.1f}]",
             va="center",
             ha="left",
-            fontsize=9,
+            fontsize=8.5,
             fontweight="bold",
         )
 
-    ax.set_xlim(0, max(ci_hi) * 1.35)
+    ax_a.set_xlim(0, max(ci_hi) * 1.35)
 
-    # Caption as explicitly requested
+    # ── Panel B: Daily gap curves ──────────────────────────────────────────
+    days_arr = np.arange(HORIZON_DAYS)
+    ax_b.axvspan(SHOCK_START, SHOCK_END, color="mistyrose", alpha=0.5, label="Foreign halt (days 90–270)")
+    ax_b.axvline(SHOCK_START, color="red", linestyle="--", linewidth=1.2)
+    ax_b.axvline(SHOCK_END, color="darkgreen", linestyle="--", linewidth=1.2, label="Supply resumes (day 270)")
+    ax_b.axhline(1.0, color="gray", linestyle=":", linewidth=1.5, label="Recovery threshold (≤ 1 aircraft)")
+
+    series_info = [
+        ("all_foreign", "crimson", "-", 2.5, "All Foreign LRUs"),
+        ("apu_start", "darkorange", "-", 2.0, "APU Starter (apu_start)"),
+        ("ecs_valve", "royalblue", "-", 2.0, "ECS Valve (ecs_valve)"),
+    ]
+
+    for sc, color, ls, lw, label in series_info:
+        if sc in daily_gaps:
+            curve = daily_gaps[sc]
+            ax_b.plot(days_arr, curve, color=color, linestyle=ls, linewidth=lw, label=label)
+
+    ax_b.set_xlabel("Simulation Day", fontsize=10, fontweight="bold")
+    ax_b.set_ylabel("Extra Grounded Aircraft (14-day rolling mean)", fontsize=10, fontweight="bold")
+    ax_b.set_title("(B) Mean Daily Gap vs Baseline (0–545 days)", fontsize=11, fontweight="bold")
+    ax_b.set_xlim(0, HORIZON_DAYS)
+    ax_b.set_ylim(-0.5, 35)
+    ax_b.grid(True, linestyle=":", alpha=0.6)
+    ax_b.legend(fontsize=8.5, loc="upper right")
+
+    fig.suptitle(
+        "A12 Supply Shock & Sustained Recovery Dynamics (Contract §6)",
+        fontsize=12,
+        fontweight="bold",
+        y=0.98,
+    )
     fig.text(
         0.5,
         0.01,
@@ -270,7 +308,7 @@ def plot_supply_shock(df: pd.DataFrame, out_path: Path) -> None:
         color="#444444",
     )
 
-    fig.tight_layout(rect=[0, 0.04, 1, 0.96])
+    fig.tight_layout(rect=[0, 0.04, 1, 0.95])
     fig.savefig(out_path, dpi=150, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"Supply shock figure saved -> {out_path}")
@@ -281,11 +319,11 @@ def main() -> None:
     csv_path = RESULTS_DIR / "supply_shock.csv"
     fig_path = RESULTS_DIR / "fig_supply_shock.png"
 
-    summary_df = run_supply_shock_experiments()
+    summary_df, daily_gaps = run_supply_shock_experiments()
     summary_df.to_csv(csv_path, index=False)
     print(f"Supply shock results saved -> {csv_path}")
 
-    plot_supply_shock(summary_df, fig_path)
+    plot_supply_shock(summary_df, daily_gaps, fig_path)
 
 
 if __name__ == "__main__":
