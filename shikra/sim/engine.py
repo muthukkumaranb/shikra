@@ -622,8 +622,8 @@ class FleetSim:
                 if not tail_mc[tail] and (
                     any(eng_state[tail * N_ENG_PER_AC + e]["in_maintenance"] for e in range(N_ENG_PER_AC))
                     or any(
-                        lru_state[tail][l["id"]]["missing"] and lru_state[tail][l["id"]].get("maint_type") == "nmcm"
-                        for l in self.lru_list
+                        lru_state[tail][lru_cfg["id"]]["missing"] and lru_state[tail][lru_cfg["id"]].get("maint_type") == "nmcm"
+                        for lru_cfg in self.lru_list
                     )
                 )
             )

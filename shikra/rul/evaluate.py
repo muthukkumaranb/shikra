@@ -78,7 +78,6 @@ def run_pipeline() -> None:
     )
     from shikra.rul.features import RUL_CAP, build_features, fit_scaler
     from shikra.rul.model import (
-        load_models,
         predict,
         save_models,
         train,
@@ -107,7 +106,6 @@ def run_pipeline() -> None:
             mask |= (df["subset"] == subset) & (df["unit"] == unit)
         return df[mask].copy()
 
-    df_train = _filter(df_all, train_pairs)
     df_calib = _filter(df_all, calib_pairs)
     df_replay = _filter(df_all, replay_pairs)
 
