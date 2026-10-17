@@ -8,6 +8,7 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "data: requires downloaded C-MAPSS dataset, skipped in CI",
 ]
