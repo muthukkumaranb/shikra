@@ -47,7 +47,8 @@ def run_summary() -> None:
         "aog_days", "unscheduled_removals", "planned_removals",
         "wasted_life_cycles", "sorties_flown", "flying_task_pct",
     ]
-    policies = ["reactive", "preventive", "shikra", "oracle"]
+    all_known_policies = ["reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2"]
+    policies = [p for p in all_known_policies if p in df["policy"].unique()]
 
     rows = []
     for policy in policies:
@@ -71,7 +72,7 @@ def run_summary() -> None:
     # Paired differences vs reactive
     reactive_df = df[df["policy"] == "reactive"].sort_values("seed")
     diff_rows = []
-    for policy in ["preventive", "shikra", "oracle"]:
+    for policy in [p for p in policies if p != "reactive"]:
         policy_df = df[df["policy"] == policy].sort_values("seed")
         for metric in metrics:
             r_vals = reactive_df[metric].values
@@ -122,8 +123,6 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     existing = gates_path.read_text(encoding="utf-8") if gates_path.exists() else "# SHIKRA Gates\n\n"
 
     reactive_svc = df[df["policy"] == "reactive"]["serviceability"].mean()
-    preventive_svc = df[df["policy"] == "preventive"]["serviceability"].mean()
-    shikra_svc = df[df["policy"] == "shikra"]["serviceability"].mean()
     oracle_svc = df[df["policy"] == "oracle"]["serviceability"].mean()
 
     # G0.3 — number of replay units (~40)
@@ -152,6 +151,13 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     else:
         gc_str = f"mean = {gc_mean:.3f}  95% CI [{gc_lo:.3f}, {gc_hi:.3f}]"
 
+    svc_rows = []
+    for p in ["reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2"]:
+        if p in df["policy"].values:
+            s_val = df[df["policy"] == p]["serviceability"].mean()
+            svc_rows.append(f"| {p} | {s_val:.1%} |")
+    svc_table = "\n".join(svc_rows)
+
     section = f"""
 ## Simulation Gates
 
@@ -165,10 +171,7 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
 
 | Policy | Mean serviceability |
 |--------|-------------------|
-| reactive | {reactive_svc:.1%} |
-| preventive | {preventive_svc:.1%} |
-| shikra | {shikra_svc:.1%} |
-| oracle | {oracle_svc:.1%} |
+{svc_table}
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
   {gc_str}

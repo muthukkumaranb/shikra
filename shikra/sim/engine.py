@@ -49,7 +49,7 @@ N_AC = N_SQN * AC_PER_SQN           # 54
 N_ENG_PER_AC = 2
 N_ENG = N_AC * N_ENG_PER_AC         # 108 engine positions
 
-POLICIES = ("reactive", "preventive", "shikra", "oracle")
+POLICIES = ("reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2")
 
 
 def _lognormal_params(mean: float, cv: float) -> tuple[float, float]:
@@ -232,9 +232,9 @@ class FleetSim:
             return None
         if self.policy == "preventive":
             return "planned" if installed_cycles >= self.T_prev else None
-        if self.policy == "shikra":
+        if self.policy in ("shikra", "shikra_v2"):
             return "planned" if q10 <= self.R_star else None
-        if self.policy == "oracle":
+        if self.policy in ("oracle", "oracle_v2"):
             return "planned" if rul_true <= self.R_star else None
         return None
 
@@ -488,7 +488,8 @@ class FleetSim:
                         # Request from depot if needed and not already inbound
                         if inbound_sqn < len(q) and depot_serviceable > 0:
                             depot_serviceable -= 1
-                            arrive = day + self.transfer_days
+                            transfer_time = max(1, int(self.transfer_days * self.pm))
+                            arrive = day + transfer_time
                             inbound_transfers.append((arrive, sqn))
                         # Engine remains grounded until spare arrives — keep at head of queue
                         break
@@ -554,8 +555,8 @@ class FleetSim:
                         ls = lru_state[tail][lid]
                         ls["sorties_flown"] += 1.0
 
-            # --- Pre-positioning (shikra and oracle only) -----------------
-            if self.policy in ("shikra", "oracle"):
+            # --- Pre-positioning (shikra, oracle, shikra_v2, oracle_v2) ---
+            if self.policy in ("shikra", "oracle", "shikra_v2", "oracle_v2"):
                 depot_serviceable = self._preposition(
                     day, eng_state, base_serviceable, depot_serviceable,
                     inbound_transfers, rng_eng
@@ -685,7 +686,7 @@ class FleetSim:
         kpis = {
             "policy": self.policy,
             "seed": self.seed,
-            "quality": 0 if self.policy == "oracle" else 1,
+            "quality": 0 if self.policy in ("oracle", "oracle_v2") else 1,
             "pipeline_mult": self.pm,
             "serviceability": serviceability,
             "mc_rate": mc_rate,
@@ -722,7 +723,12 @@ class FleetSim:
         """Pre-position spare engines from depot if expected demand exceeds supply."""
         from shikra.spares.demand import removal_prob
 
-        h = self.transfer_days * self.sortie_p  # planning horizon in cycles
+        if self.policy in ("shikra_v2", "oracle_v2"):
+            # Lead-time-aware pre-positioning horizon:
+            # h = (depot→base transfer days + planned change days) × pipeline_mult × sortie_demand, in cycles
+            h = (self.transfer_days + self.planned_days) * self.pm * self.sortie_p
+        else:
+            h = self.transfer_days * self.sortie_p  # planning horizon in cycles
 
         for sqn in range(N_SQN):
             # Count expected removals over horizon h
@@ -745,7 +751,8 @@ class FleetSim:
 
             if expected_removals > on_hand and depot_serviceable > 0:
                 depot_serviceable -= 1
-                arrive = day + self.transfer_days
+                transfer_time = max(1, int(self.transfer_days * self.pm))
+                arrive = day + transfer_time
                 inbound_transfers.append((arrive, sqn))
 
         return depot_serviceable

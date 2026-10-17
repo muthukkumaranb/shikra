@@ -21,7 +21,7 @@ RESULTS_DIR = ROOT / "results"
 CONFIG_PATH = ROOT / "config" / "wing.yaml"
 PARAMS_PATH = ARTIFACTS_DIR / "policy_params.json"
 REPLAY_PATH = ARTIFACTS_DIR / "replay_rul.parquet"
-POLICIES = ("reactive", "preventive", "shikra", "oracle")
+POLICIES = ("reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2")
 N_SEEDS = 30
 
 
@@ -35,7 +35,7 @@ def _run_one(args: tuple) -> dict:
     rul = pd.read_parquet(REPLAY_PATH)
 
     # Oracle uses perfect RUL predictions
-    if policy == "oracle":
+    if policy in ("oracle", "oracle_v2"):
         rul_use = apply(rul, 0)
     else:
         rul_use = apply(rul, 1)

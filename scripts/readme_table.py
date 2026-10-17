@@ -44,7 +44,7 @@ def generate_table() -> str:
         lines.append("### Fleet Simulation (synthetic wing, 30 replications)\n")
         lines.append("| Policy | Serviceability | 95% CI | Unscheduled removals |")
         lines.append("|--------|---------------|--------|---------------------|")
-        for p in ["reactive", "preventive", "shikra", "oracle"]:
+        for p in ["reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2"]:
             if p in svc.index:
                 row = svc.loc[p]
                 ur = uns.loc[p] if p in uns.index else None
