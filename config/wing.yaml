@@ -1,0 +1,139 @@
+# SHIKRA-Wing v0 configuration — ALL VALUES ARE SYNTHETIC
+# See DATA_CARD.md for documentation and change log.
+
+fleet:
+  squadrons: 3          # S1, S2, S3
+  aircraft_per_sqn: 18  # Tail IDs T01–T54
+  engines_per_ac: 2
+
+ops:
+  sortie_demand: 0.8    # sorties per MC tail per day
+  days: 365
+
+maintenance:
+  hangar_slots_per_sqn: 3
+  planned_change_days: 2
+  unscheduled_change_days: 5
+  engine_repair:
+    distribution: lognormal
+    mean_days: 60
+    cv: 0.4
+
+spares:
+  engines:
+    base_per_sqn: 1
+    depot: 3
+    depot_to_base_days: 3
+
+pipeline_mult: 1.0      # multiplies all repair TATs, transfer and lead times
+
+lrus:
+  - id: fuel_pump
+    description: Fuel pump
+    weibull_beta: 2.0
+    weibull_eta: 400      # sorties
+    source: domestic
+    cost_lakh: 8
+    repair_tat_days: 15
+    lead_time_days: 45
+    stock_base: 2
+    stock_depot: 4
+
+  - id: hyd_pump
+    description: Hydraulic pump
+    weibull_beta: 1.8
+    weibull_eta: 350
+    source: domestic
+    cost_lakh: 12
+    repair_tat_days: 20
+    lead_time_days: 50
+    stock_base: 2
+    stock_depot: 4
+
+  - id: radar_tx
+    description: Radar transmitter
+    weibull_beta: 1.5
+    weibull_eta: 600
+    source: foreign
+    cost_lakh: 85
+    repair_tat_days: 30
+    lead_time_days: 120
+    stock_base: 1
+    stock_depot: 2
+
+  - id: ins_unit
+    description: Inertial navigation unit
+    weibull_beta: 2.5
+    weibull_eta: 700
+    source: foreign
+    cost_lakh: 95
+    repair_tat_days: 25
+    lead_time_days: 150
+    stock_base: 1
+    stock_depot: 2
+
+  - id: gen_ac
+    description: AC generator
+    weibull_beta: 2.0
+    weibull_eta: 450
+    source: domestic
+    cost_lakh: 18
+    repair_tat_days: 18
+    lead_time_days: 40
+    stock_base: 2
+    stock_depot: 4
+
+  - id: ecs_valve
+    description: ECS valve
+    weibull_beta: 1.2
+    weibull_eta: 300
+    source: foreign
+    cost_lakh: 22
+    repair_tat_days: 35
+    lead_time_days: 180
+    stock_base: 2
+    stock_depot: 3
+
+  - id: eng_ctrl
+    description: Engine controller
+    weibull_beta: 3.0
+    weibull_eta: 900
+    source: foreign
+    cost_lakh: 110
+    repair_tat_days: 45
+    lead_time_days: 160
+    stock_base: 1
+    stock_depot: 2
+
+  - id: fire_detect
+    description: Fire detection unit
+    weibull_beta: 1.5
+    weibull_eta: 500
+    source: domestic
+    cost_lakh: 6
+    repair_tat_days: 12
+    lead_time_days: 30
+    stock_base: 3
+    stock_depot: 5
+
+  - id: apu_start
+    description: APU starter
+    weibull_beta: 2.2
+    weibull_eta: 150
+    source: foreign
+    cost_lakh: 30
+    repair_tat_days: 28
+    lead_time_days: 90
+    stock_base: 2
+    stock_depot: 3
+
+  - id: brake_ctrl
+    description: Brake controller
+    weibull_beta: 1.8
+    weibull_eta: 250
+    source: domestic
+    cost_lakh: 9
+    repair_tat_days: 10
+    lead_time_days: 35
+    stock_base: 3
+    stock_depot: 5
