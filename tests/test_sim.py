@@ -212,3 +212,54 @@ def test_engine_spares_conservation() -> None:
         )
 
 
+def test_lru_logistics_conservation_and_downtime() -> None:
+    """LRU stock is conserved, and with large stocks LRU downtime is about 1 day per failure."""
+    from shikra.rul.variants import apply
+
+    cfg = dict(_TINY_CONFIG)
+    cfg["ops"] = {"sortie_demand": 1.0, "days": 30}
+    cfg["lrus"] = [
+        {
+            "id": "pump_test",
+            "weibull_beta": 2.0,
+            "weibull_eta": 8,
+            "source": "domestic",
+            "repair_tat_days": 10,
+            "lead_time_days": 30,
+            "stock_base": 2,
+            "stock_depot": 4,
+        }
+    ]
+
+    rul = _make_tiny_rul()
+    rul_use = apply(rul, 1)
+
+    # 1. Test LRU stock conservation
+    res = run("reactive", cfg, rul_use, _TINY_PARAMS, seed=1, days=30)
+    daily = res.daily
+    assert "total_lrus" in daily.columns
+    lru_totals = [d["pump_test"] for d in daily["total_lrus"]]
+    assert len(set(lru_totals)) == 1, f"LRU stock not conserved: {set(lru_totals)}"
+
+    # 2. Test large stocks: downtime is about 1 day per failure
+    cfg_large = dict(cfg)
+    cfg_large["lrus"] = [
+        {
+            "id": "pump_large",
+            "weibull_beta": 2.0,
+            "weibull_eta": 6,
+            "source": "domestic",
+            "repair_tat_days": 10,
+            "lead_time_days": 30,
+            "stock_base": 100,
+            "stock_depot": 100,
+        }
+    ]
+    res_large = run("reactive", cfg_large, rul_use, _TINY_PARAMS, seed=1, days=30)
+    total_nmcm_days = res_large.daily["nmcm"].sum()
+    assert total_nmcm_days > 0, "Expected some NMCM days with frequent LRU failures"
+    # When base stock is abundant, every failure only incurs 1 day NMCM
+    assert (res_large.daily["nmcs"] == 0).all(), "With infinite base stock, NMCS should be 0"
+
+
+

@@ -288,8 +288,21 @@ class FleetSim:
         # Engines in repair: list of (return_day)  → go to depot
         in_repair: list[int] = []
 
-        # ── LRU state ─────────────────────────────────────────────────────
-        # lru_state[tail][lru_id] = {sorties_until_fail, missing, queue_ptr}
+        # ── LRU state and spares pools ─────────────────────────────────────
+        # lru_base_stock[sqn][lru_id] = spare count at base
+        # lru_depot_stock[lru_id] = spare count at depot
+        lru_base_stock: dict[int, dict[str, int]] = {
+            sqn: {lru["id"]: int(lru.get("stock_base", 1)) for lru in self.lru_list}
+            for sqn in range(N_SQN)
+        }
+        lru_depot_stock: dict[str, int] = {
+            lru["id"]: int(lru.get("stock_depot", 2)) for lru in self.lru_list
+        }
+        lru_in_repair: list[dict] = []
+        lru_inbound_transfers: list[dict] = []
+        lru_waiting: dict[str, list[tuple[int, int]]] = {lru["id"]: [] for lru in self.lru_list}
+
+        # lru_state[tail][lru_id] = {sorties_until_fail, missing, queue_ptr, has_lru, maint_type}
         lru_state: dict[int, dict[str, dict]] = {}
         for tail in range(N_AC):
             lru_state[tail] = {}
@@ -300,6 +313,8 @@ class FleetSim:
                     "sorties_flown": 0.0,
                     "missing": False,
                     "missing_until": -1,
+                    "has_lru": True,
+                    "maint_type": None,
                     "queue_ptr": 1,
                 }
 
@@ -335,6 +350,47 @@ class FleetSim:
             inbound_transfers = [(d, s) for (d, s) in inbound_transfers if d > day]
             for _, sqn in arrived:
                 base_serviceable[sqn] += 1
+
+            # --- Process LRU returns from repair → depot -------------------
+            lru_returned = [r for r in lru_in_repair if r["return_day"] <= day]
+            lru_in_repair = [r for r in lru_in_repair if r["return_day"] > day]
+            transfer_days = max(1, int(self.transfer_days * self.pm))
+            for r in lru_returned:
+                lid = r["id"]
+                if lru_waiting[lid]:
+                    wait_tail, wait_sqn = lru_waiting[lid].pop(0)
+                    ls = lru_state[wait_tail][lid]
+                    ls["missing_until"] = day + transfer_days
+                    lru_inbound_transfers.append({
+                        "arrival_day": day + transfer_days,
+                        "sqn": wait_sqn,
+                        "id": lid,
+                        "tail": wait_tail,
+                    })
+                else:
+                    lru_depot_stock[lid] += 1
+
+            # --- Process inbound LRU transfers → base ----------------------
+            lru_arrived = [t for t in lru_inbound_transfers if t["arrival_day"] < day]
+            lru_inbound_transfers = [t for t in lru_inbound_transfers if t["arrival_day"] >= day]
+            for t in lru_arrived:
+                tail = t["tail"]
+                lid = t["id"]
+                if lru_state[tail][lid]["missing"]:
+                    lru_state[tail][lid]["missing"] = False
+                    lru_state[tail][lid]["has_lru"] = True
+                    lru_state[tail][lid]["maint_type"] = None
+                else:
+                    lru_base_stock[t["sqn"]][lid] += 1
+
+            # --- Check completed LRU base installation (1-day change) -----
+            for tail in range(N_AC):
+                for lru in self.lru_list:
+                    lid = lru["id"]
+                    ls = lru_state[tail][lid]
+                    if ls["missing"] and ls["has_lru"] and ls["missing_until"] < day:
+                        ls["missing"] = False
+                        ls["maint_type"] = None
 
             # --- Free completed maintenance slots -------------------------
             for pos in range(N_ENG):
@@ -506,18 +562,52 @@ class FleetSim:
 
             # --- LRU failures and logistics --------------------------------
             for tail in range(N_AC):
+                sqn = tail // AC_PER_SQN
                 for lru in self.lru_list:
                     lid = lru["id"]
                     ls = lru_state[tail][lid]
-                    if ls["missing"] and ls["missing_until"] <= day:
-                        ls["missing"] = False
 
                     if not ls["missing"]:
                         if ls["sorties_flown"] >= ls["sorties_until_fail"]:
                             ls["missing"] = True
-                            # Determine resupply lead time
-                            lead = self._lru_lead_time(lru, day, rng_repair)
-                            ls["missing_until"] = day + lead
+                            ls["has_lru"] = False
+                            # Failed unit goes to repair and returns to depot stock
+                            repair_tat = max(1, int(lru["repair_tat_days"] * self.pm))
+                            lru_in_repair.append({"return_day": day + repair_tat, "id": lid})
+
+                            if lru_base_stock[sqn][lid] > 0:
+                                # Take base stock (1-day change, 1 day NMCM)
+                                lru_base_stock[sqn][lid] -= 1
+                                ls["has_lru"] = True
+                                ls["maint_type"] = "nmcm"
+                                ls["missing_until"] = day + 1
+                            elif lru_depot_stock[lid] > 0:
+                                # Transfer from depot (depot_to_base_days * pipeline_mult, NMCS)
+                                lru_depot_stock[lid] -= 1
+                                transfer_days = max(1, int(self.transfer_days * self.pm))
+                                ls["has_lru"] = False
+                                ls["maint_type"] = "nmcs"
+                                ls["missing_until"] = day + transfer_days
+                                lru_inbound_transfers.append({
+                                    "arrival_day": day + transfer_days,
+                                    "sqn": sqn,
+                                    "id": lid,
+                                    "tail": tail,
+                                })
+                            else:
+                                # Wait for repair return or new buy (lead_time_days * pipeline_mult, by source)
+                                ls["has_lru"] = False
+                                ls["maint_type"] = "nmcs"
+                                lru_waiting[lid].append((tail, sqn))
+                                lead_days = max(1, int(lru["lead_time_days"] * self.pm))
+                                transfer_days = max(1, int(self.transfer_days * self.pm))
+                                repairs = [r["return_day"] for r in lru_in_repair if r["id"] == lid]
+                                if repairs:
+                                    wait_days = max(1, min(repairs) - day) + transfer_days
+                                else:
+                                    wait_days = lead_days + transfer_days
+                                ls["missing_until"] = day + wait_days
+
                             # Advance to next lifetime draw
                             qptr = ls["queue_ptr"]
                             if qptr >= len(lru_queues[lid][tail]):
@@ -530,9 +620,12 @@ class FleetSim:
             mc = sum(tail_mc)
             nmcm = sum(
                 1 for tail in range(N_AC)
-                if not tail_mc[tail] and any(
-                    eng_state[tail * N_ENG_PER_AC + e]["in_maintenance"]
-                    for e in range(N_ENG_PER_AC)
+                if not tail_mc[tail] and (
+                    any(eng_state[tail * N_ENG_PER_AC + e]["in_maintenance"] for e in range(N_ENG_PER_AC))
+                    or any(
+                        lru_state[tail][l["id"]]["missing"] and lru_state[tail][l["id"]].get("maint_type") == "nmcm"
+                        for l in self.lru_list
+                    )
                 )
             )
             nmcs = N_AC - mc - nmcm
@@ -544,6 +637,16 @@ class FleetSim:
                 + len(inbound_transfers)
                 + len(in_repair)
             )
+            total_lrus = {
+                lru["id"]: (
+                    sum(1 for t in range(N_AC) if lru_state[t][lru["id"]]["has_lru"])
+                    + sum(lru_base_stock[s][lru["id"]] for s in range(N_SQN))
+                    + lru_depot_stock[lru["id"]]
+                    + sum(1 for r in lru_in_repair if r["id"] == lru["id"])
+                    + sum(1 for tr in lru_inbound_transfers if tr["id"] == lru["id"])
+                )
+                for lru in self.lru_list
+            }
             daily_records.append(
                 {
                     "day": day,
@@ -551,6 +654,7 @@ class FleetSim:
                     "nmcm": nmcm,
                     "nmcs": nmcs,
                     "total_engines": total_engines,
+                    "total_lrus": total_lrus,
                 }
             )
 
