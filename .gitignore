@@ -19,3 +19,6 @@ artifacts/*
 !artifacts/conformal.json
 !artifacts/splits_multi.json
 
+# Tooling
+scripts/visualizer_server.py
+visualizer/
