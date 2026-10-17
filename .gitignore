@@ -11,4 +11,6 @@ dist/
 build/
 *.so
 .eggs/
-*.log
+artifacts/*
+!artifacts/.gitkeep
+!artifacts/splits.json

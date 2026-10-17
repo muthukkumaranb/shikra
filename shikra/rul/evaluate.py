@@ -73,7 +73,6 @@ def run_pipeline() -> None:
     from shikra.data.split import load_split, split_to_sets
     from shikra.rul.conformal import (
         adjust,
-        build_calib_rows,
         calibrate,
         save_conformal,
     )
@@ -130,7 +129,8 @@ def run_pipeline() -> None:
     print(f"  X_train: {X_train.shape}  X_val: {X_val.shape}")
 
     # ── Train model ────────────────────────────────────────────────────────
-    if MODEL_PREFIX.with_suffix("").with_name("rul_models.pkl").exists():
+    models_file = ARTIFACTS_DIR / "rul_models.pkl"
+    if models_file.exists():
         print("\n[3/6] Loading existing models …")
         models = load_models(MODEL_PREFIX)
     else:
@@ -140,12 +140,22 @@ def run_pipeline() -> None:
 
     # ── Conformal calibration on calib units ──────────────────────────────
     print("\n[4/6] Conformal calibration on calib units …")
-    calib_rows = build_calib_rows(df_calib, n_trunc=10, seed=2026)
-    X_calib, y_calib, meta_calib = build_features(calib_rows, scaler)
+    X_calib_all, y_calib_all, meta_calib = build_features(df_calib, scaler)
+    rng = np.random.default_rng(2026)
+    calib_indices = []
+    for (subset, unit), grp in meta_calib.groupby(["subset", "unit"]):
+        life = grp["cycle"].max()
+        chosen_cycles = rng.integers(1, life + 1, size=10)
+        for c in chosen_cycles:
+            diffs = (grp["cycle"] - c).abs()
+            calib_indices.append(grp.index[diffs.argmin()])
+
+    X_calib = X_calib_all[calib_indices]
+    y_calib = y_calib_all[calib_indices]
     preds_calib_raw = predict(models, X_calib)
     Q_dict = calibrate(y_calib, preds_calib_raw)
     save_conformal(Q_dict)
-    adjust(preds_calib_raw, Q_dict)  # runs conformal adjustment (Q_dict is used later)
+    adjust(preds_calib_raw, Q_dict)  # runs conformal adjustment
 
     # ── Evaluate on official test sets ────────────────────────────────────
     print("\n[5/6] Evaluating on official test sets …")
@@ -154,12 +164,12 @@ def run_pipeline() -> None:
 
     for subset in ("FD001", "FD003"):
         df_test = load(subset, "test")
-        # Use last cycle per unit only
-        last_rows = df_test.sort_values("cycle").groupby("unit").tail(1).copy()
-        X_test, y_test_arr, meta_test = build_features(last_rows, scaler)
-        y_test_true = last_rows["rul_true"].values  # uncapped true RUL
+        X_test_all, _, meta_test = build_features(df_test, scaler)
+        last_idx = meta_test.groupby(["subset", "unit"]).tail(1).index
+        X_test = X_test_all[last_idx]
+        y_test_true = df_test.groupby(["subset", "unit"])["rul_final"].last().values
         y_test_capped = np.minimum(y_test_true, RUL_CAP)
-        n_units = len(last_rows)
+        n_units = len(last_idx)
 
         preds_raw = predict(models, X_test)
         preds_adj = adjust(preds_raw, Q_dict)
@@ -170,7 +180,7 @@ def run_pipeline() -> None:
         mae = float(np.mean(np.abs(y_pred_median - y_test_capped)))
         ns = nasa_score(y_test_true, y_pred_median)
 
-        # RMSE where true RUL ≤ 30
+        # RMSE where true RUL <= 30
         mask_crit = y_test_true <= 30
         if mask_crit.sum() > 0:
             rmse_crit = float(
@@ -211,8 +221,17 @@ def run_pipeline() -> None:
                 )
 
     # ── Coverage on replay units ───────────────────────────────────────────
-    replay_rows_df = build_calib_rows(df_replay, n_trunc=10, seed=2026)
-    X_rep, y_rep, _ = build_features(replay_rows_df, scaler)
+    X_rep_all, y_rep_all, meta_rep = build_features(df_replay, scaler)
+    rep_indices = []
+    for (subset, unit), grp in meta_rep.groupby(["subset", "unit"]):
+        life = grp["cycle"].max()
+        chosen_cycles = rng.integers(1, life + 1, size=10)
+        for c in chosen_cycles:
+            diffs = (grp["cycle"] - c).abs()
+            rep_indices.append(grp.index[diffs.argmin()])
+
+    X_rep = X_rep_all[rep_indices]
+    y_rep = y_rep_all[rep_indices]
     preds_rep_raw = predict(models, X_rep)
     preds_rep_adj = adjust(preds_rep_raw, Q_dict)
 
