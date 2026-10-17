@@ -21,12 +21,14 @@ against a synthetic 54-aircraft wing.
 
 ### RUL Model (LightGBM quantile ensemble, 5 seeds)
 
-| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |
-|--------|---------------|-------------|-----|------------|---------------|-----------------------------|---------|
-| FD001 | 18.45 | 11.43 | 8.29 | 227.4 | 3.47 | 62.0% | 100 |
-| FD002 | 30.29 | 13.45 | 9.47 | 7291.7 | 3.49 | 66.8% | 259 |
-| FD003 | 19.82 | 14.34 | 9.66 | 588.7 | 2.63 | 55.0% | 100 |
-| FD004 | 29.16 | 14.33 | 9.48 | 4446.0 | 7.39 | 55.6% | 248 |
+Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (piecewise convention) and uncapped.
+
+| Subset | Babu 2016 CNN | RMSE (capped 125) | RMSE (uncapped) | MAE (capped 125) | MAE (uncapped) | NASA Score (capped 125) | NASA Score (uncapped) | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |
+|--------|---------------|-------------------|-----------------|------------------|----------------|-------------------------|-----------------------|---------------|-----------------------------|---------|
+| FD001 | 18.45 | 11.64 | 12.95 | 8.40 | 9.47 | 204.3 | 235.4 | 3.37 | 61.0% | 100 |
+| FD002 | 30.29 | 13.45 | 25.47 | 9.47 | 16.96 | 975.8 | 7291.7 | 3.49 | 66.8% | 259 |
+| FD003 | 19.82 | 14.50 | 15.74 | 9.83 | 11.39 | 578.4 | 618.4 | 2.60 | 57.0% | 100 |
+| FD004 | 29.16 | 14.33 | 25.99 | 9.48 | 18.17 | 1151.2 | 4446.0 | 7.39 | 55.6% | 248 |
 
 ### Fleet Simulation (synthetic wing, 30 replications)
 

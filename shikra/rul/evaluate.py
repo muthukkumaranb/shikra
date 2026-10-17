@@ -75,8 +75,10 @@ def run_pipeline() -> None:
     from shikra.data.cmapss import load
     from shikra.data.split import load_split, split_to_sets
     from shikra.rul.conformal import (
+        CONFORMAL_PATH,
         adjust,
         calibrate,
+        load_conformal,
         save_conformal,
     )
     from shikra.rul.features import RUL_CAP, build_features, fit_scaler
@@ -152,8 +154,11 @@ def run_pipeline() -> None:
     X_calib = X_calib_all[calib_indices]
     y_calib = y_calib_all[calib_indices]
     preds_calib_raw = predict(models, X_calib)
-    Q_dict = calibrate(y_calib, preds_calib_raw)
-    save_conformal(Q_dict)
+    if CONFORMAL_PATH.exists():
+        Q_dict = load_conformal(CONFORMAL_PATH)
+    else:
+        Q_dict = calibrate(y_calib, preds_calib_raw)
+        save_conformal(Q_dict)
     adjust(preds_calib_raw, Q_dict)  # runs conformal adjustment
 
     # ── Evaluate on official test sets ────────────────────────────────────
@@ -175,9 +180,13 @@ def run_pipeline() -> None:
 
         y_pred_median = preds_adj[0.50]
 
-        rmse = float(np.sqrt(np.mean((y_pred_median - y_test_capped) ** 2)))
-        mae = float(np.mean(np.abs(y_pred_median - y_test_capped)))
-        ns = nasa_score(y_test_true, y_pred_median)
+        rmse_capped125 = float(np.sqrt(np.mean((y_pred_median - y_test_capped) ** 2)))
+        mae_capped125 = float(np.mean(np.abs(y_pred_median - y_test_capped)))
+        nasa_score_capped125 = nasa_score(y_test_capped, y_pred_median)
+
+        rmse_uncapped = float(np.sqrt(np.mean((y_pred_median - y_test_true) ** 2)))
+        mae_uncapped = float(np.mean(np.abs(y_pred_median - y_test_true)))
+        nasa_score_uncapped = nasa_score(y_test_true, y_pred_median)
 
         # RMSE where true RUL <= 30
         mask_crit = y_test_true <= 30
@@ -193,14 +202,20 @@ def run_pipeline() -> None:
                 "subset": subset,
                 "model": "lgbm_quantile",
                 "seed": "avg5",
-                "rmse": rmse,
-                "mae": mae,
-                "nasa_score": ns,
+                "rmse_capped125": rmse_capped125,
+                "mae_capped125": mae_capped125,
+                "nasa_score_capped125": nasa_score_capped125,
+                "rmse_uncapped": rmse_uncapped,
+                "mae_uncapped": mae_uncapped,
+                "nasa_score_uncapped": nasa_score_uncapped,
                 "rmse_critical": rmse_crit,
                 "n_units": n_units,
             }
         )
-        print(f"  {subset}: RMSE={rmse:.2f}  MAE={mae:.2f}  NASA={ns:.1f}  n={n_units}")
+        print(
+            f"  {subset}: RMSE(cap125)={rmse_capped125:.2f}  RMSE(uncapped)={rmse_uncapped:.2f}  "
+            f"MAE(cap125)={mae_capped125:.2f}  NASA(cap125)={nasa_score_capped125:.1f}  n={n_units}"
+        )
 
         # Coverage — pre and post conformal
         for nominal, (alo, ahi) in [(0.80, (0.10, 0.90)), (0.90, (0.05, 0.95))]:
@@ -301,7 +316,7 @@ def _write_gates(
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     fd001_row = next(r for r in rul_rows if r["subset"] == "FD001")
-    fd001_rmse = fd001_row["rmse"]
+    fd001_rmse = fd001_row["rmse_capped125"]
     g01 = "PASS" if fd001_rmse <= 18.5 else "FAIL"
     g01_detail = f"FD001 RMSE = {fd001_rmse:.2f} (threshold <= 18.5, target <= 13)"
 

@@ -45,8 +45,9 @@ def generate_table() -> str:
                 cov_lookup[r["subset"]] = float(r["empirical"])
 
         lines.append("### RUL Model (LightGBM quantile ensemble, 5 seeds)\n")
-        lines.append("| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |")
-        lines.append("|--------|---------------|-------------|-----|------------|---------------|-----------------------------|---------|")
+        lines.append("Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (piecewise convention) and uncapped.\n")
+        lines.append("| Subset | Babu 2016 CNN | RMSE (capped 125) | RMSE (uncapped) | MAE (capped 125) | MAE (uncapped) | NASA Score (capped 125) | NASA Score (uncapped) | RMSE (RUL≤30) | 80% Coverage (uncalibrated) | n units |")
+        lines.append("|--------|---------------|-------------------|-----------------|------------------|----------------|-------------------------|-----------------------|---------------|-----------------------------|---------|")
         for _, row in all_rul.iterrows():
             sub = str(row["subset"])
             babu_val = f"{babu_cnn[sub]:.2f}" if sub in babu_cnn else "—"
@@ -57,9 +58,18 @@ def generate_table() -> str:
             else:
                 cov_str = "—"
 
+            rmse_c = row.get("rmse_capped125", row.get("rmse", 0.0))
+            rmse_u = row.get("rmse_uncapped", 0.0)
+            mae_c = row.get("mae_capped125", row.get("mae", 0.0))
+            mae_u = row.get("mae_uncapped", 0.0)
+            ns_c = row.get("nasa_score_capped125", row.get("nasa_score", 0.0))
+            ns_u = row.get("nasa_score_uncapped", 0.0)
+
             lines.append(
-                f"| {sub} | {babu_val} | {row['rmse']:.2f} | {row['mae']:.2f} | "
-                f"{row['nasa_score']:.1f} | {row['rmse_critical']:.2f} | {cov_str} | {int(row['n_units'])} |"
+                f"| {sub} | {babu_val} | {rmse_c:.2f} | {rmse_u:.2f} | "
+                f"{mae_c:.2f} | {mae_u:.2f} | "
+                f"{ns_c:.1f} | {ns_u:.1f} | "
+                f"{row['rmse_critical']:.2f} | {cov_str} | {int(row['n_units'])} |"
             )
         lines.append("")
 

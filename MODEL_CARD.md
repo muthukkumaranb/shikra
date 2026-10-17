@@ -9,7 +9,7 @@
 - **Quantiles:** $\alpha \in \{0.05, 0.10, 0.50, 0.90, 0.95\}$
 - **Hyperparameters:** `learning_rate=0.05`, `num_leaves=63`, `min_child_samples=20`, `subsample=0.8`, `colsample_bytree=0.8`, `n_estimators=1000` with early stopping (30 rounds on validation).
 - **Piecewise Linear Cap:** 125 cycles
-- **Post-Processing:** Strict quantile monotonicity enforced via sorting; bounded to $[0, 125]$. Inductive conformal calibration applied for calibrated prediction intervals.
+- **Post-Processing:** Strict quantile monotonicity enforced via sorting; bounded to $[0, 125]$. Inductive conformal calibration applied for calibrated prediction intervals (FD001/FD003 only; FD002/FD004 intervals are uncalibrated quantiles).
 
 ## Intended Use
 
@@ -42,27 +42,27 @@ Data is drawn from the NASA C-MAPSS dataset. All splits are strictly engine-disj
 
 ## Performance Metrics per Subset
 
-Evaluated on official test sets, **last cycle only**, against true ground-truth RUL:
+Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (piecewise convention) and uncapped.
 
-| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Interval Coverage | Test Units |
-|--------|---------------|-------------|-----|------------|---------------|----------------------|------------|
-| FD001 | 18.45 | 11.43 | 8.29 | 227.4 | 3.47 | 83.0% (62.0% uncalibrated) | 100 |
-| FD002 | 30.29 | 13.45 | 9.47 | 7291.7 | 3.49 | 66.8% (uncalibrated) | 259 |
-| FD003 | 19.82 | 14.34 | 9.66 | 588.7 | 2.63 | 79.0% (55.0% uncalibrated) | 100 |
-| FD004 | 29.16 | 14.33 | 9.48 | 4446.0 | 7.39 | 55.6% (uncalibrated) | 248 |
+| Subset | Babu 2016 CNN | RMSE (capped 125) | RMSE (uncapped) | MAE (capped 125) | MAE (uncapped) | NASA Score (capped 125) | NASA Score (uncapped) | RMSE (RUL≤30) | 80% Interval Coverage | Test Units |
+|--------|---------------|-------------------|-----------------|------------------|----------------|-------------------------|-----------------------|---------------|-----------------------|------------|
+| FD001 | 18.45 | 11.64 | 12.95 | 8.40 | 9.47 | 204.3 | 235.4 | 3.37 | 81.0% (61.0% uncalibrated) | 100 |
+| FD002 | 30.29 | 13.45 | 25.47 | 9.47 | 16.96 | 975.8 | 7291.7 | 3.49 | 66.8% (uncalibrated) | 259 |
+| FD003 | 19.82 | 14.50 | 15.74 | 9.83 | 11.39 | 578.4 | 618.4 | 2.60 | 79.0% (57.0% uncalibrated) | 100 |
+| FD004 | 29.16 | 14.33 | 25.99 | 9.48 | 18.17 | 1151.2 | 4446.0 | 7.39 | 55.6% (uncalibrated) | 248 |
 
 ## Conformal Calibration
 
-Inductive conformal prediction calibrates prediction intervals on held-out calibration units:
+Inductive conformal prediction calibrates prediction intervals on held-out calibration units (conformal calibration applies to FD001/FD003 only; FD002/FD004 intervals are uncalibrated quantiles):
 
 | Subset / Split | Nominal Coverage | Calibrated Empirical Coverage | Uncalibrated Empirical Coverage | Mean Interval Width | Sample Size |
 |----------------|------------------|-------------------------------|---------------------------------|---------------------|-------------|
-| FD001 (test) | 80% | 83.0% | 62.0% | 30.95 cycles | 100 |
-| FD001 (test) | 90% | 92.0% | 78.0% | 42.91 cycles | 100 |
-| FD001+FD003 (replay) | 80% | 81.5% | 57.5% | 25.02 cycles | 400 |
-| FD001+FD003 (replay) | 90% | 91.5% | 73.0% | 34.11 cycles | 400 |
-| FD003 (test) | 80% | 79.0% | 55.0% | 31.55 cycles | 100 |
-| FD003 (test) | 90% | 90.0% | 75.0% | 41.27 cycles | 100 |
+| FD001 (test) | 80% | 81.0% | 61.0% | 30.94 cycles | 100 |
+| FD001 (test) | 90% | 91.0% | 76.0% | 43.24 cycles | 100 |
+| FD001+FD003 (replay) | 80% | 82.0% | 56.0% | 24.81 cycles | 400 |
+| FD001+FD003 (replay) | 90% | 92.8% | 73.2% | 34.22 cycles | 400 |
+| FD003 (test) | 80% | 79.0% | 57.0% | 30.17 cycles | 100 |
+| FD003 (test) | 90% | 90.0% | 75.0% | 40.79 cycles | 100 |
 
 ## Known Failure Modes and Robustness Findings
 

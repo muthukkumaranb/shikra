@@ -88,7 +88,7 @@ def generate_model_card() -> str:
         "- **Quantiles:** $\\alpha \\in \\{0.05, 0.10, 0.50, 0.90, 0.95\\}$",
         "- **Hyperparameters:** `learning_rate=0.05`, `num_leaves=63`, `min_child_samples=20`, `subsample=0.8`, `colsample_bytree=0.8`, `n_estimators=1000` with early stopping (30 rounds on validation).",
         "- **Piecewise Linear Cap:** 125 cycles",
-        "- **Post-Processing:** Strict quantile monotonicity enforced via sorting; bounded to $[0, 125]$. Inductive conformal calibration applied for calibrated prediction intervals.",
+        "- **Post-Processing:** Strict quantile monotonicity enforced via sorting; bounded to $[0, 125]$. Inductive conformal calibration applied for calibrated prediction intervals (FD001/FD003 only; FD002/FD004 intervals are uncalibrated quantiles).",
         "",
         "## Intended Use",
         "",
@@ -121,10 +121,10 @@ def generate_model_card() -> str:
         "",
         "## Performance Metrics per Subset",
         "",
-        "Evaluated on official test sets, **last cycle only**, against true ground-truth RUL:",
+        "Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (piecewise convention) and uncapped.",
         "",
-        "| Subset | Babu 2016 CNN | SHIKRA RMSE | MAE | NASA Score | RMSE (RUL≤30) | 80% Interval Coverage | Test Units |",
-        "|--------|---------------|-------------|-----|------------|---------------|----------------------|------------|",
+        "| Subset | Babu 2016 CNN | RMSE (capped 125) | RMSE (uncapped) | MAE (capped 125) | MAE (uncapped) | NASA Score (capped 125) | NASA Score (uncapped) | RMSE (RUL≤30) | 80% Interval Coverage | Test Units |",
+        "|--------|---------------|-------------------|-----------------|------------------|----------------|-------------------------|-----------------------|---------------|-----------------------|------------|",
     ]
 
     for _, row in all_rul.iterrows():
@@ -139,16 +139,25 @@ def generate_model_card() -> str:
         else:
             cov_val = "—"
 
+        rmse_c = row.get("rmse_capped125", row.get("rmse", 0.0))
+        rmse_u = row.get("rmse_uncapped", 0.0)
+        mae_c = row.get("mae_capped125", row.get("mae", 0.0))
+        mae_u = row.get("mae_uncapped", 0.0)
+        ns_c = row.get("nasa_score_capped125", row.get("nasa_score", 0.0))
+        ns_u = row.get("nasa_score_uncapped", 0.0)
+
         lines.append(
-            f"| {sub} | {babu_val} | {row['rmse']:.2f} | {row['mae']:.2f} | "
-            f"{row['nasa_score']:.1f} | {row['rmse_critical']:.2f} | {cov_val} | {int(row['n_units'])} |"
+            f"| {sub} | {babu_val} | {rmse_c:.2f} | {rmse_u:.2f} | "
+            f"{mae_c:.2f} | {mae_u:.2f} | "
+            f"{ns_c:.1f} | {ns_u:.1f} | "
+            f"{row['rmse_critical']:.2f} | {cov_val} | {int(row['n_units'])} |"
         )
 
     lines.extend([
         "",
         "## Conformal Calibration",
         "",
-        "Inductive conformal prediction calibrates prediction intervals on held-out calibration units:",
+        "Inductive conformal prediction calibrates prediction intervals on held-out calibration units (conformal calibration applies to FD001/FD003 only; FD002/FD004 intervals are uncalibrated quantiles):",
         "",
         "| Subset / Split | Nominal Coverage | Calibrated Empirical Coverage | Uncalibrated Empirical Coverage | Mean Interval Width | Sample Size |",
         "|----------------|------------------|-------------------------------|---------------------------------|---------------------|-------------|",

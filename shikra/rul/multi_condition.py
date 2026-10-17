@@ -215,10 +215,15 @@ def run_multi_condition_pipeline() -> pd.DataFrame:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    splits = generate_multi_splits(seed=SPLIT_SEED)
-    with SPLITS_MULTI_PATH.open("w", encoding="utf-8") as f:
-        json.dump(splits, f, indent=2)
-    print(f"Multi-condition splits saved -> {SPLITS_MULTI_PATH}")
+    if SPLITS_MULTI_PATH.exists():
+        with SPLITS_MULTI_PATH.open("r", encoding="utf-8") as f:
+            splits = json.load(f)
+        print(f"Multi-condition splits loaded -> {SPLITS_MULTI_PATH}")
+    else:
+        splits = generate_multi_splits(seed=SPLIT_SEED)
+        with SPLITS_MULTI_PATH.open("w", encoding="utf-8") as f:
+            json.dump(splits, f, indent=2)
+        print(f"Multi-condition splits saved -> {SPLITS_MULTI_PATH}")
 
     results_rows = []
 
@@ -248,13 +253,18 @@ def run_multi_condition_pipeline() -> pd.DataFrame:
         X_test_last = X_test[last_idx]
         y_test_last = meta_test.loc[last_idx, "rul_true"].values
         y_test_capped = np.minimum(y_test_last, RUL_CAP)
+        y_test_true = y_test_last
 
         preds = predict(models, X_test_last)
         y_pred = preds[0.50]
 
-        rmse = float(np.sqrt(np.mean((y_pred - y_test_capped) ** 2)))
-        mae = float(np.mean(np.abs(y_pred - y_test_capped)))
-        ns = nasa_score(y_test_last, y_pred)
+        rmse_capped125 = float(np.sqrt(np.mean((y_pred - y_test_capped) ** 2)))
+        mae_capped125 = float(np.mean(np.abs(y_pred - y_test_capped)))
+        nasa_score_capped125 = nasa_score(y_test_capped, y_pred)
+
+        rmse_uncapped = float(np.sqrt(np.mean((y_pred - y_test_true) ** 2)))
+        mae_uncapped = float(np.mean(np.abs(y_pred - y_test_true)))
+        nasa_score_uncapped = nasa_score(y_test_true, y_pred)
 
         mask_crit = y_test_last <= 30
         if np.any(mask_crit):
@@ -270,8 +280,9 @@ def run_multi_condition_pipeline() -> pd.DataFrame:
         n_units = len(last_idx)
 
         print(
-            f"  {subset} Test (last cycle): RMSE={rmse:.2f}  MAE={mae:.2f}  "
-            f"NASA={ns:.1f}  RMSE(<=30)={rmse_crit:.2f}  Cov80={cov80:.1%}  n={n_units}"
+            f"  {subset} Test (last cycle): RMSE(cap125)={rmse_capped125:.2f}  "
+            f"RMSE(uncapped)={rmse_uncapped:.2f}  MAE(cap125)={mae_capped125:.2f}  "
+            f"NASA(cap125)={nasa_score_capped125:.1f}  RMSE(<=30)={rmse_crit:.2f}  Cov80={cov80:.1%}  n={n_units}"
         )
 
         results_rows.append(
@@ -279,9 +290,12 @@ def run_multi_condition_pipeline() -> pd.DataFrame:
                 "subset": subset,
                 "model": "lgbm_quantile",
                 "seed": "avg5",
-                "rmse": rmse,
-                "mae": mae,
-                "nasa_score": ns,
+                "rmse_capped125": rmse_capped125,
+                "mae_capped125": mae_capped125,
+                "nasa_score_capped125": nasa_score_capped125,
+                "rmse_uncapped": rmse_uncapped,
+                "mae_uncapped": mae_uncapped,
+                "nasa_score_uncapped": nasa_score_uncapped,
                 "rmse_critical": rmse_crit,
                 "n_units": n_units,
                 "coverage_80": cov80,
