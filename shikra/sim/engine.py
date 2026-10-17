@@ -35,6 +35,7 @@ class SimResult:
     kpis: dict[str, Any]
     daily: pd.DataFrame
     events: pd.DataFrame
+    tail_mc: np.ndarray | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +269,7 @@ class FleetSim:
                     "life": life,
                     "queue_ptr": 1,   # next trajectory to pull
                     "in_maintenance": False,
-                    "maint_done_day": -1,
+                    "maint_done_day": None,
                     "removal_type": None,
                     "wasted_life": 0,  # life - cycle at removal for planned
                 }
@@ -310,6 +311,7 @@ class FleetSim:
         # ── Output collectors ─────────────────────────────────────────────
         daily_records: list[dict] = []
         event_records: list[dict] = []
+        tail_mc_history: list[list[bool]] = []
 
         planned_removals = 0
         unscheduled_removals = 0
@@ -336,10 +338,10 @@ class FleetSim:
             # --- Free completed maintenance slots -------------------------
             for pos in range(N_ENG):
                 es = eng_state[pos]
-                if es["in_maintenance"] and es["maint_done_day"] <= day:
-                    sqn = (pos // (N_ENG_PER_AC * AC_PER_SQN))
+                if es["in_maintenance"] and es["maint_done_day"] is not None and es["maint_done_day"] <= day:
+                    sqn = pos // (N_ENG_PER_AC * AC_PER_SQN)
                     es["in_maintenance"] = False
-                    es["maint_done_day"] = -1
+                    es["maint_done_day"] = None
                     hangar_busy[sqn] = max(0, hangar_busy[sqn] - 1)
                     # Pull next trajectory from queue
                     qptr = es["queue_ptr"]
@@ -361,13 +363,68 @@ class FleetSim:
                     if base_serviceable[sqn] > 0:
                         base_serviceable[sqn] -= 1
 
+            # --- Check engine failures and removal triggers ---------------
+            for pos in range(N_ENG):
+                es = eng_state[pos]
+                if es["in_maintenance"]:
+                    continue
+
+                sqn = pos // (N_ENG_PER_AC * AC_PER_SQN)
+                rul_info = self._get_rul(es["subset"], es["unit"], es["cycle"])
+
+                # Check failure
+                failed = es["cycle"] >= es["life"]
+                if failed:
+                    es["in_maintenance"] = True
+                    es["maint_done_day"] = None
+                    es["removal_type"] = "unscheduled"
+                    unscheduled_removals += 1
+
+                    # Send old engine to repair
+                    repair_time = int(
+                        np.exp(self.repair_mu + self.repair_sigma * rng_repair.standard_normal())
+                    )
+                    in_repair.append(day + repair_time)
+
+                    event_records.append(
+                        {"day": day, "pos": pos, "type": "unscheduled", "cycle": es["cycle"]}
+                    )
+                    maint_queue[sqn].append(pos)
+                    continue
+
+                # Check policy removal trigger
+                removal_type = self._should_remove(
+                    es["cycle"],
+                    rul_info["q10"],
+                    rul_info["rul_true"],
+                )
+                if removal_type:
+                    wasted = max(0, es["life"] - es["cycle"])
+                    es["in_maintenance"] = True
+                    es["maint_done_day"] = None
+                    es["removal_type"] = "planned"
+                    planned_removals += 1
+                    wasted_life_cycles += wasted
+
+                    repair_time = int(
+                        np.exp(self.repair_mu + self.repair_sigma * rng_repair.standard_normal())
+                    )
+                    in_repair.append(day + repair_time)
+
+                    event_records.append(
+                        {"day": day, "pos": pos, "type": "planned", "cycle": es["cycle"],
+                         "wasted": wasted}
+                    )
+                    maint_queue[sqn].append(pos)
+
             # --- Process maintenance queue (assign available hangar slots) -
             for sqn in range(N_SQN):
                 q = maint_queue[sqn]
                 while q and hangar_busy[sqn] < self.hangar_per_sqn:
-                    pos = q.pop(0)
+                    pos = q[0]
                     es = eng_state[pos]
                     if not es["in_maintenance"]:
+                        q.pop(0)
                         continue
                     # Check spare availability
                     if base_serviceable[sqn] <= 0:
@@ -376,9 +433,9 @@ class FleetSim:
                             depot_serviceable -= 1
                             arrive = day + self.transfer_days
                             inbound_transfers.append((arrive, sqn))
-                        # Engine remains grounded until spare arrives — re-queue
-                        q.insert(0, pos)
+                        # Engine remains grounded until spare arrives — keep at head of queue
                         break
+                    q.pop(0)
                     hangar_busy[sqn] += 1
                     maint_type = es["removal_type"] or "unscheduled"
                     change_days = (
@@ -405,6 +462,7 @@ class FleetSim:
                 )
 
                 tail_mc.append(both_ok and lru_ok)
+            tail_mc_history.append(list(tail_mc))
 
             # --- Sorties -------------------------------------------------
             sqn_sorties = [0] * N_SQN
@@ -421,7 +479,6 @@ class FleetSim:
             # --- Advance engine cycles ----------------------------------
             for tail in range(N_AC):
                 sqn = tail // AC_PER_SQN
-                # Actually use per-tail sortie (0 or 1) properly
                 sortie_happened = (
                     sortie_draws[tail, day] < self.sortie_p and tail_mc[tail]
                 )
@@ -437,58 +494,6 @@ class FleetSim:
                         lid = lru["id"]
                         ls = lru_state[tail][lid]
                         ls["sorties_flown"] += 1.0
-
-            # --- Check engine failures and removal triggers ---------------
-            for pos in range(N_ENG):
-                es = eng_state[pos]
-                if es["in_maintenance"]:
-                    continue
-
-                sqn = pos // (N_ENG_PER_AC * AC_PER_SQN)
-                rul_info = self._get_rul(es["subset"], es["unit"], es["cycle"])
-
-                # Check failure
-                failed = es["cycle"] >= es["life"]
-                if failed:
-                    es["in_maintenance"] = True
-                    es["removal_type"] = "unscheduled"
-                    unscheduled_removals += 1
-
-                    # Send old engine to repair
-                    repair_time = int(
-                        np.exp(self.repair_mu + self.repair_sigma * rng_repair.standard_normal())
-                    )
-                    in_repair.append(day + repair_time)
-
-                    event_records.append(
-                        {"day": day, "pos": pos, "type": "unscheduled", "cycle": es["cycle"]}
-                    )
-                    maint_queue[sqn].append(pos)
-                    continue
-
-                # Check policy removal trigger
-                removal_type = self._should_remove(
-                    es["cycle"],
-                    rul_info["q10"],
-                    rul_info["rul_true"],
-                )
-                if removal_type:
-                    wasted = max(0, es["life"] - es["cycle"])
-                    es["in_maintenance"] = True
-                    es["removal_type"] = "planned"
-                    planned_removals += 1
-                    wasted_life_cycles += wasted
-
-                    repair_time = int(
-                        np.exp(self.repair_mu + self.repair_sigma * rng_repair.standard_normal())
-                    )
-                    in_repair.append(day + repair_time)
-
-                    event_records.append(
-                        {"day": day, "pos": pos, "type": "planned", "cycle": es["cycle"],
-                         "wasted": wasted}
-                    )
-                    maint_queue[sqn].append(pos)
 
             # --- Pre-positioning (shikra and oracle only) -----------------
             if self.policy in ("shikra", "oracle"):
@@ -564,7 +569,12 @@ class FleetSim:
             ),
         }
 
-        return SimResult(kpis=kpis, daily=daily_df, events=events_df)
+        return SimResult(
+            kpis=kpis,
+            daily=daily_df,
+            events=events_df,
+            tail_mc=np.array(tail_mc_history, dtype=bool),
+        )
 
     def _preposition(
         self,

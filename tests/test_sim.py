@@ -119,3 +119,54 @@ def test_kpi_columns_present() -> None:
     kpis = _run_quick("reactive")
     for col in required_cols:
         assert col in kpis, f"KPI missing: {col}"
+
+
+def test_engine_removals_ground_aircraft_until_change_completes() -> None:
+    """If a tail has an unscheduled engine removal on day d, it is NOT MC on days d..d+4 and NMCM > 0."""
+    from shikra.rul.variants import apply
+
+    def _make_short_rul() -> pd.DataFrame:
+        rows = []
+        for unit in range(1, 10):
+            life = 15
+            for cycle in range(1, life + 1):
+                rul_true = life - cycle
+                rows.append(
+                    {
+                        "subset": "FD001",
+                        "unit": unit,
+                        "cycle": cycle,
+                        "life": life,
+                        "rul_true": rul_true,
+                        "q10": max(0, rul_true - 2),
+                        "q50": rul_true,
+                        "q90": rul_true + 2,
+                        "model_id": "test",
+                        "calib_id": "test",
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    cfg = dict(_TINY_CONFIG)
+    cfg["ops"] = {"sortie_demand": 1.0, "days": 30}
+    rul = _make_short_rul()
+    rul_use = apply(rul, 1)
+
+    result = run("reactive", cfg, rul_use, _TINY_PARAMS, seed=1, days=30)
+    unscheduled = result.events[result.events["type"] == "unscheduled"]
+    assert not unscheduled.empty, "Expected unscheduled removal event"
+
+    first_event = unscheduled.iloc[0]
+    d = int(first_event["day"])
+    tail = int(first_event["pos"]) // 2
+
+    assert result.tail_mc is not None
+    # Tail T must NOT be MC on days d..d+4 (5-day unscheduled change)
+    for day in range(d, d + 5):
+        assert not result.tail_mc[day, tail], (
+            f"Tail {tail} was unexpectedly MC on day {day} following unscheduled removal on day {d}"
+        )
+
+    # Assert that NMCM > 0 on some day
+    assert (result.daily["nmcm"] > 0).any(), "Expected NMCM > 0 on at least one day"
+
