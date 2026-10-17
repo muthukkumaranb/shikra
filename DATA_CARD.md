@@ -87,6 +87,17 @@
 
 Pre-positioning horizon h = (depot→base transfer days + planned change days) × pipeline_mult × sortie_demand, in cycles. Applies identically to shikra and oracle. R_star unchanged.
 
+### Pre-registered v2 simulation
+
+v2 simulation:
+
+- random initial ages (engines start at a uniform random cycle of their trajectory; LRUs start with sorties flown uniform in [0, first lifetime]), drawn from a dedicated RNG stream, identical across policies;
+- 365-day warm-up discarded; all KPIs measured over days 365–729;
+- squadron symmetry fixed;
+- pipeline_mult recalibrated so reactive serviceability lands at 55–65% (shared parameter only, at most 3 iterations, each logged).
+
+Whatever G0.5 shows afterwards is reported as is.
+
 ---
 
 ## 3. Model Parameters
