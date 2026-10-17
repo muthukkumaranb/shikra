@@ -70,12 +70,7 @@ def build_replay_table() -> pd.DataFrame:
     preds_raw = predict(models, X)
     preds_adj = adjust(preds_raw, Q_dict)
 
-    # Merge back with original life and rul_true (uncapped)
-    life_map = (
-        df_replay.groupby(["subset", "unit"])["cycle"].max().rename("life").reset_index()
-    )
-    df_replay = df_replay.merge(life_map, on=["subset", "unit"], how="left")
-
+    df_replay = df_replay.reset_index(drop=True)
     result = meta[["subset", "unit", "cycle"]].copy()
     result["life"] = df_replay["life"].values
     result["rul_true"] = df_replay["rul_true"].values   # uncapped
