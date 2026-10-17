@@ -73,13 +73,13 @@
 
 | Parameter | Value |
 |---|---|
-| pipeline_mult | 1.0 |
+| pipeline_mult | 1.9 |
 | Simulation horizon | 365 days |
 | Replications | 30 (seeds 1–30) |
 
 ### Calibration change log
 
-*Changes to shared wing parameters made during G0.4 calibration will be logged here.*
+- **Iteration 1**: Set `pipeline_mult: 1.9` (previously `1.0`). Increases repair turnaround times, depot-to-base transfer times, and LRU procurement lead times by 1.9×, bringing 30-seed reactive serviceability from ~76.1% to 61.6%, satisfying Gate G0.4 (target 55%–65%).
 
 ---
 

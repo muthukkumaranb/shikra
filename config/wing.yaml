@@ -25,7 +25,7 @@ spares:
     depot: 3
     depot_to_base_days: 3
 
-pipeline_mult: 1.0      # multiplies all repair TATs, transfer and lead times
+pipeline_mult: 1.9      # multiplies all repair TATs, transfer and lead times
 
 lrus:
   - id: fuel_pump

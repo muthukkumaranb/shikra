@@ -185,10 +185,10 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
             f.write(section)
 
     print(f"Gates written -> {gates_path}")
-    print(f"  {g03}")
-    print(f"  {g04}")
-    print(f"  {g05}")
-    print(f"  gap_captured = {gc_mean:.3f} [{gc_lo:.3f}, {gc_hi:.3f}]")
+    print(f"  G0.3: {g03_verdict} - {g03_detail}")
+    print(f"  G0.4: {g04_verdict} - {g04_detail}")
+    print(f"  G0.5: {g05_verdict} - {g05_detail}")
+    print(f"  gap_captured: {gc_str}")
 
 
 if __name__ == "__main__":
