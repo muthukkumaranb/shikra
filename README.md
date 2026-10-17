@@ -47,10 +47,71 @@ against a synthetic 54-aircraft wing.
 
 ## Quickstart
 
+### 1. Environment Setup
+
 ```bash
-make setup          # create .venv and install requirements
-make data           # download C-MAPSS, verify checksums
-make reproduce      # run the full pipeline (split → rul → replay → params → sim → summary → figures)
+# Linux / macOS
+make setup
+
+# Windows (PowerShell)
+python -m venv .venv
+.venv/Scripts/pip install --upgrade pip
+.venv/Scripts/pip install -r requirements.txt
+```
+
+### 2. Reproduction from Committed Artifacts (No Raw Data Needed)
+
+To reproduce all simulation results from committed artifacts (`artifacts/`):
+
+**Linux / macOS:**
+```bash
+make reproduce-sim PY=python
+python scripts/check_reproduce.py
+```
+
+**Windows (PowerShell):**
+```powershell
+make reproduce-sim PY=.venv/Scripts/python
+.venv/Scripts/python scripts/check_reproduce.py
+```
+
+#### Measured Runtimes per Target
+
+| Target | Description | Measured Runtime | Output Artifacts |
+|--------|-------------|------------------|------------------|
+| `sim` | Fleet simulation (6 policies, 30 seeds) | ~18.5s | `results/policies.csv` |
+| `summary` | Bootstrapped KPI summary & gates | ~3.5s | `results/policy_summary.csv` |
+| `heatmap` | Pipeline multiplier lever sweep & bootstrap | ~2.0s | `results/heatmap.csv`, `results/fig_lever_map.png` |
+| `bias` | Systematic RUL bias sweep (§3.2b, 150 runs) | ~32.1s | `results/bias.csv`, `results/fig_bias.png` |
+| `shock` | Supply-shock resilience & recovery (545 days, 30 seeds) | ~65.0 min | `results/supply_shock.csv`, `results/fig_supply_shock.png` |
+| `figures` | Policy comparison charts | ~1.3s | `results/fig_policies.png` |
+| `readme` | Auto-generate README / GATES summary tables | ~0.7s | `README.md`, `GATES.md` |
+| **`reproduce-sim`** | **Full simulation reproduction** | **~66 min** | All committed CSVs & figures |
+
+> **CI Quick Mode (`reproduce-sim-quick`):** Because `shock` runs 60 full 545-day simulations and takes ~65 minutes (exceeding standard CI time budgets), CI runs in `--quick` mode:
+> ```bash
+> make reproduce-sim-quick PY=python
+> python scripts/check_reproduce.py --quick
+> ```
+> This executes `sim` + `summary` + `bias` in ~54 seconds and validates `policies.csv`, `policy_summary.csv`, and `bias.csv`.
+
+### 3. Full Pipeline Reproduction (Requires C-MAPSS)
+
+```bash
+make data       # download C-MAPSS FD001–FD004
+make reproduce  # full pipeline: split → rul → replay → params → sim → summary → figures
+```
+
+### 4. Offline Containerized Reproduction (Docker)
+
+To verify full offline reproducibility with zero network access:
+
+```bash
+# Build offline Docker image
+docker build -t shikra .
+
+# Run container completely air-gapped
+docker run --network none shikra
 ```
 
 ---
