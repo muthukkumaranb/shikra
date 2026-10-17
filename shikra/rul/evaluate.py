@@ -16,6 +16,9 @@ from __future__ import annotations
 import pickle
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -285,7 +288,7 @@ def _plot_reliability(
     ax.set_xlim(0.7, 1.0)
     ax.set_ylim(0.7, 1.0)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=120)
+    fig.savefig(out_path, dpi=120, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"  Reliability figure -> {out_path}")
 

@@ -19,6 +19,9 @@ import multiprocessing as mp
 import sys
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -202,7 +205,7 @@ def plot_bias_results(summary_df: pd.DataFrame, out_path: Path) -> None:
     )
 
     fig.tight_layout(rect=[0, 0.04, 1, 0.95])
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"Bias robustness figure saved -> {out_path}")
 

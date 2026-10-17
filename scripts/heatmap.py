@@ -19,6 +19,9 @@ import multiprocessing as mp
 import sys
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -272,7 +275,7 @@ def plot_heatmap(df: pd.DataFrame, out_path: Path) -> None:
     cbar.set_label("Serviceability Gain vs Reactive (percentage points)", fontsize=10)
 
     fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"Heatmap figure saved -> {out_path}")
 
@@ -386,7 +389,7 @@ def plot_lever_map(df: pd.DataFrame, out_path: Path) -> None:
     )
 
     fig.tight_layout(rect=[0, 0.04, 1, 0.95])
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"Lever map figure saved -> {out_path}")
 

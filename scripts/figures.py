@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -67,7 +70,7 @@ def fig_policies() -> None:
 
     fig.tight_layout()
     out = RESULTS_DIR / "fig_policies.png"
-    fig.savefig(out, dpi=150)
+    fig.savefig(out, dpi=150, metadata={"Software": None, "CreationDate": None})
     plt.close(fig)
     print(f"Figure saved -> {out}")
 
