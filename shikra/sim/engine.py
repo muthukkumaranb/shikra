@@ -307,7 +307,14 @@ class FleetSim:
         # lru_base_stock[sqn][lru_id] = spare count at base
         # lru_depot_stock[lru_id] = spare count at depot
         lru_base_stock: dict[int, dict[str, int]] = {
-            sqn: {lru["id"]: int(lru.get("stock_base", 1)) for lru in self.lru_list}
+            sqn: {
+                lru["id"]: (
+                    int(lru["stock_base"][sqn])
+                    if isinstance(lru.get("stock_base"), (list, tuple))
+                    else int(lru.get("stock_base", 1))
+                )
+                for lru in self.lru_list
+            }
             for sqn in range(N_SQN)
         }
         lru_depot_stock: dict[str, int] = {
@@ -746,8 +753,9 @@ class FleetSim:
             "flying_task_pct": (
                 sorties_flown / sorties_demanded if sorties_demanded > 0 else 0.0
             ),
-            "lru_failures_shock_window": lru_failures_shock_window,
         }
+        if self.shock:
+            kpis["lru_failures_shock_window"] = lru_failures_shock_window
 
         return SimResult(
             kpis=kpis,
