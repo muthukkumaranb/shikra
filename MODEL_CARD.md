@@ -57,27 +57,27 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
 
 | Subset / Split | Nominal Coverage | Calibrated Empirical Coverage | Uncalibrated Empirical Coverage | Mean Interval Width | Sample Size |
 |----------------|------------------|-------------------------------|---------------------------------|---------------------|-------------|
-| FD001 (test) | 80% | 81.0% | 61.0% | 30.94 cycles | 100 |
-| FD001 (test) | 90% | 91.0% | 76.0% | 43.24 cycles | 100 |
-| FD001+FD003 (replay) | 80% | 82.0% | 56.0% | 24.81 cycles | 400 |
-| FD001+FD003 (replay) | 90% | 92.8% | 73.2% | 34.22 cycles | 400 |
-| FD003 (test) | 80% | 79.0% | 57.0% | 30.17 cycles | 100 |
-| FD003 (test) | 90% | 90.0% | 75.0% | 40.79 cycles | 100 |
+| FD001 (test) | 80% | 81.0% | 61.0% | 30.91 cycles | 100 |
+| FD001 (test) | 90% | 90.0% | 76.0% | 42.96 cycles | 100 |
+| FD001+FD003 (replay) | 80% | 81.8% | 56.0% | 24.78 cycles | 400 |
+| FD001+FD003 (replay) | 90% | 92.8% | 73.2% | 33.97 cycles | 400 |
+| FD003 (test) | 80% | 79.0% | 57.0% | 30.14 cycles | 100 |
+| FD003 (test) | 90% | 89.0% | 75.0% | 40.51 cycles | 100 |
 
 ## Known Failure Modes and Robustness Findings
 
 1. **Systematic Prediction Bias Sensitivity (§3.2b):**
-   - **Pessimistic Bias (−10 cycles):** Wastes 1993 cycles of usable engine life across the fleet due to premature removals, while maintaining 0 unscheduled removals.
+   - **Pessimistic Bias (−10 cycles):** Wastes 1978 cycles of usable engine life across the fleet due to premature removals, while maintaining 0 unscheduled removals.
    - **Optimistic Bias (+10 cycles):** Causes severe late removals, raising unscheduled engine removals from 0.0 to 94.8 per fleet-year.
-   - **Zero Bias (Nominal):** Produces 0.0 unscheduled removals with 845 cycles wasted life.
+   - **Zero Bias (Nominal):** Produces 0.0 unscheduled removals with 820 cycles wasted life.
 
 2. **Degraded Prediction Quality (2× Error Impact from Heatmap):**
    - At nominal pipeline speed (`pipeline_mult=1.0`):
      - SHIKRA nominal (quality 1.0): 76.7% serviceability (gain vs reactive: +0.7%).
-     - Poor quality (quality 2.0, 2× error): 55.6% serviceability (loss vs reactive: -20.5%), causing a net availability drop of 21.2 percentage points.
+     - Poor quality (quality 2.0, 2× error): 55.6% serviceability (loss vs reactive: -20.4%), causing a net availability drop of 21.1 percentage points.
    - At wing pipeline speed (`pipeline_mult=1.9`):
-     - SHIKRA nominal (quality 1.0): 60.5% serviceability.
-     - Poor quality (quality 2.0): 40.3% serviceability, causing an availability collapse of 20.3 percentage points due to hangar congestion and erratic queue spikes.
+     - SHIKRA nominal (quality 1.0): 60.6% serviceability.
+     - Poor quality (quality 2.0): 40.5% serviceability, causing an availability collapse of 20.1 percentage points due to hangar congestion and erratic queue spikes.
 
 ## Data Integrity and Leakage Prevention
 
@@ -85,3 +85,4 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
   - The model never accesses `rul_true` during inference, test evaluation, or fleet simulation.
   - The model is never trained or calibrated on the 40 replay engines, which are kept strictly unseen to prevent optimistic bias in simulation.
   - Sensor scaling and cluster centers are fit strictly on training units, with zero leakage from validation, calibration, or test sets.
+- **Model of Record:** model of record re-frozen 17 Oct; previous replay model was not committed and was overwritten by a retrain; all results regenerated from the committed model.

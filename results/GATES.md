@@ -21,13 +21,13 @@
 | preventive | 51.8% |
 | shikra | 60.5% |
 | oracle | 60.9% |
-| shikra_v2 | 60.5% |
+| shikra_v2 | 60.6% |
 | oracle_v2 | 60.9% |
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
-  mean = -0.594  95% CI [-3.134, 1.479]
+  mean = -0.890  95% CI [-4.621, 1.685]
 
-> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.5% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.6% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 >
 > **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 29 extra aircraft of 54 (15.7 pp over the halt); recovery takes 95 days after supply resumes. Ranking: apu_start (13.6 pp), ecs_valve (3.7 pp). Parameters are synthetic; the method is the claim.
 >

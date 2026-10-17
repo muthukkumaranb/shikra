@@ -193,6 +193,7 @@ def generate_model_card() -> str:
         "  - The model never accesses `rul_true` during inference, test evaluation, or fleet simulation.",
         f"  - The model is never trained or calibrated on the {n_rep_single} replay engines, which are kept strictly unseen to prevent optimistic bias in simulation.",
         "  - Sensor scaling and cluster centers are fit strictly on training units, with zero leakage from validation, calibration, or test sets.",
+        "- **Model of Record:** model of record re-frozen 17 Oct; previous replay model was not committed and was overwritten by a retrain; all results regenerated from the committed model.",
         "",
     ])
 

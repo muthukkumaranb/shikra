@@ -81,6 +81,7 @@
 
 - **Iteration 1**: Set `pipeline_mult: 1.9` (previously `1.0`). Increases repair turnaround times, depot-to-base transfer times, and LRU procurement lead times by 1.9×, bringing 30-seed reactive serviceability from ~76.1% to 61.6%, satisfying Gate G0.4 (target 55%–65%).
 - **Supply halt repair restart**: In A12 supply shock, held-repair return day set to `return_day = max(day, self.shock_end) + repair_tat`, and shock window bounded by `self.shock_start <= day < self.shock_end` (v1 returned all held repairs on the day the halt lifted, which produced an instant recovery and an overshoot; found in verification).
+- **Model of record re-freeze**: model of record re-frozen 17 Oct; previous replay model was not committed and was overwritten by a retrain; all results regenerated from the committed model.
 
 ### Pre-registered SHIKRA v2 (lead-time-aware pre-positioning)
 
