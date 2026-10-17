@@ -149,7 +149,7 @@ def save_models(
     with out_path.open("wb") as f:
         pickle.dump(models, f)
     sha = hashlib.sha256(out_path.read_bytes()).hexdigest()[:12]
-    print(f"Models saved → {out_path}  (sha256[:12]={sha})")
+    print(f"Models saved -> {out_path}  (sha256[:12]={sha})")
     return sha
 
 

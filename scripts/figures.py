@@ -69,7 +69,7 @@ def fig_policies() -> None:
     out = RESULTS_DIR / "fig_policies.png"
     fig.savefig(out, dpi=150)
     plt.close(fig)
-    print(f"Figure saved → {out}")
+    print(f"Figure saved -> {out}")
 
 
 if __name__ == "__main__":

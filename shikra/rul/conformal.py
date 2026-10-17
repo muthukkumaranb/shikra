@@ -183,7 +183,7 @@ def save_conformal(Q_dict: dict, path: Path = CONFORMAL_PATH) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(Q_dict, indent=2))
     sha = hashlib.sha256(path.read_bytes()).hexdigest()[:12]
-    print(f"Conformal params saved → {path}  (sha256[:12]={sha})")
+    print(f"Conformal params saved -> {path}  (sha256[:12]={sha})")
     return sha
 
 

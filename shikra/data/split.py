@@ -133,7 +133,7 @@ if __name__ == "__main__":
     else:
         split = make_split()
         SPLITS_PATH.write_text(json.dumps(split, indent=2))
-        print(f"Wrote split → {SPLITS_PATH}")
+        print(f"Wrote split -> {SPLITS_PATH}")
 
     split = load_split()
     n_train = len(split["train"])

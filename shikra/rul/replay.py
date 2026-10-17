@@ -92,6 +92,6 @@ if __name__ == "__main__":
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     table = build_replay_table()
     table.to_parquet(REPLAY_PATH, index=False)
-    print(f"Replay table written → {REPLAY_PATH}  ({len(table):,} rows)")
+    print(f"Replay table written -> {REPLAY_PATH}  ({len(table):,} rows)")
     print(f"  Unique units: {table.groupby(['subset','unit']).ngroups}")
     print(f"  model_id={table['model_id'].iloc[0]}  calib_id={table['calib_id'].iloc[0]}")

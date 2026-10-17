@@ -111,7 +111,7 @@ def run_summary() -> None:
         gc_mean, gc_lo, gc_hi = float("nan"), float("nan"), float("nan")
 
     summary.to_csv(RESULTS_DIR / "policy_summary.csv", index=False)
-    print(f"Summary written → {RESULTS_DIR / 'policy_summary.csv'}")
+    print(f"Summary written -> {RESULTS_DIR / 'policy_summary.csv'}")
 
     # ── Gates ────────────────────────────────────────────────────────────
     _write_sim_gates(df, gc_mean, gc_lo, gc_hi)
@@ -119,7 +119,7 @@ def run_summary() -> None:
 
 def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: float) -> None:
     gates_path = RESULTS_DIR / "GATES.md"
-    existing = gates_path.read_text() if gates_path.exists() else "# SHIKRA Gates\n\n"
+    existing = gates_path.read_text(encoding="utf-8") if gates_path.exists() else "# SHIKRA Gates\n\n"
 
     reactive_svc = df[df["policy"] == "reactive"]["serviceability"].mean()
     oracle_svc = df[df["policy"] == "oracle"]["serviceability"].mean()
@@ -131,23 +131,23 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     if replay_path.exists():
         rul = pd.read_parquet(replay_path)
         n_replay = rul.groupby(["subset", "unit"]).ngroups
-    g03 = f"G0.3 — replay units = {n_replay} (expected ~40)"
+    g03 = f"G0.3 - replay units = {n_replay} (expected ~40)"
 
     # G0.4 — reactive serviceability 55-65%
     g04_pass = 0.55 <= reactive_svc <= 0.65
     g04_verdict = "PASS" if g04_pass else "FAIL"
     g04 = (
-        f"G0.4 — reactive serviceability = {reactive_svc:.1%} "
-        f"(target 55-65%) → **{g04_verdict}**"
+        f"G0.4 - reactive serviceability = {reactive_svc:.1%} "
+        f"(target 55-65%) -> **{g04_verdict}**"
     )
 
-    # G0.5 — oracle - reactive ≥ 5 pp
+    # G0.5 — oracle - reactive >= 5 pp
     gap_pp = (oracle_svc - reactive_svc) * 100
     g05_pass = gap_pp >= 5.0
     g05_verdict = "PASS" if g05_pass else "FAIL (finding, not tuned)"
     g05 = (
-        f"G0.5 — oracle − reactive = {gap_pp:.1f} pp "
-        f"(threshold ≥ 5 pp) → **{g05_verdict}**"
+        f"G0.5 - oracle - reactive = {gap_pp:.1f} pp "
+        f"(threshold >= 5 pp) -> **{g05_verdict}**"
     )
 
     section = f"""
@@ -177,12 +177,12 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
         existing = re.sub(
             r"## Simulation Gates.*", section.strip(), existing, flags=re.DOTALL
         )
-        gates_path.write_text(existing)
+        gates_path.write_text(existing, encoding="utf-8")
     else:
-        with gates_path.open("a") as f:
+        with gates_path.open("a", encoding="utf-8") as f:
             f.write(section)
 
-    print(f"Gates written → {gates_path}")
+    print(f"Gates written -> {gates_path}")
     print(f"  {g03}")
     print(f"  {g04}")
     print(f"  {g05}")

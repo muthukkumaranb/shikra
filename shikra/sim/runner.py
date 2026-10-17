@@ -72,7 +72,7 @@ def run_all(n_seeds: int = N_SEEDS, n_jobs: int | None = None) -> pd.DataFrame:
     df = pd.DataFrame(results)
     out_path = RESULTS_DIR / "policies.csv"
     df.to_csv(out_path, index=False)
-    print(f"Results written → {out_path}  ({len(df)} rows)")
+    print(f"Results written -> {out_path}  ({len(df)} rows)")
     return df
 
 

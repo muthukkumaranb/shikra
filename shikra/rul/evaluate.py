@@ -235,8 +235,8 @@ def run_pipeline() -> None:
     # ── Write results ──────────────────────────────────────────────────────
     pd.DataFrame(rul_rows).to_csv(RESULTS_DIR / "rul_cmapss.csv", index=False)
     pd.DataFrame(cov_rows).to_csv(RESULTS_DIR / "coverage.csv", index=False)
-    print(f"\n  Results written → {RESULTS_DIR/'rul_cmapss.csv'}")
-    print(f"  Coverage written → {RESULTS_DIR/'coverage.csv'}")
+    print(f"\n  Results written -> {RESULTS_DIR/'rul_cmapss.csv'}")
+    print(f"  Coverage written -> {RESULTS_DIR/'coverage.csv'}")
 
     # ── Reliability figure ─────────────────────────────────────────────────
     _plot_reliability(preds_rep_adj, y_rep, RESULTS_DIR / "fig_reliability.png")
@@ -272,7 +272,7 @@ def _plot_reliability(
     fig.tight_layout()
     fig.savefig(out_path, dpi=120)
     plt.close(fig)
-    print(f"  Reliability figure → {out_path}")
+    print(f"  Reliability figure -> {out_path}")
 
 
 def _write_gates(
@@ -285,7 +285,7 @@ def _write_gates(
     fd001_row = next(r for r in rul_rows if r["subset"] == "FD001")
     fd001_rmse = fd001_row["rmse"]
     g01 = "PASS" if fd001_rmse <= 18.5 else "FAIL"
-    g01_detail = f"FD001 RMSE = {fd001_rmse:.2f} (threshold ≤ 18.5, target ≤ 13)"
+    g01_detail = f"FD001 RMSE = {fd001_rmse:.2f} (threshold <= 18.5, target <= 13)"
 
     # G0.2: 90% coverage on replay units (calibrated)
     cov_90_replay = next(
@@ -295,13 +295,13 @@ def _write_gates(
     )
     emp_90 = cov_90_replay["empirical"]
     g02 = "PASS" if 0.85 <= emp_90 <= 0.95 else "FAIL"
-    g02_detail = f"90% replay coverage = {emp_90:.3f} (target 0.85–0.95)"
+    g02_detail = f"90% replay coverage = {emp_90:.3f} (target 0.85-0.95)"
 
-    print(f"  G0.1: {g01}  — {g01_detail}")
-    print(f"  G0.2: {g02}  — {g02_detail}")
+    print(f"  G0.1: {g01}  - {g01_detail}")
+    print(f"  G0.2: {g02}  - {g02_detail}")
 
     # Append to GATES.md
-    existing = GATES_PATH.read_text() if GATES_PATH.exists() else ""
+    existing = GATES_PATH.read_text(encoding="utf-8") if GATES_PATH.exists() else ""
     section = f"""
 ## RUL Model Gates
 
@@ -317,12 +317,12 @@ def _write_gates(
         existing = re.sub(
             r"## RUL Model Gates.*?(?=\n## |\Z)", section.strip(), existing, flags=re.DOTALL
         )
-        GATES_PATH.write_text(existing)
+        GATES_PATH.write_text(existing, encoding="utf-8")
     else:
-        with GATES_PATH.open("a") as f:
+        with GATES_PATH.open("a", encoding="utf-8") as f:
             f.write(section)
 
-    print(f"  Gates written → {GATES_PATH}")
+    print(f"  Gates written -> {GATES_PATH}")
 
 
 # ---------------------------------------------------------------------------

@@ -168,5 +168,5 @@ if __name__ == "__main__":
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     params = compute_params()
     PARAMS_PATH.write_text(json.dumps(params, indent=2))
-    print(f"\nPolicy params → {PARAMS_PATH}")
+    print(f"\nPolicy params -> {PARAMS_PATH}")
     print(json.dumps(params, indent=2))
