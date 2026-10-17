@@ -122,8 +122,9 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     existing = gates_path.read_text(encoding="utf-8") if gates_path.exists() else "# SHIKRA Gates\n\n"
 
     reactive_svc = df[df["policy"] == "reactive"]["serviceability"].mean()
-    oracle_svc = df[df["policy"] == "oracle"]["serviceability"].mean()
+    preventive_svc = df[df["policy"] == "preventive"]["serviceability"].mean()
     shikra_svc = df[df["policy"] == "shikra"]["serviceability"].mean()
+    oracle_svc = df[df["policy"] == "oracle"]["serviceability"].mean()
 
     # G0.3 — number of replay units (~40)
     replay_path = ARTIFACTS_DIR / "replay_rul.parquet"
@@ -131,45 +132,46 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     if replay_path.exists():
         rul = pd.read_parquet(replay_path)
         n_replay = rul.groupby(["subset", "unit"]).ngroups
-    g03 = f"G0.3 - replay units = {n_replay} (expected ~40)"
+    g03_pass = 35 <= n_replay <= 45
+    g03_verdict = "PASS" if g03_pass else "FAIL"
+    g03_detail = f"replay units = {n_replay} (expected ~40)"
 
     # G0.4 — reactive serviceability 55-65%
     g04_pass = 0.55 <= reactive_svc <= 0.65
     g04_verdict = "PASS" if g04_pass else "FAIL"
-    g04 = (
-        f"G0.4 - reactive serviceability = {reactive_svc:.1%} "
-        f"(target 55-65%) -> **{g04_verdict}**"
-    )
+    g04_detail = f"reactive serviceability = {reactive_svc:.1%} (target 55-65%)"
 
     # G0.5 — oracle - reactive >= 5 pp
     gap_pp = (oracle_svc - reactive_svc) * 100
     g05_pass = gap_pp >= 5.0
     g05_verdict = "PASS" if g05_pass else "FAIL (finding, not tuned)"
-    g05 = (
-        f"G0.5 - oracle - reactive = {gap_pp:.1f} pp "
-        f"(threshold >= 5 pp) -> **{g05_verdict}**"
-    )
+    g05_detail = f"oracle - reactive = {gap_pp:.1f} pp (threshold >= 5 pp)"
+
+    if np.isnan(gc_mean):
+        gc_str = "n/a (oracle gap is zero)"
+    else:
+        gc_str = f"mean = {gc_mean:.3f}  95% CI [{gc_lo:.3f}, {gc_hi:.3f}]"
 
     section = f"""
 ## Simulation Gates
 
-| Gate | Result |
-|------|--------|
-| {g03} | — |
-| {g04} | |
-| {g05} | |
+| Gate | Verdict | Detail |
+|------|---------|--------|
+| G0.3 — replay units ~40 | **{g03_verdict}** | {g03_detail} |
+| G0.4 — reactive serviceability 55–65% | **{g04_verdict}** | {g04_detail} |
+| G0.5 — oracle gap ≥ 5 pp | **{g05_verdict}** | {g05_detail} |
 
 **Serviceability per policy (mean over 30 seeds):**
 
 | Policy | Mean serviceability |
 |--------|-------------------|
 | reactive | {reactive_svc:.1%} |
+| preventive | {preventive_svc:.1%} |
 | shikra | {shikra_svc:.1%} |
 | oracle | {oracle_svc:.1%} |
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
-  mean = {gc_mean:.3f}  95% CI [{gc_lo:.3f}, {gc_hi:.3f}]
-
+  {gc_str}
 """
 
     if "## Simulation Gates" in existing:
