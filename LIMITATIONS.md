@@ -33,7 +33,7 @@ This document honestly lists the known limitations of the SHIKRA system for SIH2
 
 ## Simulation Limitations
 
-- **SimPy discrete-event simulation with daily resolution.**
+- **Discrete-event simulation with daily resolution.**
   Sub-daily events (e.g., multiple sorties in a day, mid-day failures) are not modelled.
 
 - **No multi-condition modelling today.**

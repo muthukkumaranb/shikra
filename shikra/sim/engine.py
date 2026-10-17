@@ -1,7 +1,7 @@
 """SHIKRA fleet discrete-event simulation.
 
 Simulates a 54-aircraft wing (3 squadrons × 18 aircraft) over a one-year
-horizon using SimPy with daily resolution.  Four policies are supported:
+horizon with daily resolution.  Four policies are supported:
   reactive    — remove only at failure
   preventive  — remove when installed cycles ≥ T_prev
   shikra      — remove when q10 ≤ R_star (or failure)

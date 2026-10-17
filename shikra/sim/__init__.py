@@ -1,1 +1,1 @@
-"""Fleet discrete-event simulation using SimPy."""
+"""Fleet discrete-event simulation."""
