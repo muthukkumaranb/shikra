@@ -262,4 +262,62 @@ def test_lru_logistics_conservation_and_downtime() -> None:
     assert (res_large.daily["nmcs"] == 0).all(), "With infinite base stock, NMCS should be 0"
 
 
+def test_spare_waiting_aircraft_is_nmcs() -> None:
+    """An aircraft waiting for an engine spare is NMCS until spare arrives, then NMCM for change days."""
+    from shikra.rul.variants import apply
+
+    rows = []
+    # unit 1: life 1 (will fail after 1 cycle)
+    rows.append({
+        "subset": "FD001", "unit": 1, "cycle": 1, "life": 1,
+        "rul_true": 0, "q10": 0, "q50": 0, "q90": 0,
+        "model_id": "test", "calib_id": "test",
+    })
+    for u in range(2, 20):
+        for c in range(1, 200):
+            rows.append({
+                "subset": "FD001", "unit": u, "cycle": c, "life": 200,
+                "rul_true": 200 - c, "q10": max(0, 200 - c - 2), "q50": 200 - c, "q90": 200 - c + 2,
+                "model_id": "test", "calib_id": "test",
+            })
+    rul = pd.DataFrame(rows)
+    rul_use = apply(rul, 1)
+
+    cfg = dict(_TINY_CONFIG)
+    cfg["ops"] = {"sortie_demand": 1.0, "days": 15}
+    cfg["maintenance"]["unscheduled_change_days"] = 5
+    # Base stock 0, depot 1, transfer time 3 days
+    cfg["spares"] = {"engines": {"base_per_sqn": 0, "depot": 1, "depot_to_base_days": 3}}
+    cfg["pipeline_mult"] = 1.0
+
+    res = run("reactive", cfg, rul_use, _TINY_PARAMS, seed=1, days=15)
+    ev = res.events
+    assert len(ev) >= 1, "Expected at least one removal event"
+    rem_event = ev[ev["type"] == "unscheduled"].iloc[0]
+    rem_day = int(rem_event["day"])
+    tail = int(rem_event["pos"] // 2)
+
+    spare_arrive_day = rem_day + 3
+    change_days = 5
+    maint_done_day = spare_arrive_day + change_days
+
+    # Tail should be NMCS while waiting for spare
+    for d in range(rem_day, spare_arrive_day):
+        assert res.tail_status[d][tail] == "NMCS", (
+            f"Day {d}: expected NMCS while waiting for spare, got {res.tail_status[d][tail]}"
+        )
+
+    # Tail should be NMCM during change days
+    for d in range(spare_arrive_day, maint_done_day):
+        assert res.tail_status[d][tail] == "NMCM", (
+            f"Day {d}: expected NMCM during change, got {res.tail_status[d][tail]}"
+        )
+
+    # Tail should be MC after change completes
+    assert res.tail_status[maint_done_day][tail] == "MC", (
+        f"Day {maint_done_day}: expected MC after change, got {res.tail_status[maint_done_day][tail]}"
+    )
+
+
+
 

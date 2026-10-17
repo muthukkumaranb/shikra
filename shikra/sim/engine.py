@@ -36,6 +36,7 @@ class SimResult:
     daily: pd.DataFrame
     events: pd.DataFrame
     tail_mc: np.ndarray | None = None
+    tail_status: list[list[str]] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +331,7 @@ class FleetSim:
         daily_records: list[dict] = []
         event_records: list[dict] = []
         tail_mc_history: list[list[bool]] = []
+        tail_status_history: list[list[str]] = []
 
         planned_removals = 0
         unscheduled_removals = 0
@@ -617,17 +619,29 @@ class FleetSim:
 
             # --- Record daily status -------------------------------------
             mc = sum(tail_mc)
-            nmcm = sum(
-                1 for tail in range(N_AC)
-                if not tail_mc[tail] and (
-                    any(eng_state[tail * N_ENG_PER_AC + e]["in_maintenance"] for e in range(N_ENG_PER_AC))
-                    or any(
-                        lru_state[tail][lru_cfg["id"]]["missing"] and lru_state[tail][lru_cfg["id"]].get("maint_type") == "nmcm"
-                        for lru_cfg in self.lru_list
+            daily_tail_status = []
+            for tail in range(N_AC):
+                if tail_mc[tail]:
+                    daily_tail_status.append("MC")
+                else:
+                    # NMCM = actively in a hangar slot (change in progress) or LRU change in progress
+                    is_nmcm = (
+                        any(
+                            eng_state[tail * N_ENG_PER_AC + e]["in_maintenance"]
+                            and eng_state[tail * N_ENG_PER_AC + e]["maint_done_day"] is not None
+                            for e in range(N_ENG_PER_AC)
+                        )
+                        or any(
+                            lru_state[tail][lru_cfg["id"]]["missing"]
+                            and lru_state[tail][lru_cfg["id"]].get("maint_type") == "nmcm"
+                            for lru_cfg in self.lru_list
+                        )
                     )
-                )
-            )
-            nmcs = N_AC - mc - nmcm
+                    daily_tail_status.append("NMCM" if is_nmcm else "NMCS")
+            tail_status_history.append(daily_tail_status)
+
+            nmcm = sum(1 for s in daily_tail_status if s == "NMCM")
+            nmcs = sum(1 for s in daily_tail_status if s == "NMCS")
             installed_engines = sum(1 for e in eng_state if e["installed"])
             total_engines = (
                 installed_engines
@@ -693,6 +707,7 @@ class FleetSim:
             daily=daily_df,
             events=events_df,
             tail_mc=np.array(tail_mc_history, dtype=bool),
+            tail_status=tail_status_history,
         )
 
     def _preposition(
