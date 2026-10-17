@@ -37,6 +37,7 @@ class SimResult:
     events: pd.DataFrame
     tail_mc: np.ndarray | None = None
     tail_status: list[list[str]] | None = None
+    snapshots: dict[int, dict[str, Any]] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +143,7 @@ class FleetSim:
         seed: int,
         days: int = 365,
         overrides: dict | None = None,
+        snapshot_days: list[int] | None = None,
     ) -> None:
         assert policy in POLICIES, f"Unknown policy: {policy!r}"
         self.policy = policy
@@ -153,6 +155,7 @@ class FleetSim:
         self.seed = seed
         self.days = days
         self.pm = self.cfg.get("pipeline_mult", 1.0)
+        self.snapshot_days = set(snapshot_days) if snapshot_days else None
 
         # Pre-build O(1) RUL lookup dictionary:
         # (subset, unit) -> (max_cycle, q10_arr, q50_arr, q90_arr, rul_true_arr)
@@ -307,7 +310,14 @@ class FleetSim:
         # lru_base_stock[sqn][lru_id] = spare count at base
         # lru_depot_stock[lru_id] = spare count at depot
         lru_base_stock: dict[int, dict[str, int]] = {
-            sqn: {lru["id"]: int(lru.get("stock_base", 1)) for lru in self.lru_list}
+            sqn: {
+                lru["id"]: (
+                    int(lru["stock_base"][sqn])
+                    if isinstance(lru.get("stock_base"), list | tuple)
+                    else int(lru.get("stock_base", 1))
+                )
+                for lru in self.lru_list
+            }
             for sqn in range(N_SQN)
         }
         lru_depot_stock: dict[str, int] = {
@@ -317,6 +327,7 @@ class FleetSim:
         lru_inbound_transfers: list[dict] = []
         lru_waiting: dict[str, list[tuple[int, int]]] = {lru["id"]: [] for lru in self.lru_list}
         lru_failures_shock_window: dict[str, int] = {lru["id"]: 0 for lru in self.lru_list}
+        snapshots_dict: dict[int, dict[str, Any]] = {}
 
         # lru_state[tail][lru_id] = {sorties_until_fail, missing, queue_ptr, has_lru, maint_type}
         lru_state: dict[int, dict[str, dict]] = {}
@@ -717,6 +728,95 @@ class FleetSim:
                 }
             )
 
+            # --- Record snapshot if requested (additive hook) -------------
+            if self.snapshot_days and day in self.snapshot_days:
+                tails_snap = []
+                for tail in range(N_AC):
+                    sqn = tail // AC_PER_SQN
+                    st = daily_tail_status[tail]
+                    ret_days = []
+                    for e in range(N_ENG_PER_AC):
+                        pos = tail * N_ENG_PER_AC + e
+                        es = eng_state[pos]
+                        if es["in_maintenance"] and es["maint_done_day"] is not None:
+                            ret_days.append(es["maint_done_day"])
+                    for lru_cfg in self.lru_list:
+                        lid = lru_cfg["id"]
+                        ls = lru_state[tail][lid]
+                        if ls["missing"] and ls["missing_until"] is not None and ls["missing_until"] >= 0:
+                            ret_days.append(ls["missing_until"])
+                    tail_ret = max(ret_days) if ret_days else None
+                    tails_snap.append({
+                        "tail": tail,
+                        "sqn": sqn,
+                        "status": st,
+                        "return_day": tail_ret,
+                    })
+
+                engs_snap = []
+                for pos in range(N_ENG):
+                    es = eng_state[pos]
+                    sqn = pos // (N_ENG_PER_AC * AC_PER_SQN)
+                    tail = pos // N_ENG_PER_AC
+                    rul_info = self._get_rul(es["subset"], es["unit"], es["cycle"])
+                    engs_snap.append({
+                        "pos": pos,
+                        "tail": tail,
+                        "sqn": sqn,
+                        "cycle": es["cycle"],
+                        "subset": es["subset"],
+                        "unit": es["unit"],
+                        "installed": es["installed"],
+                        "in_maintenance": es["in_maintenance"],
+                        "maint_done_day": es["maint_done_day"],
+                        "removal_type": es["removal_type"],
+                        "q10": rul_info["q10"],
+                        "q50": rul_info["q50"],
+                        "q90": rul_info["q90"],
+                        # rul_true stored ONLY for evaluation and calibration checks; NEVER used in readiness forecast
+                        "rul_true": rul_info["rul_true"],
+                    })
+
+                lru_snap = {}
+                for tail in range(N_AC):
+                    lru_snap[tail] = {}
+                    for lru_cfg in self.lru_list:
+                        lid = lru_cfg["id"]
+                        ls = lru_state[tail][lid]
+                        lru_snap[tail][lid] = {
+                            "sorties_flown": ls["sorties_flown"],
+                            "missing": ls["missing"],
+                            "has_lru": ls["has_lru"],
+                            "maint_type": ls["maint_type"],
+                            "missing_until": ls["missing_until"],
+                        }
+
+                snapshots_dict[day] = {
+                    "day": day,
+                    "tails": tails_snap,
+                    "engines": engs_snap,
+                    "lrus": lru_snap,
+                    "stock": {
+                        "engines": {
+                            "base": list(base_serviceable),
+                            "depot": int(depot_serviceable),
+                        },
+                        "lrus": {
+                            "base": {s: dict(lru_base_stock[s]) for s in range(N_SQN)},
+                            "depot": dict(lru_depot_stock),
+                        },
+                    },
+                    "queues": {
+                        "engine_repair": list(in_repair),
+                        "engine_transfers": list(inbound_transfers),
+                        "lru_repair": [dict(r) for r in lru_in_repair],
+                        "lru_transfers": [dict(t) for t in lru_inbound_transfers],
+                        "lru_waiting": {lid: list(q) for lid, q in lru_waiting.items()},
+                        "engine_maint_queue": [list(q) for q in maint_queue],
+                    },
+                    "hangar_busy": list(hangar_busy),
+                }
+
         # ── Compute KPIs ─────────────────────────────────────────────────
         daily_df = pd.DataFrame(daily_records)
         events_df = pd.DataFrame(event_records) if event_records else pd.DataFrame(
@@ -746,8 +846,9 @@ class FleetSim:
             "flying_task_pct": (
                 sorties_flown / sorties_demanded if sorties_demanded > 0 else 0.0
             ),
-            "lru_failures_shock_window": lru_failures_shock_window,
         }
+        if self.shock:
+            kpis["lru_failures_shock_window"] = lru_failures_shock_window
 
         return SimResult(
             kpis=kpis,
@@ -755,6 +856,7 @@ class FleetSim:
             events=events_df,
             tail_mc=np.array(tail_mc_history, dtype=bool),
             tail_status=tail_status_history,
+            snapshots=snapshots_dict if self.snapshot_days else None,
         )
 
     def _preposition(
@@ -827,22 +929,25 @@ def run(
     seed: int,
     days: int = 365,
     overrides: dict | None = None,
+    snapshot_days: list[int] | None = None,
 ) -> SimResult:
     """Run one simulation replication.
 
     Parameters
     ----------
-    policy   : 'reactive', 'preventive', 'shikra', or 'oracle'
-    config   : parsed wing.yaml dict
-    rul      : replay RUL DataFrame (apply variants.apply before passing)
-    params   : dict with T_prev, R_star
-    seed     : integer seed for this replication
-    days     : simulation horizon (default 365)
-    overrides: optional dict of config overrides
+    policy       : 'reactive', 'preventive', 'shikra', or 'oracle'
+    config       : parsed wing.yaml dict
+    rul          : replay RUL DataFrame (apply variants.apply before passing)
+    params       : dict with T_prev, R_star
+    seed         : integer seed for this replication
+    days         : simulation horizon (default 365)
+    overrides    : optional dict of config overrides
+    snapshot_days: optional list of simulation days (0..days-1) at the end of
+                   which a wing state snapshot is recorded
 
     Returns
     -------
-    SimResult with kpis, daily, and events DataFrames
+    SimResult with kpis, daily, and events DataFrames (and snapshots dict if snapshot_days)
     """
-    sim = FleetSim(policy, config, rul, params, seed, days, overrides)
+    sim = FleetSim(policy, config, rul, params, seed, days, overrides, snapshot_days)
     return sim.run()
