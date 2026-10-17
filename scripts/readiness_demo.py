@@ -30,6 +30,8 @@ RESULTS_DIR = ROOT / "results"
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     with CONFIG_PATH.open(encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     cfg["pipeline_mult"] = 1.9

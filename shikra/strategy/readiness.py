@@ -179,16 +179,21 @@ def _simulate_mc_trajectory(
                 engine_repair_q[earliest_idx] = start_day + max(1, rem_days // 2)
 
         elif atype == "defer_planned":
-            # Defer one planned removal whose q10 is still above 0
+            # Defer planned removal for the first tail whose q10 is still above 0
             sqn_start = target_sqn * AC_PER_SQN
             sqn_end = sqn_start + AC_PER_SQN
+            deferred_tail = None
             for pos in range(sqn_start * N_ENG_PER_AC, sqn_end * N_ENG_PER_AC):
                 if eng_removal_type[pos] == "planned":
                     eng_snap = snapshot["engines"][pos]
                     if eng_snap["q10"] > 0:
-                        # Defer planned removal by horizon length
-                        eng_cycles_rem[pos] += horizon_days * sortie_p
+                        deferred_tail = eng_snap["tail"]
                         break
+            if deferred_tail is not None:
+                for e_idx in range(N_ENG_PER_AC):
+                    p = deferred_tail * N_ENG_PER_AC + e_idx
+                    if eng_removal_type[p] == "planned":
+                        eng_cycles_rem[p] += horizon_days * sortie_p
 
         elif atype == "add_hangar_slot":
             hangar_capacity[target_sqn] += 1
