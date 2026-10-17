@@ -6,6 +6,7 @@ and for the oracle policy (quality=0 → perfect predictions).
 Public API
 ----------
 apply(df, quality) -> pd.DataFrame
+apply_bias(df, bias_cycles) -> pd.DataFrame
 """
 
 from __future__ import annotations
@@ -47,4 +48,28 @@ def apply(df: pd.DataFrame, quality: float) -> pd.DataFrame:
             out[col] = (
                 out["rul_true"] + k * (out[col] - out["rul_true"])
             ).clip(lower=0)
+    return out
+
+
+def apply_bias(df: pd.DataFrame, bias_cycles: float) -> pd.DataFrame:
+    """Apply a systematic additive bias to the replay RUL quantiles.
+
+    Each of ``q10``, ``q50``, ``q90`` becomes ``q + bias_cycles``, clipped to
+    ``[0, 125]``. ``rul_true`` is unchanged.
+
+    Parameters
+    ----------
+    df : replay RUL DataFrame with columns ``rul_true, q10, q50, q90``.
+    bias_cycles : float
+        Cycles to add to each quantile prediction. Positive indicates
+        over-optimistic predictions; negative indicates conservative ones.
+
+    Returns
+    -------
+    Copy of ``df`` with ``q10``, ``q50``, ``q90`` biased and clipped to [0, 125].
+    """
+    out = df.copy()
+    b = float(bias_cycles)
+    for col in ("q10", "q50", "q90"):
+        out[col] = (out[col] + b).clip(0, RUL_CAP)
     return out

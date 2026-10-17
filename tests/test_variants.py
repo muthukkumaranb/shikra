@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from shikra.rul.variants import apply
+from shikra.rul.variants import apply, apply_bias
 
 
 def _make_df() -> pd.DataFrame:
@@ -62,3 +62,36 @@ def test_nonnegative_output() -> None:
         assert (out["q10"] >= 0).all(), f"q10 < 0 for quality={k}"
         assert (out["q50"] >= 0).all()
         assert (out["q90"] >= 0).all()
+
+
+def test_bias_zero_is_identity() -> None:
+    """bias 0 is the identity."""
+    df = _make_df()
+    out = apply_bias(df, 0.0)
+    np.testing.assert_array_equal(out["q10"].values, df["q10"].values)
+    np.testing.assert_array_equal(out["q50"].values, df["q50"].values)
+    np.testing.assert_array_equal(out["q90"].values, df["q90"].values)
+    np.testing.assert_array_equal(out["rul_true"].values, df["rul_true"].values)
+
+
+def test_bias_plus_10() -> None:
+    """bias +10 raises q50 by exactly 10 before clipping."""
+    df = _make_df()
+    out = apply_bias(df, 10.0)
+    np.testing.assert_array_equal(out["q50"].values, df["q50"].values + 10.0)
+    np.testing.assert_array_equal(out["q10"].values, df["q10"].values + 10.0)
+    np.testing.assert_array_equal(out["q90"].values, df["q90"].values + 10.0)
+    np.testing.assert_array_equal(out["rul_true"].values, df["rul_true"].values)
+
+
+def test_bias_oracle() -> None:
+    """apply_bias(apply(df, 0), b) gives rul_true + b (clipped)."""
+    df = _make_df()
+    oracle_df = apply(df, 0)
+    for b in (-5.0, 0.0, 10.0, 150.0):
+        out = apply_bias(oracle_df, b)
+        expected = np.clip(df["rul_true"].values + b, 0, 125)
+        np.testing.assert_array_equal(out["q10"].values, expected)
+        np.testing.assert_array_equal(out["q50"].values, expected)
+        np.testing.assert_array_equal(out["q90"].values, expected)
+        np.testing.assert_array_equal(out["rul_true"].values, df["rul_true"].values)
