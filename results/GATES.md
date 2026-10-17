@@ -10,17 +10,17 @@
 | Gate | Verdict | Detail |
 |------|---------|--------|
 | G0.3 — replay units ~40 | **PASS** | replay units = 40 (expected ~40) |
-| G0.4 — reactive serviceability 55–65% | **FAIL** | reactive serviceability = 76.1% (target 55-65%) |
-| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.9 pp (threshold >= 5 pp) |
+| G0.4 — reactive serviceability 55–65% | **PASS** | reactive serviceability = 61.6% (target 55-65%) |
+| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.1 pp (threshold >= 5 pp) |
 
 **Serviceability per policy (mean over 30 seeds):**
 
 | Policy | Mean serviceability |
 |--------|-------------------|
-| reactive | 76.1% |
-| preventive | 68.9% |
-| shikra | 76.7% |
-| oracle | 77.0% |
+| reactive | 61.6% |
+| preventive | 52.7% |
+| shikra | 61.3% |
+| oracle | 61.6% |
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
-  mean = 0.762  95% CI [0.585, 0.974]
+  mean = -1.247  95% CI [-7.252, 2.664]

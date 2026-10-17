@@ -59,14 +59,13 @@ def generate_table() -> str:
 
 
 def update_readme(table: str) -> None:
-    content = README_PATH.read_text()
+    content = README_PATH.read_text(encoding="utf-8")
     start_marker = "<!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->"
     end_marker = "---"
 
     start_idx = content.find(start_marker)
     if start_idx == -1:
-        print("Marker not found in README.md. Printing table to stdout:")
-        print(table)
+        print("Marker not found in README.md.")
         return
 
     # Find the next --- after the marker
@@ -75,11 +74,17 @@ def update_readme(table: str) -> None:
         end_idx = len(content)
 
     new_content = content[:start_idx] + start_marker + "\n\n" + table + "\n" + content[end_idx:]
-    README_PATH.write_text(new_content)
+    README_PATH.write_text(new_content, encoding="utf-8")
     print("README.md updated with results table.")
 
 
 if __name__ == "__main__":
+    import sys
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     table = generate_table()
-    print(table)
+    try:
+        print(table)
+    except UnicodeEncodeError:
+        print(table.encode("ascii", errors="replace").decode("ascii"))
     update_readme(table)
