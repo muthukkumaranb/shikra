@@ -111,3 +111,90 @@ def test_snapshot_structure_and_fields():
     assert "engines" in snap["stock"] and "lrus" in snap["stock"]
     assert "queues" in snap
     assert "hangar_busy" in snap
+
+
+def test_forecast_never_reads_rul_true():
+    """Verify that forecast NEVER reads rul_true.
+
+    Setting rul_true to invalid garbage values in the snapshot must leave the
+    forecast outputs 100% byte-identical.
+    """
+    import copy
+
+    from shikra.strategy.readiness import forecast
+
+    with CONFIG_PATH.open(encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    with PARAMS_PATH.open(encoding="utf-8") as f:
+        params = json.load(f)
+
+    rul_raw = pd.read_parquet(REPLAY_PATH)
+    rul_shikra = apply(rul_raw, 1)
+
+    res = run("shikra", cfg, rul_shikra, params, seed=1, days=35, snapshot_days=[30])
+    snap_clean = res.snapshots[30]
+
+    # Clean forecast
+    fc_clean = forecast(snap_clean, cfg, params, policy="shikra", horizon_days=7, n=50, seed=42)
+
+    # Corrupt rul_true with negative, infinite, and nonsense values
+    snap_corrupt = copy.deepcopy(snap_clean)
+    for eng in snap_corrupt["engines"]:
+        eng["rul_true"] = -99999.0
+
+    fc_corrupt = forecast(snap_corrupt, cfg, params, policy="shikra", horizon_days=7, n=50, seed=42)
+
+    pd.testing.assert_frame_equal(fc_clean, fc_corrupt)
+
+
+def test_forecast_columns_and_determinism():
+    """Verify forecast DataFrame structure and determinism."""
+    from shikra.strategy.readiness import forecast
+
+    with CONFIG_PATH.open(encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    with PARAMS_PATH.open(encoding="utf-8") as f:
+        params = json.load(f)
+
+    rul_raw = pd.read_parquet(REPLAY_PATH)
+    rul_shikra = apply(rul_raw, 1)
+
+    res = run("shikra", cfg, rul_shikra, params, seed=1, days=35, snapshot_days=[30])
+    snap = res.snapshots[30]
+
+    df1 = forecast(snap, cfg, params, policy="shikra", horizon_days=7, n=50, seed=123)
+    df2 = forecast(snap, cfg, params, policy="shikra", horizon_days=7, n=50, seed=123)
+    pd.testing.assert_frame_equal(df1, df2)
+
+    # Check required columns
+    expected_cols = ["lead_days", "sqn", "expected_mc", "mc_q10", "mc_q90"] + [
+        f"p_ge_{i}" for i in range(6, 19)
+    ]
+    for col in expected_cols:
+        assert col in df1.columns
+
+    assert len(df1) == 7 * 3  # 7 lead days * 3 squadrons
+
+
+def test_rank_actions():
+    """Verify rank_actions returns top candidate actions with correct metadata."""
+    from shikra.strategy.readiness import rank_actions
+
+    with CONFIG_PATH.open(encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    with PARAMS_PATH.open(encoding="utf-8") as f:
+        params = json.load(f)
+
+    rul_raw = pd.read_parquet(REPLAY_PATH)
+    rul_shikra = apply(rul_raw, 1)
+
+    res = run("shikra", cfg, rul_shikra, params, seed=1, days=35, snapshot_days=[30])
+    snap = res.snapshots[30]
+
+    actions_df = rank_actions(snap, cfg, params, sqn=1, lead_days=3, n=50, seed=99)
+    assert len(actions_df) <= 5
+    assert "rank" in actions_df.columns
+    assert "action" in actions_df.columns
+    assert "target" in actions_df.columns
+    assert "delta_expected_mc" in actions_df.columns
+    assert actions_df.attrs["note"] == "forecast-estimated gain (not validated in simulation)"
