@@ -235,10 +235,49 @@ def generate_model_card() -> str:
     return "\n".join(lines)
 
 
+def generate_a10_findings() -> str:
+    calib = pd.read_csv(RESULTS_DIR / "readiness_calib.csv")
+    actions = pd.read_csv(RESULTS_DIR / "readiness_actions_summary.csv")
+    raw = calib[calib["method"] == "shikra_forecast"].set_index("lead_days")
+    conformal = calib[calib["method"] == "shikra_conformal"].set_index("lead_days")
+    persistence = calib[calib["method"] == "persistence"].set_index("lead_days")
+    scope = str(actions["evaluation_scope"].iloc[0])
+    n_mc = int(actions["n_mc"].iloc[0])
+    return f"""# A10 Readiness Forecast Findings
+
+The v2 calibration uses `shikra_v2`, `pipeline_mult=1.7`, seeds 1-30, and
+330 end-of-day snapshots from days 395 through 695. Each snapshot evaluates
+three squadrons.
+
+The raw bands under-cover: the original all-seed calibration measured 0.59 at
+D+3 and 0.41 at D+7. On the held-out seeds 16-30, raw coverage is
+{raw.loc[3, "coverage_80"]:.4f} at D+3 and {raw.loc[7, "coverage_80"]:.4f} at D+7.
+The forecast loses to persistence on MAE at both leads.
+
+## Conformal calibration result
+
+The 80th percentile absolute-error widening is applied separately by lead,
+using seeds 1-15, and evaluated on seeds 16-30. Conformal coverage is
+{conformal.loc[3, "coverage_80"]:.4f} at D+3 and {conformal.loc[7, "coverage_80"]:.4f}
+at D+7. Conformal widening changes the interval coverage only; its MAE and
+Brier score remain the raw forecast values. Persistence remains better on MAE
+at both leads, and the conformal method is not a validated replacement for
+persistence.
+
+Action results use {scope} at n={n_mc}. They are forecast-estimated gains, not
+validated in simulation. The action model is a one-step approximation and
+does not capture future policy feedback, competing squadron demand, or
+uncertainty in maintenance and transfer assumptions.
+"""
+
+
 def main() -> None:
     content = generate_model_card()
     MODEL_CARD_PATH.write_text(content, encoding="utf-8")
     print(f"MODEL_CARD.md generated successfully -> {MODEL_CARD_PATH}")
+    findings_path = RESULTS_DIR / "FINDINGS_A10.md"
+    findings_path.write_text(generate_a10_findings(), encoding="utf-8")
+    print(f"A10 findings generated successfully -> {findings_path}")
 
 
 if __name__ == "__main__":
