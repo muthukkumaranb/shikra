@@ -125,7 +125,7 @@ if snap is not None:
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
         st.markdown(
-            f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+            f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
         )
 
         st.markdown("##### Propulsion Subsystems")
@@ -158,7 +158,7 @@ if snap is not None:
 else:
     # Snapshot not available: show tail-level status only
     with c_img:
-        st.caption("Engine health (tail-level; per-engine RUL unavailable)")
+        st.caption("engine detail after T1.7 merge")
         svg_detail = render_aircraft_detail_svg(
             selected_tail, tail_st, width=380, height=480
         )
@@ -173,7 +173,7 @@ else:
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
         st.markdown(
-            f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+            f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
         )
         st.markdown(
             '<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #94a3b8; margin-top: 1rem;">'
@@ -237,7 +237,7 @@ if snap is not None:
     df_eng = df_eng.sort_values(["_sort", "q10 RUL"]).drop(columns=["_sort"])
     st.dataframe(df_eng, use_container_width=True, hide_index=True, height=400)
 else:
-    st.caption("Engine RUL table (q10/q50/q90) — snapshot not available")
+    st.caption("Engine RUL table (q10/q50/q90) available after T1.7 merge")
 
     # Derive engine state from the simulation events
     replay_rul = load_replay_rul()
@@ -312,7 +312,7 @@ else:
 
 st.markdown(f"**R* (removal threshold):** {R_star} cycles")
 st.markdown(
-    f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+    f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
 )
 st.markdown("**Note:** Ground-truth RUL is never shown — only predictive quantiles (q10/q50/q90).")
 
