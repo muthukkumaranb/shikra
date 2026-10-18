@@ -3,8 +3,8 @@
 > **Prediction, spares or depots: which buys aircraft readiness, and what should India make itself first?**
 > SHIKRA is offline, advisory decision support evaluated on NASA public data and a synthetic wing.
 
-SHIKRA (Smart Heuristic for Integrated Knowledge-based Readiness Assessment) is an entry for
-Smart India Hackathon 2026, problem statement **SIH26249** — "Air Power – Predictive Maintenance
+SHIKRA is named after the shikra, a small Indian hawk. It is an entry for
+Smart India Hackathon 2026, problem statement **SIH26249** — "Air Power — Predictive Maintenance
 & Fleet Availability" (Ministry of Defence / Defence Services Staff College).
 
 The system advises **when** to proactively remove engines for maintenance and **which spares** to
@@ -13,7 +13,15 @@ against a synthetic 54-aircraft wing.
 
 ---
 
-## Results
+## In 60 seconds
+
+- **What it is**: Offline, advisory decision support for maintenance scheduling and spares prepositioning; advisory only, never autonomous.
+- **The data**: Open NASA C-MAPSS turbofan run-to-failure benchmarks (FD001–FD004) paired with a synthetic 54-aircraft wing simulation evaluated under common random numbers (CRN).
+- **Which lever pays?**: Warning time alone cannot overcome saturated depot pipelines; spares inventory depth and pipeline throughput are the binding constraints on readiness.
+- **How much gain does prediction capture?**: Eliminates all unscheduled engine removals, but captures fleet serviceability gains only when maintenance turnaround is fast enough to exploit lead time (see Fleet Simulation table below).
+- **Which part to indigenise first?**: Under a 180-day foreign supply halt scenario, LRU vulnerability rankings identify the APU starter and ECS valve as highest-priority components for domestic manufacturing (see A12 Supply Shock table below).
+
+---
 
 <!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->
 
@@ -51,13 +59,18 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ---
 
+## Quickstart
+
 ## Judge quickstart
 
 ### Environment and Python Requirement
 - **Python Version**: **Python 3.11.x strictly required** (tested and verified on CPython 3.11.16).
-- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `torch==2.2.2`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers.
+- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `scipy==1.13.1`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers (the optional LSTM extras, `requirements-lstm.txt`, add torch).
 
-### Full Reproducibility in a Single Command
+### Verification Scope & Commands
+
+- **`scripts/verify.ps1` (default, ~8 min)**: Windows one-line validation executing the full test suite (`pytest -q -m "not data"`), every simulation (`sim`, `summary`, `heatmap`, `bias`, `figures`, `deck-figures`, `readme`) EXCEPT the ~65-min supply-shock run, followed by a bitwise byte-compare of ALL 17 committed results CSVs (`scripts/check_reproduce.py`) and a git working tree diff check. Add `-Full` to also regenerate supply shock (~73 min).
+- **`make verify` (~70+ min)**: Full pipeline reproduction including the 545-day supply-shock simulation (`reproduce-sim`), followed by bitwise validation against all committed CSVs and git diff verification.
 
 **Linux / macOS:**
 ```bash
@@ -81,9 +94,10 @@ powershell -ExecutionPolicy Bypass -File scripts/verify.ps1 -Py .venv\Scripts\py
 - **`git clone`**: ~16.3s
 - **`python -m venv .venv`**: ~26.6s
 - **`pip install -r requirements.txt`**: ~4m 13.6s (253.6s)
-- **`pytest -q -m "not data"`**: ~1m 52.3s (112.3s) (89 passed, 2 skipped, 4 deselected)
-- **`shikra.sim.runner` (30 seeds, 6 policies)**: ~2m 40.6s (160.6s)
-- **`make verify` / `verify.ps1`**: Executes test suite, full simulation reproduction, bitwise verification against committed CSVs, and git working tree diff check in one command.
+- **`pytest -q -m "not data"`**: ~48.5s (full test suite excluding raw data)
+- **`shikra.sim.runner` (30 seeds, 6 policies, `n_jobs=2`)**: ~2m 40.6s (160.6s)
+- **`scripts/verify.ps1` (default)**: ~7m 51.5s (471.5s) (tests + sim + summary + heatmap + bias + figures + deck figures + readme + byte-compare of all 17 CSVs)
+- **`scripts/verify.ps1 -Full` / `make verify`**: ~73 min (includes ~65 min 545-day supply shock run)
 
 ---
 
@@ -125,7 +139,7 @@ make reproduce-sim PY=.venv/Scripts/python
 | `bias` | Systematic RUL bias sweep (§3.2b, 150 runs) | ~32.1s | `results/bias.csv`, `results/fig_bias.png` |
 | `shock` | Supply-shock resilience & recovery (545 days, 30 seeds) | ~65.0 min | `results/supply_shock.csv`, `results/fig_supply_shock.png` |
 | `figures` | Policy comparison charts | ~1.3s | `results/fig_policies.png` |
-| `readme` | Auto-generate README / GATES summary tables | ~0.7s | `README.md`, `GATES.md` |
+| `readme` | Auto-generate README / GATES summary tables | ~0.7s | `README.md`, `results/GATES.md` |
 | **`reproduce-sim`** | **Full simulation reproduction** | **~66 min** | All committed CSVs & figures |
 
 > **CI Quick Mode (`reproduce-sim-quick`):** Because `shock` runs 60 full 545-day simulations and takes ~65 minutes (exceeding standard CI time budgets), CI runs in `--quick` mode:
@@ -133,7 +147,7 @@ make reproduce-sim PY=.venv/Scripts/python
 > make reproduce-sim-quick PY=python
 > python scripts/check_reproduce.py --quick
 > ```
-> This executes `sim` + `summary` + `bias` in ~54 seconds and validates `policies.csv`, `policy_summary.csv`, and `bias.csv`.
+> This executes `sim` + `summary` + `bias` in ~54 seconds and validates `results/policies.csv`, `results/policy_summary.csv`, and `results/bias.csv`.
 
 ### 3. Full Pipeline Reproduction (Requires C-MAPSS)
 
