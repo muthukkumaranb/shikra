@@ -7,6 +7,7 @@ RUFF   ?= ruff
 
 # ── Environment ──────────────────────────────────────────────────────────────
 setup:
+	@$(PY) --version
 	$(PY) -m venv .venv
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
