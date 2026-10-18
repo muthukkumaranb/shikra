@@ -47,6 +47,8 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 > **Systematic Bias Robustness (§3.2b, at 1.0× pipeline speed):** −10 cycles wastes 2019 cycles; +10 raises unscheduled removals from 0 to 97.8.
 
+> **A10 Readiness Forecast:** At lead 7, forecast MAE is 2.261 vs 1.508 for persistence and Brier is 0.131 vs 0.114; action gains are forecast-estimated and not validated in simulation.
+
 ---
 
 ## Quickstart

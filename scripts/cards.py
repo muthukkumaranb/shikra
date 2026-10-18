@@ -38,6 +38,8 @@ def generate_model_card() -> str:
     cov_df = pd.read_csv(RESULTS_DIR / "coverage.csv")
     bias_df = pd.read_csv(RESULTS_DIR / "bias.csv")
     hm_df = pd.read_csv(RESULTS_DIR / "heatmap.csv")
+    readiness_df = pd.read_csv(RESULTS_DIR / "readiness_calib.csv") if (RESULTS_DIR / "readiness_calib.csv").exists() else None
+    actions_df = pd.read_csv(RESULTS_DIR / "readiness_actions_summary.csv") if (RESULTS_DIR / "readiness_actions_summary.csv").exists() else None
 
     # Combine RUL results
     all_rul = pd.concat([rul_single, rul_multi], ignore_index=True).sort_values("subset").reset_index(drop=True)
@@ -169,6 +171,39 @@ def generate_model_card() -> str:
             lines.append(
                 f"| {sub} ({split}) | {nom:.0%} | {emp:.1%} | {uncal_emp:.1%} | {width:.2f} cycles | {n} |"
             )
+
+    if readiness_df is not None:
+        lines.extend([
+            "",
+            "## A10 Readiness Forecast and Actions",
+            "",
+            "The readiness forecast uses `shikra_v2` at `pipeline_mult=1.7` and operational snapshot state: known return days, conformal RUL quantiles, stock, queues, and hangar occupancy. It never uses `rul_true`; that field is stored only for evaluation.",
+            "",
+            "| Lead | Method | 80% Coverage | MAE | Brier | Snapshots |",
+            "|------|--------|--------------|-----|-------|-----------|",
+        ])
+        for _, row in readiness_df.iterrows():
+            lines.append(
+                f"| {int(row['lead_days'])} | {row['method']} | {row['coverage_80']:.1%} | "
+                f"{row['mae']:.3f} | {row['brier']:.3f} | {int(row['n_snapshots'])} |"
+            )
+        lines.extend([
+            "",
+            "Calibration covers 330 snapshots (days 395-695, seeds 1-30) and compares against persistence and leave-one-seed-out climatology from days 365-729. At lead 7, the forecast is worse than persistence on MAE and Brier score; it is not a validated replacement for the baselines.",
+        ])
+        if actions_df is not None:
+            lines.extend([
+                "",
+                "Action rankings are forecast-estimated gains, not validated in simulation. They evaluate one-step interventions at lead 7 and omit future policy feedback, competing demand, and model uncertainty.",
+                "",
+                "| Action | Share best | Mean expected-MC gain | Share positive |",
+                "|--------|------------|------------------------|----------------|",
+            ])
+            for _, row in actions_df.iterrows():
+                lines.append(
+                    f"| {row['action']} | {row['share_of_snapshots_best']:.1%} | "
+                    f"{row['mean_delta_expected_mc']:.3f} | {row['share_with_positive_gain']:.1%} |"
+                )
 
     lines.extend([
         "",

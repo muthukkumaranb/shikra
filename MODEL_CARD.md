@@ -64,6 +64,30 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
 | FD003 (test) | 80% | 79.0% | 57.0% | 30.14 cycles | 100 |
 | FD003 (test) | 90% | 89.0% | 75.0% | 40.51 cycles | 100 |
 
+## A10 Readiness Forecast and Actions
+
+The readiness forecast uses `shikra_v2` at `pipeline_mult=1.7` and operational snapshot state: known return days, conformal RUL quantiles, stock, queues, and hangar occupancy. It never uses `rul_true`; that field is stored only for evaluation.
+
+| Lead | Method | 80% Coverage | MAE | Brier | Snapshots |
+|------|--------|--------------|-----|-------|-----------|
+| 3 | shikra_forecast | 58.7% | 1.284 | 0.070 | 330 |
+| 3 | persistence | 32.2% | 0.963 | 0.073 | 330 |
+| 3 | climatology | 83.7% | 2.130 | 0.114 | 330 |
+| 7 | shikra_forecast | 40.9% | 2.261 | 0.131 | 330 |
+| 7 | persistence | 20.3% | 1.508 | 0.114 | 330 |
+| 7 | climatology | 85.0% | 2.055 | 0.110 | 330 |
+
+Calibration covers 330 snapshots (days 395-695, seeds 1-30) and compares against persistence and leave-one-seed-out climatology from days 365-729. At lead 7, the forecast is worse than persistence on MAE and Brier score; it is not a validated replacement for the baselines.
+
+Action rankings are forecast-estimated gains, not validated in simulation. They evaluate one-step interventions at lead 7 and omit future policy feedback, competing demand, and model uncertainty.
+
+| Action | Share best | Mean expected-MC gain | Share positive |
+|--------|------------|------------------------|----------------|
+| Transfer spare engine depot to squadron | 70.3% | 0.000 | 0.0% |
+| Expedite earliest pending engine repair by 50% | 0.0% | 0.000 | 0.0% |
+| Defer planned removal within safety margin (q10 > 0) | 3.0% | 0.019 | 3.0% |
+| Transfer scarcest LRU (APU starter) depot to squadron | 26.7% | 0.004 | 27.0% |
+
 ## Known Failure Modes and Robustness Findings
 
 1. **Systematic Prediction Bias Sensitivity (§3.2b):**
