@@ -322,7 +322,7 @@ class FleetSim:
             sqn: {
                 lru["id"]: (
                     int(lru["stock_base"][sqn])
-                    if isinstance(lru.get("stock_base"), (list, tuple))
+                    if isinstance(lru.get("stock_base"), list | tuple)
                     else int(lru.get("stock_base", 1))
                 )
                 for lru in self.lru_list
