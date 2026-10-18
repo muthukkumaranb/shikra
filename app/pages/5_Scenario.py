@@ -496,8 +496,11 @@ elif st.session_state.scenario_step == 5:
                     unsafe_allow_html=True,
                 )
 
-            cov_x = load_readiness_calib_coverage() or "58.7%"
-            st.caption(f"forecast; 80% band coverage on held-out seeds = {cov_x}")
+            cov_x = load_readiness_calib_coverage()
+            if cov_x:
+                st.caption(f"raw forecast band; held-out coverage {cov_x}")
+            else:
+                st.caption("coverage: pending")
         else:
             st.info("Readiness forecast computation pending.")
     else:

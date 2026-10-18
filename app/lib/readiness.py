@@ -100,28 +100,22 @@ def get_forecast(
 
 
 def load_readiness_calib_coverage() -> str | None:
-    """Read honest 80% band coverage from results/readiness_calib.csv for D+3.
+    """Read honest 80% raw band coverage from results/readiness_calib.csv for D+3.
 
-    Checks results/ in local repo and sibling worktree.
+    Returns the value from the shikra_forecast row, or None if the CSV is missing.
     """
-    candidates = [
-        RESULTS_DIR / "readiness_calib.csv",
-        ROOT.parent / "shikra-rd" / "results" / "readiness_calib.csv",
-    ]
-    for cand in candidates:
-        if cand.exists():
-            try:
-                df = pd.read_csv(cand)
-                sub = df[df["lead_days"] == 3]
-                if not sub.empty:
-                    # Prefer shikra_conformal, then shikra_forecast, then first row
-                    row = sub[sub["method"].str.contains("conformal", case=False, na=False)]
-                    if row.empty:
-                        row = sub[sub["method"].str.contains("shikra", case=False, na=False)]
-                    if row.empty:
-                        row = sub.iloc[0:1]
-                    cov = float(row.iloc[0]["coverage_80"])
-                    return f"{cov * 100:.1f}%" if cov <= 1.0 else f"{cov:.1f}%"
-            except Exception:
-                pass
+    calib_csv = RESULTS_DIR / "readiness_calib.csv"
+    if calib_csv.exists():
+        try:
+            df = pd.read_csv(calib_csv)
+            sub = df[(df["lead_days"] == 3) & (df["method"] == "shikra_forecast")]
+            if not sub.empty:
+                val = sub.iloc[0]["coverage_80"]
+                try:
+                    num = float(val)
+                    return f"{num:.2f}" if abs(num - round(num, 2)) < 1e-4 else f"{num}"
+                except (ValueError, TypeError):
+                    return str(val)
+        except Exception:
+            pass
     return None
