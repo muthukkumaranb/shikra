@@ -298,6 +298,7 @@ elif st.session_state.scenario_step == 5:
     s2_nmcs_tails = [f"T{t+1:02d}" for t in s2_tails if sim_res.tail_status[DAY][t] == "NMCS"]
 
     slot1_tail = s2_nmcm_tails[0] if s2_nmcm_tails else (s2_nmcs_tails[0] if s2_nmcs_tails else "Vacant")
+    slot1_status = "Active Maintenance (Engine Change)" if s2_nmcm_tails else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
     slot1_comp = "—"
 
     hangar_data = [
