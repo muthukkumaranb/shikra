@@ -282,16 +282,22 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
     best_jobs = edf_res.jobs
     best_cost = (edf_res.total_weighted_tardiness * 1000.0) + edf_res.makespan
 
-    # 1. For small instances (N <= 8), exact branch-and-bound over permutation space
-    if n_jobs <= 8:
+    def _quick_cost(jobs: list[Job]) -> float:
+        wt = sum(j.weight * max(0, (j.assigned_start + j.duration) - j.due_date) for j in jobs if j.assigned_start is not None)
+        ms = max(((j.assigned_start + j.duration) for j in jobs if j.assigned_start is not None), default=0)
+        return (wt * 1000.0) + ms
+
+    best_cost = _quick_cost(best_jobs)
+
+    # 1. For small instances (N <= 7), exact branch-and-bound over permutation space
+    if n_jobs <= 7:
         from itertools import permutations
 
         for perm in permutations(problem.jobs):
             if time.perf_counter() - t0 > time_limit_s:
                 break
             cand_jobs = _schedule_ordered_jobs(list(perm), problem.capacity)
-            eval_c = evaluate(problem, cand_jobs)
-            cost = (eval_c["total_weighted_tardiness"] * 1000.0) + eval_c["makespan"]
+            cost = _quick_cost(cand_jobs)
             if cost < best_cost - 1e-6:
                 best_cost = cost
                 best_jobs = cand_jobs
@@ -324,8 +330,7 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
             new_order = list(current_order)
             new_order[i], new_order[i + 1] = new_order[i + 1], new_order[i]
             cand_jobs = _schedule_ordered_jobs(new_order, problem.capacity)
-            eval_c = evaluate(problem, cand_jobs)
-            cost = (eval_c["total_weighted_tardiness"] * 1000.0) + eval_c["makespan"]
+            cost = _quick_cost(cand_jobs)
             if cost < best_cost - 1e-6:
                 best_cost = cost
                 best_jobs = cand_jobs
