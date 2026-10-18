@@ -169,6 +169,21 @@ def write_findings_doc(
             f"- **Direction consistent**: **{consistent}** (both LRU metrics move in the same direction).\n",
         ])
 
+    sub_17_curr = compare_df[
+        (compare_df["pipeline_mult"] == 1.7)
+        & (compare_df["policy"] == "shikra_v2")
+        & (compare_df["stock"] == "current")
+    ].iloc[0]
+    sub_17_vm = compare_df[
+        (compare_df["pipeline_mult"] == 1.7)
+        & (compare_df["policy"] == "shikra_v2")
+        & (compare_df["stock"] == "vari_metric")
+    ].iloc[0]
+
+    lru_cut_17 = float(sub_17_curr["nmcs_lru_sim"] - sub_17_vm["nmcs_lru_sim"])
+    eng_rise_17 = float(sub_17_vm["nmcs_engine_sim"] - sub_17_curr["nmcs_engine_sim"])
+    eng_share_pct = float(sub_17_curr["nmcs_engine_sim"] / sub_17_curr["nmcs_mean"] * 100.0)
+
     lines.extend([
         "## 4. Key Observations and Honesty Statement\n",
         "- **Capital Redistribution**: VARI-METRIC systematically shifts capital away from over-provisioned domestic items "
@@ -177,14 +192,10 @@ def write_findings_doc(
         "- **Magnitude of Impact**: The availability gain is largest under severe logistics strain (pipeline multiplier 1.7), "
         "where repair queues and depot stockouts dominate downtime. Under faster resupply (0.5×), the marginal benefit of "
         "re-allocation narrows because pipelines clear quickly even under sub-optimal stocking.",
-        "- **Measured Root-Cause Decomposition**: Disaggregating simulated NMCS demonstrates that engine spare shortages and "
-        "repair turnaround times (mean ~60 days × pipeline multiplier) account for the majority of grounded aircraft "
-        "(~14–17 fleet aircraft across operating regimes). The LRU-attributable simulated NMCS isolates the component governed by "
-        "VARI-METRIC and confirms consistent backorder reduction across pipeline regimes.",
-        "- **Remaining Analytic vs Simulation Gap**: While the direction of movement is consistent across all pipeline multipliers, "
-        "the simulated LRU backorders exceed stationary Poisson expectations under severe logistics strain (e.g. at 1.7×: "
-        "simulated LRU NMCS vs analytic). This gap reflects non-stationary Weibull wear-out, discrete depot-to-base transit lag, "
-        "and flight cancellations preventing sortie-dependent maintenance progress.\n",
+        f"- **Measured Root-Cause and Bottleneck Shift**: At 1.7×, VARI-METRIC cuts LRU-waiting NMCS by "
+        f"{lru_cut_17:.2f} aircraft, but engine-waiting NMCS rises by {eng_rise_17:.2f}, because (hypothesis) "
+        f"aircraft freed from the parts queue fly, wear their engines and join the engine queue (a bottleneck shift). "
+        f"Two-thirds ({eng_share_pct:.1f}%) of NMCS is engine-caused.\n",
     ])
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
