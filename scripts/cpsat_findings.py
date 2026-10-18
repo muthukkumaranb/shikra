@@ -18,6 +18,8 @@ if str(_ROOT) not in sys.path:
 
 BENCH_CSV = _ROOT / "results" / "cpsat_benchmark.csv"
 WING_CSV = _ROOT / "results" / "cpsat_wing.csv"
+HEATMAP_CSV = _ROOT / "results" / "heatmap.csv"
+SPARES_CSV = _ROOT / "results" / "spares_compare.csv"
 OUT_MD = _ROOT / "results" / "FINDINGS_CPSAT.md"
 
 
@@ -80,6 +82,17 @@ def generate_markdown() -> str:
 
     snapshots_with_tardiness = int((df_wing["edf_wt"] > 0).sum())
 
+    # ── Pipeline & spares comparison (for conclusion) ────────────────
+    df_hm = pd.read_csv(HEATMAP_CSV)
+    df_sp = pd.read_csv(SPARES_CSV)
+
+    hm_shikra = df_hm[df_hm["quality_label"] == "1 (SHIKRA)"]
+    hm_fast = float(hm_shikra[hm_shikra["pipeline_mult"] == 0.5]["serviceability_mean"].iloc[0])
+    hm_slow = float(hm_shikra[hm_shikra["pipeline_mult"] == 1.9]["serviceability_mean"].iloc[0])
+
+    sp_v2 = df_sp[df_sp["policy"] == "shikra_v2"]
+    max_sp_diff = float(sp_v2["diff_vs_current_pp"].max())
+
     # ── Emit markdown ────────────────────────────────────────────────
     lines = [
         "# CP-SAT Hangar Scheduling: Findings",
@@ -129,9 +142,9 @@ def generate_markdown() -> str:
         "",
         "**Hangar bays are not the bottleneck in this wing; engine spares are.**",
         "",
-        "The simulation consistently shows ~5 engines queued per squadron against",
+        f"The simulation consistently shows ~{mean_jobs:.0f} engines queued per squadron against",
         "3 hangar bays. At this load, even the simplest EDF rule completes all",
-        "maintenance within the 7-day due window in 57/60 snapshots, and the",
+        f"maintenance within the 7-day due window in {n_wing - snapshots_with_tardiness}/{n_wing} snapshots, and the",
         f"remaining {snapshots_with_tardiness} carry negligible tardiness.",
         "CP-SAT adds nothing because there is nothing to optimise: the constraint",
         "is waiting for a spare engine to arrive from depot (transfer pipeline),",
@@ -139,8 +152,14 @@ def generate_markdown() -> str:
         "",
         "CP-SAT remains valuable as insurance: if fleet policy, bay count, or",
         "maintenance tempo changes, the solver will find improvements that EDF",
-        "cannot. But under current shikra_v2 parameters, the single most impactful",
-        "lever is spares positioning (VARI-METRIC T1.6), not hangar scheduling.",
+        "cannot.",
+        "",
+        "Hangar bays are not the constraint in this wing. Aircraft wait for engines and LRUs",
+        "from the repair and supply pipeline; per results/heatmap.csv, pipeline speed is the",
+        "dominant lever, and spares re-allocation (results/spares_compare.csv) adds little.",
+        f"(Across pipeline speeds 0.5× to 1.9×, serviceability spans {hm_fast:.1%} down to",
+        f"{hm_slow:.1%}, whereas spares re-allocation yields at most +{max_sp_diff:.2f} pp",
+        "gain under shikra_v2.)",
     ]
     return "\n".join(lines) + "\n"
 

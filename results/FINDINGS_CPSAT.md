@@ -48,5 +48,11 @@ not sequencing jobs through bays.
 
 CP-SAT remains valuable as insurance: if fleet policy, bay count, or
 maintenance tempo changes, the solver will find improvements that EDF
-cannot. But under current shikra_v2 parameters, the single most impactful
-lever is spares positioning (VARI-METRIC T1.6), not hangar scheduling.
+cannot.
+
+Hangar bays are not the constraint in this wing. Aircraft wait for engines and LRUs
+from the repair and supply pipeline; per results/heatmap.csv, pipeline speed is the
+dominant lever, and spares re-allocation (results/spares_compare.csv) adds little.
+(Across pipeline speeds 0.5× to 1.9×, serviceability spans 88.3% down to
+52.9%, whereas spares re-allocation yields at most +0.45 pp
+gain under shikra_v2.)
