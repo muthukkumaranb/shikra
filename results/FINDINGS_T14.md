@@ -1,4 +1,4 @@
-# FINDINGS — T1.4 (Attention-LSTM Comparison Member)
+# FINDINGS - T1.4 (Attention-LSTM Comparison Member)
 
 > All evaluations conducted on official NASA C-MAPSS FD001 and FD003 test sets (last cycle only).
 > Generated automatically by `scripts/train_lstm.py` from CSV outputs.
@@ -14,15 +14,16 @@
 
 | Subset | Model | RMSE (Capped 125) | MAE (Capped 125) | NASA Score (Capped) | RMSE (Uncapped) | Train Time (min) |
 |---|---|---|---|---|---|---|
-| FD001 | LightGBM (model of record) | **11.64** | 8.40 | 204.3 | 12.95 | — |
+| FD001 | LightGBM (model of record) | **11.64** | 8.40 | 204.3 | 12.95 | - |
 | FD001 | Attention-LSTM (3-seed avg) | **14.66** | 11.20 | 407.8 | 15.86 | 27.60 |
-| FD003 | LightGBM (model of record) | **14.50** | 9.83 | 578.4 | 15.74 | — |
+| FD003 | LightGBM (model of record) | **14.50** | 9.83 | 578.4 | 15.74 | - |
 | FD003 | Attention-LSTM (3-seed avg) | **13.71** | 9.33 | 1078.3 | 14.98 | 27.60 |
 
 ## 3. Findings and Comparison Summary
 
 - **FD001**: Attention-LSTM achieved worse than LightGBM by +3.02 RMSE (14.66 vs 11.64).
-- **FD003**: Attention-LSTM achieved better than LightGBM by -0.79 RMSE (13.71 vs 14.50).
+- **FD003**: Attention-LSTM achieved comparable RMSE (13.71 vs 14.50; 3 seeds, n=100, no significance test) but a ~2x worse NASA score (more late predictions).
+- **Training Sample Size**: Note that the LSTM trained on 96 units vs 120 for LightGBM (24 units held out for early stopping validation).
 
 ## 4. Architectural Observations
 

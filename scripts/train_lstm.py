@@ -62,7 +62,7 @@ def generate_findings_doc(
 ) -> None:
     """Generate results/FINDINGS_T14.md dynamically comparing LightGBM vs LSTM."""
     lines = [
-        "# FINDINGS — T1.4 (Attention-LSTM Comparison Member)\n",
+        "# FINDINGS - T1.4 (Attention-LSTM Comparison Member)\n",
         "> All evaluations conducted on official NASA C-MAPSS FD001 and FD003 test sets (last cycle only).",
         "> Generated automatically by `scripts/train_lstm.py` from CSV outputs.\n",
         "## 1. Model Configuration and Protocol\n",
@@ -84,7 +84,7 @@ def generate_findings_doc(
         lines.append(
             f"| {subset} | LightGBM (model of record) | **{lgbm_sub['rmse_capped125']:.2f}** | "
             f"{lgbm_sub['mae_capped125']:.2f} | {lgbm_sub['nasa_score_capped125']:.1f} | "
-            f"{lgbm_sub['rmse_uncapped']:.2f} | — |"
+            f"{lgbm_sub['rmse_uncapped']:.2f} | - |"
         )
         # LSTM row
         lstm_sub = lstm_df[lstm_df["subset"] == subset].iloc[0]
@@ -101,16 +101,23 @@ def generate_findings_doc(
     for subset in ("FD001", "FD003"):
         lgbm_sub = lgbm_df[lgbm_df["subset"] == subset].iloc[0]
         lstm_sub = lstm_df[lstm_df["subset"] == subset].iloc[0]
-        delta_rmse = lstm_sub["rmse_capped125"] - lgbm_sub["rmse_capped125"]
 
-        if delta_rmse > 0:
-            status = f"worse than LightGBM by +{delta_rmse:.2f} RMSE ({lstm_sub['rmse_capped125']:.2f} vs {lgbm_sub['rmse_capped125']:.2f})"
+        if subset == "FD003":
+            summary = (
+                f"comparable RMSE ({lstm_sub['rmse_capped125']:.2f} vs {lgbm_sub['rmse_capped125']:.2f}; "
+                f"3 seeds, n={int(lstm_sub['n_units'])}, no significance test) but a ~2x worse NASA score (more late predictions)"
+            )
+            lines.append(f"- **{subset}**: Attention-LSTM achieved {summary}.")
         else:
-            status = f"better than LightGBM by {delta_rmse:.2f} RMSE ({lstm_sub['rmse_capped125']:.2f} vs {lgbm_sub['rmse_capped125']:.2f})"
-
-        lines.append(f"- **{subset}**: Attention-LSTM achieved {status}.")
+            delta_rmse = lstm_sub["rmse_capped125"] - lgbm_sub["rmse_capped125"]
+            lines.append(
+                f"- **{subset}**: Attention-LSTM achieved worse than LightGBM by +{delta_rmse:.2f} RMSE "
+                f"({lstm_sub['rmse_capped125']:.2f} vs {lgbm_sub['rmse_capped125']:.2f})."
+            )
 
     lines.extend([
+        "- **Training Sample Size**: Note that the LSTM trained on 96 units vs 120 for LightGBM "
+        "(24 units held out for early stopping validation).",
         "\n## 4. Architectural Observations\n",
         "- **Sequence Learning vs Explicit Causal Features**: The Attention-LSTM processes raw 14-sensor sequences over a 30-cycle window "
         "and learns temporal attention dynamically, whereas the LightGBM model of record relies on causal rolling features (mean, std, slope over windows 5, 10, 20, 30).",
@@ -125,6 +132,16 @@ def generate_findings_doc(
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+
+    if "--doc-only" in sys.argv:
+        if RUL_CMAPSS_PATH.exists() and RUL_LSTM_PATH.exists():
+            lgbm_df = pd.read_csv(RUL_CMAPSS_PATH)
+            lstm_df = pd.read_csv(RUL_LSTM_PATH)
+            generate_findings_doc(lgbm_df, lstm_df, FINDINGS_PATH)
+            return
+        else:
+            print("Missing CSVs for doc generation", file=sys.stderr)
+            sys.exit(1)
 
     t_start = time.time()
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
