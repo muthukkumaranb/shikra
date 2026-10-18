@@ -71,9 +71,9 @@ def test_immols_roundtrip() -> None:
     assert res.quarantined == 0
 
     cur = conn.cursor()
-    cur.execute("SELECT lru_id, location, on_hand, on_order, lead_time_days, last_updated FROM lru_stock")
+    cur.execute("SELECT lru_id, location, on_hand, on_order, lead_time_days, last_updated, stale FROM lru_stock")
     fetched = cur.fetchone()
-    assert fetched == ("fuel_pump", "base_S1", 4, 1, 15.0, "2026-12-25")
+    assert fetched == ("fuel_pump", "base_S1", 4, 1, 15.0, "2026-12-25", 0)
 
 
 def test_hums_roundtrip() -> None:
@@ -193,8 +193,8 @@ def test_quarantine_catches_mismatched_sn() -> None:
     assert reason_hums.startswith("mismatched_sn")
 
 
-def test_quarantine_catches_stale_stock() -> None:
-    """Quarantine catches stock records older than 30 days."""
+def test_stale_stock_loaded_with_flag() -> None:
+    """Stale stock records (>30 days old) are loaded into lru_stock with stale = 1 instead of quarantined."""
     conn = _create_mem_db()
     cur = conn.cursor()
     ref_date = date(2027, 1, 1)
@@ -206,10 +206,15 @@ def test_quarantine_catches_stale_stock() -> None:
         "on_hand": "5",
         "last_updated": "2026-11-01",  # 61 days before ref_date
     }])
-    assert res.quarantined == 1
-    cur.execute("SELECT reason FROM quarantine WHERE source = ?", (immols.SOURCE_NAME,))
-    reason = cur.fetchone()[0]
-    assert reason.startswith("stale")
+    assert res.loaded == 1
+    assert res.quarantined == 0
+    assert res.stale_count == 1
+
+    cur.execute("SELECT lru_id, location, stale FROM lru_stock WHERE lru_id = 'fuel_pump'")
+    assert cur.fetchone() == ("fuel_pump", "depot", 1)
+
+    cur.execute("SELECT COUNT(*) FROM quarantine WHERE source = ?", (immols.SOURCE_NAME,))
+    assert cur.fetchone()[0] == 0
 
 
 def test_row_conservation_on_mock_exports(tmp_path: Path) -> None:

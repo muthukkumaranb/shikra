@@ -106,11 +106,15 @@ def generate_reports(
             )
             mismatched_sns = int(cur.fetchone()[0])
 
-            cur.execute(
-                "SELECT COUNT(*) FROM quarantine WHERE source = ? AND reason LIKE 'stale%'",
-                (src_name,),
-            )
-            stale = int(cur.fetchone()[0])
+            if table_name == "lru_stock":
+                cur.execute("SELECT COUNT(*) FROM lru_stock WHERE stale = 1")
+                stale = int(cur.fetchone()[0])
+            else:
+                cur.execute(
+                    "SELECT COUNT(*) FROM quarantine WHERE source = ? AND reason LIKE 'stale%'",
+                    (src_name,),
+                )
+                stale = int(cur.fetchone()[0])
 
             load_rate = round(100.0 * loaded / total_rows, 2) if total_rows > 0 else 0.0
             mk_pct = round(100.0 * missing_keys / total_rows, 2) if total_rows > 0 else 0.0
@@ -160,13 +164,19 @@ def generate_reports(
         # Load ground truth faults
         faults_df = pd.read_csv(faults_csv, comment="#")
 
-        # Load quarantined items
+        # Load quarantined items and detected stale stock
         cur.execute("SELECT source, row_id, reason FROM quarantine")
         q_records = cur.fetchall()
         q_rows = []
         for src, rid, reason in q_records:
             ftype = reason.split(":")[0].strip()
             q_rows.append({"source": src, "row_id": int(rid), "detected_type": ftype})
+
+        cur.execute("SELECT row_id FROM lru_stock WHERE stale = 1")
+        for (rid,) in cur.fetchall():
+            if rid is not None:
+                q_rows.append({"source": "immols_stock.csv", "row_id": int(rid), "detected_type": "stale"})
+
         q_df = pd.DataFrame(q_rows) if q_rows else pd.DataFrame(columns=["source", "row_id", "detected_type"])
 
         detection_rows: list[dict[str, Any]] = []

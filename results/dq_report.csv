@@ -1,5 +1,5 @@
 source,rows,loaded,quarantined,load_rate_pct,key_resolution_pct,missing_key_pct,mismatched_sn_pct,stale_pct
 emms_workorders.csv,204,197,7,96.57,100.0,2.94,0.49,0.0
-immols_stock.csv,40,37,3,92.5,100.0,2.5,0.0,5.0
+immols_stock.csv,40,39,1,97.5,100.0,2.5,0.0,5.0
 hums_engine.csv,2745,2637,108,96.07,100.0,2.99,0.95,0.0
 brd_repairs.csv,194,188,6,96.91,100.0,3.09,0.0,0.0

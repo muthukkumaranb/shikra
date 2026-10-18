@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS lru_stock (
     on_order INTEGER NOT NULL,
     lead_time_days REAL NOT NULL,
     last_updated TEXT NOT NULL,
+    stale INTEGER DEFAULT 0,
+    row_id INTEGER,
     PRIMARY KEY(lru_id, location)
 );
 

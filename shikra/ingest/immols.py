@@ -86,25 +86,21 @@ class IMMOLSAdapter:
                 quarantined += 1
                 continue
 
-            if (ref_date - row_date).days > 30:
-                quarantine_rows.append(
-                    (self.SOURCE_NAME, row_id, f"stale: last_updated {last_updated_str} is >30 days old")
-                )
+            is_stale = 1 if (ref_date - row_date).days > 30 else 0
+            if is_stale:
                 stale_cnt += 1
-                quarantined += 1
-                continue
 
-            # Valid row
+            # Valid row (stale stock is loaded with stale=1 per contract)
             on_hand = int(on_hand_str)
             on_order = int(on_order_str)
             lead_time = float(lead_time_str)
-            valid_rows.append((lru_id, location, on_hand, on_order, lead_time, last_updated_str))
+            valid_rows.append((lru_id, location, on_hand, on_order, lead_time, last_updated_str, is_stale, row_id))
             loaded += 1
             join_coverage_cnt += 1
 
         cur = self.conn.cursor()
         cur.executemany(
-            "INSERT OR REPLACE INTO lru_stock (lru_id, location, on_hand, on_order, lead_time_days, last_updated) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO lru_stock (lru_id, location, on_hand, on_order, lead_time_days, last_updated, stale, row_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             valid_rows,
         )
         cur.executemany(
