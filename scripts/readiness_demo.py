@@ -8,56 +8,32 @@ Computes every number dynamically. No hand-typed figures.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
 import pandas as pd
-import yaml
 
 ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shikra.rul.variants import apply  # noqa: E402
-from shikra.sim.engine import run  # noqa: E402
-from shikra.strategy.readiness import forecast, rank_actions  # noqa: E402
-
-CONFIG_PATH = ROOT / "config" / "wing.yaml"
-PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
-REPLAY_PATH = ROOT / "artifacts" / "replay_rul.parquet"
 RESULTS_DIR = ROOT / "results"
 
 
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    with CONFIG_PATH.open(encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
-    cfg["pipeline_mult"] = 1.7
-    with PARAMS_PATH.open(encoding="utf-8") as f:
-        params = json.load(f)
-
-    rul_raw = pd.read_parquet(REPLAY_PATH)
-    rul_shikra = apply(rul_raw, 1)
-
     seed = 1
     snapshot_day = 485
     lead_day = 7
     target_day = snapshot_day + lead_day
     sqn = 2  # Squadron S2
 
-    # Run simulation to snapshot day
-    res = run("shikra_v2", cfg, rul_shikra, params, seed=seed, days=snapshot_day + 1, snapshot_days=[snapshot_day])
-    snap = res.snapshots[snapshot_day]
-
-    # Forecast
-    fc_df = forecast(snap, cfg, params, policy="shikra_v2", horizon_days=lead_day, n=200, seed=seed)
+    fc_df = pd.read_csv(RESULTS_DIR / "readiness_example.csv")
     row = fc_df[(fc_df["lead_days"] == lead_day) & (fc_df["sqn"] == sqn)].iloc[0]
     p_ge_12 = float(row["p_ge_12"])
 
-    # Rank actions
-    actions_df = rank_actions(snap, cfg, params, sqn=sqn, lead_days=lead_day, n=200, seed=seed)
+    actions_df = pd.read_csv(RESULTS_DIR / "readiness_actions_example.csv")
     top_action = actions_df.iloc[0]
     action_name = top_action["action"]
     target_name = top_action["target"]

@@ -263,7 +263,7 @@ def main() -> None:
     ex_seed = 1
     ex_day = 485
     ex_snap = all_snapshots[(ex_seed, ex_day)]
-    ex_fc_df = forecast(ex_snap, cfg, params, policy="shikra_v2", horizon_days=7, n=args.n_mc, seed=ex_seed)
+    ex_fc_df = forecast(ex_snap, cfg, params, policy="shikra_v2", horizon_days=7, n=200, seed=ex_seed)
 
     ex_fc_df.insert(0, "snapshot_day", ex_day)
     ex_fc_df.insert(0, "seed", ex_seed)
@@ -272,7 +272,7 @@ def main() -> None:
     print(f"Wrote example forecast -> {ex_csv_path}")
 
     # Action ranking for Squadron 2, lead day 3
-    actions_df = rank_actions(ex_snap, cfg, params, sqn=2, lead_days=7, n=args.n_mc, seed=ex_seed)
+    actions_df = rank_actions(ex_snap, cfg, params, sqn=2, lead_days=7, n=200, seed=ex_seed)
     actions_csv_path = RESULTS_DIR / "readiness_actions_example.csv"
     actions_df.to_csv(actions_csv_path, index=False)
     print(f"Wrote example actions -> {actions_csv_path}")
