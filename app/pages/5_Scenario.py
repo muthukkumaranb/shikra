@@ -7,11 +7,13 @@ hangar plan update, and Engineering Officer sign-off.
 
 from __future__ import annotations
 
+import copy
 import sys
 import time
 from pathlib import Path
 
 import altair as alt
+import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -22,6 +24,12 @@ if str(ROOT) not in sys.path:
 from app.lib.audit import append as audit_append  # noqa: E402
 from app.lib.audit import get_recent as audit_recent  # noqa: E402
 from app.lib.data import load_config, load_params  # noqa: E402
+from app.lib.readiness import (  # noqa: E402
+    get_forecast,
+    get_readiness_module,
+    get_snapshot,
+    load_readiness_calib_coverage,
+)
 from app.lib.state import get_deterministic_injection_trajectory, get_sim_result  # noqa: E402
 from shikra.spares.demand import removal_prob  # noqa: E402
 
@@ -199,7 +207,7 @@ elif st.session_state.scenario_step == 3:
 
     rul_chart = (band + median + r_rule).properties(height=320)
     st.altair_chart(rul_chart, use_container_width=True)
-    st.caption("Red dashed line: R* = 5 cycles. Note: rul_true is never displayed — only calibrated quantiles.")
+    st.caption(f"Red dashed line: R* = {R_star} cycles. Note: Ground-truth RUL is never displayed — only calibrated quantiles.")
 
     col_nav1, col_nav2 = st.columns([1, 1])
     if col_nav1.button("⬅️ Previous"):
@@ -265,8 +273,21 @@ elif st.session_state.scenario_step == 5:
     transit_days = int(depot_to_base_days * pm)
     arrival_day = DAY + transit_days
 
-    transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">request raised; pending EO approval</span>'
-    transfer_note = "Depot stock: available after T1.7 merge"
+    # Check readiness module
+    readiness_mod = get_readiness_module()
+    snap = get_snapshot("shikra_v2", seed=1, day=DAY) if readiness_mod else None
+
+    if snap is not None:
+        depot_engines = int(snap.get("stock", {}).get("engines", {}).get("depot", 0))
+        if depot_engines > 0:
+            transfer_status_html = '<span style="color:#22c55e; font-weight:bold;">dispatched; in transit</span>'
+            transfer_note = f"Depot stock: {depot_engines} available on shelf"
+        else:
+            transfer_status_html = '<span style="color:#ef4444; font-weight:bold;">no depot engine available; pending repair completion</span>'
+            transfer_note = "no depot engine available (0 on shelf; depot repair pipeline active)"
+    else:
+        transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">request raised; pending EO approval</span>'
+        transfer_note = "Depot stock: available after T1.7 merge"
 
     st.markdown(
         f"""
@@ -290,35 +311,198 @@ elif st.session_state.scenario_step == 5:
     )
 
     st.markdown("#### Squadron 2 Hangar Plan (3 Slots Available)")
-    st.caption("illustrative layout; live hangar state after T1.7 merge")
 
-    # Derive S2 hangar occupancy from simulation state on DAY (tails 18 to 35)
-    s2_tails = list(range(18, 36))
-    s2_nmcm_tails = [f"T{t+1:02d}" for t in s2_tails if sim_res.tail_status[DAY][t] == "NMCM"]
-    s2_nmcs_tails = [f"T{t+1:02d}" for t in s2_tails if sim_res.tail_status[DAY][t] == "NMCS"]
+    if snap is not None:
+        # Real hangar state from snapshot on Day 485
+        st.caption("Live hangar state from Day 485 simulation snapshot. Synthetic wing.")
 
-    slot1_tail = s2_nmcm_tails[0] if s2_nmcm_tails else (s2_nmcs_tails[0] if s2_nmcs_tails else "Vacant")
-    slot1_status = "Active Maintenance (Engine Change)" if s2_nmcm_tails else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
-    slot1_comp = "—"
+        # S2 is squadron index 1 (tails 18..35)
+        s2_tails_snap = [t for t in snap["tails"] if t["sqn"] == 1]
+        s2_maint = [t for t in s2_tails_snap if t["status"] in ("NMCM", "NMCS")]
 
-    hangar_data = [
-        {"Slot": "Slot 1", "Current Tail": slot1_tail, "Status": slot1_status, "Completion Day": slot1_comp},
-        {"Slot": "Slot 2", "Current Tail": f"{st.session_state.selected_tail} (Reserved)", "Status": "Scheduled Engine Change", "Completion Day": str(arrival_day + planned_days)},
-        {"Slot": "Slot 3", "Current Tail": "Vacant", "Status": "Standby / Emergency Buffer", "Completion Day": "—"},
-    ]
-    st.dataframe(pd.DataFrame(hangar_data), use_container_width=True, hide_index=True)
+        hangar_rows = []
+        # Slot 1
+        if len(s2_maint) > 0:
+            m1 = s2_maint[0]
+            ret_d = m1.get("return_day", "—")
+            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "—"
+            hangar_rows.append({
+                "Slot": "Slot 1",
+                "Current Tail": f"T{m1['tail']+1:02d}",
+                "Status": f"Active Maintenance ({m1['status']})",
+                "Completion Day": comp_d,
+            })
+        else:
+            hangar_rows.append({
+                "Slot": "Slot 1",
+                "Current Tail": "Vacant",
+                "Status": "Standby",
+                "Completion Day": "—",
+            })
 
-    # Readiness forecast comparison
+        # Slot 2 (Reserved for injected engine change on T19)
+        hangar_rows.append({
+            "Slot": "Slot 2",
+            "Current Tail": f"{st.session_state.selected_tail} (Reserved)",
+            "Status": "Scheduled Engine Change",
+            "Completion Day": str(arrival_day + planned_days),
+        })
+
+        # Slot 3
+        if len(s2_maint) > 1:
+            m2 = s2_maint[1]
+            ret_d = m2.get("return_day", "—")
+            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "—"
+            hangar_rows.append({
+                "Slot": "Slot 3",
+                "Current Tail": f"T{m2['tail']+1:02d}",
+                "Status": f"Active Maintenance ({m2['status']})",
+                "Completion Day": comp_d,
+            })
+        else:
+            hangar_rows.append({
+                "Slot": "Slot 3",
+                "Current Tail": "Vacant",
+                "Status": "Standby / Emergency Buffer",
+                "Completion Day": "—",
+            })
+        st.dataframe(
+            pd.DataFrame(hangar_rows), use_container_width=True, hide_index=True
+        )
+    else:
+        # Fallback before T1.7 merge
+        st.caption("illustrative layout; live hangar state after T1.7 merge")
+
+        s2_tails = list(range(18, 36))
+        s2_nmcm_tails = [
+            f"T{t+1:02d}"
+            for t in s2_tails
+            if sim_res.tail_status[DAY][t] == "NMCM"
+        ]
+        s2_nmcs_tails = [
+            f"T{t+1:02d}"
+            for t in s2_tails
+            if sim_res.tail_status[DAY][t] == "NMCS"
+        ]
+
+        slot1_tail = (
+            s2_nmcm_tails[0]
+            if s2_nmcm_tails
+            else (s2_nmcs_tails[0] if s2_nmcs_tails else "Vacant")
+        )
+        slot1_status = (
+            "Active Maintenance (Engine Change)"
+            if s2_nmcm_tails
+            else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
+        )
+        slot1_comp = "—"
+
+        hangar_data = [
+            {
+                "Slot": "Slot 1",
+                "Current Tail": slot1_tail,
+                "Status": slot1_status,
+                "Completion Day": slot1_comp,
+            },
+            {
+                "Slot": "Slot 2",
+                "Current Tail": f"{st.session_state.selected_tail} (Reserved)",
+                "Status": "Scheduled Engine Change",
+                "Completion Day": str(arrival_day + planned_days),
+            },
+            {
+                "Slot": "Slot 3",
+                "Current Tail": "Vacant",
+                "Status": "Standby / Emergency Buffer",
+                "Completion Day": "—",
+            },
+        ]
+        st.dataframe(
+            pd.DataFrame(hangar_data), use_container_width=True, hide_index=True
+        )
+
+    # ── D+3 Squadron Readiness Forecast ─────────────────────────────────────
     st.markdown("#### D+3 Squadron Readiness Forecast")
-    try:
-        from shikra.strategy.readiness import forecast  # noqa: F401
-        has_readiness = True
-    except (ImportError, AttributeError):
-        has_readiness = False
 
-    if has_readiness:
-        # When forecast exists after T1.7 merge, invoke forecast and display actual numbers
-        st.markdown("#### Squadron Readiness Forecast (D+3)")
+    if readiness_mod is not None and snap is not None:
+        with st.spinner("Computing D+3 readiness distribution (before vs after injection)..."):
+            snap_before = copy.deepcopy(snap)
+            snap_after = copy.deepcopy(snap)
+            # Injected action: dispatch engine and schedule planned change
+            snap_after["queues"]["engine_transfers"].append((DAY + transit_days, 1))
+            # Set planned return for injected tail T19 (tail index 18)
+            snap_after["tails"][18]["return_day"] = arrival_day + planned_days
+
+            fc_before = get_forecast(
+                snap_before,
+                config,
+                params,
+                policy="shikra",
+                horizon_days=3,
+                n=150,
+                seed=42,
+            )
+            fc_after = get_forecast(
+                snap_after,
+                config,
+                params,
+                policy="shikra",
+                horizon_days=3,
+                n=150,
+                seed=42,
+            )
+
+        if fc_before is not None and fc_after is not None:
+            row_b = fc_before[
+                (fc_before["lead_days"] == 3) & (fc_before["sqn"] == 2)
+            ].iloc[0]
+            row_a = fc_after[
+                (fc_after["lead_days"] == 3) & (fc_after["sqn"] == 2)
+            ].iloc[0]
+
+            exp_b = float(row_b["expected_mc"])
+            q10_b = float(row_b["mc_q10"])
+            q90_b = float(row_b["mc_q90"])
+
+            exp_a = float(row_a["expected_mc"])
+            q10_a = float(row_a["mc_q10"])
+            q90_a = float(row_a["mc_q90"])
+
+            target_n = int(np.clip(round(exp_b), 6, 18))
+            p_n_b = float(row_b.get(f"p_ge_{target_n}", 0.0)) * 100.0
+            p_n_a = float(row_a.get(f"p_ge_{target_n}", 0.0)) * 100.0
+
+            fc_cols = st.columns(2)
+            with fc_cols[0]:
+                st.markdown(
+                    f'<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
+                    f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600;">BEFORE INJECTION (Baseline S2 at D+3)</div>'
+                    f'<div style="font-size: 1.5rem; font-weight: 700; color: #38bdf8; margin: 0.25rem 0;">{exp_b:.2f} MC</div>'
+                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_b:.1f}, {q90_b:.1f}] MC</div>'
+                    f'<div style="font-size: 0.85rem; color: #fde047; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_b:.1f}%</b></div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            with fc_cols[1]:
+                delta_exp = exp_a - exp_b
+                delta_p = p_n_a - p_n_b
+                st.markdown(
+                    f'<div style="background: #1e293b; border: 1px solid #0284c7; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
+                    f'<div style="color: #38bdf8; font-size: 0.85rem; font-weight: 600;">AFTER INJECTED CHANGE (Mitigated S2 at D+3)</div>'
+                    f'<div style="font-size: 1.5rem; font-weight: 700; color: #4ade80; margin: 0.25rem 0;">{exp_a:.2f} MC <span style="font-size: 0.95rem; color: #4ade80;">({delta_exp:+.2f})</span></div>'
+                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_a:.1f}, {q90_a:.1f}] MC</div>'
+                    f'<div style="font-size: 0.85rem; color: #4ade80; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_a:.1f}%</b> ({delta_p:+.1f} pp)</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            cov_x = load_readiness_calib_coverage()
+            if cov_x:
+                st.caption(f"raw forecast band; held-out coverage {cov_x}")
+            else:
+                st.caption("coverage: pending")
+        else:
+            st.info("Readiness forecast computation pending.")
     else:
         st.markdown(
             '<div style="background: #374151; border-radius: 8px; padding: 0.8rem; '
@@ -327,6 +511,7 @@ elif st.session_state.scenario_step == 5:
             "</div>",
             unsafe_allow_html=True,
         )
+
 
     col_nav1, col_nav2 = st.columns([1, 1])
     if col_nav1.button("⬅️ Previous"):
