@@ -102,6 +102,22 @@ def test_data_loaders_columns():
     conformal = load_conformal()
     assert isinstance(conformal, dict)
 
+    # Spares allocation & comparison
+    from app.lib.data import load_spares_alloc, load_spares_compare
+
+    spares_alloc = load_spares_alloc()
+    assert spares_alloc is not None and not spares_alloc.empty
+    assert "pipeline_mult" in spares_alloc.columns
+    assert "vm_base_per_sqn" in spares_alloc.columns
+    assert "vm_depot" in spares_alloc.columns
+
+    spares_comp = load_spares_compare()
+    assert spares_comp is not None and not spares_comp.empty
+    assert "pipeline_mult" in spares_comp.columns
+    assert "diff_vs_current_pp" in spares_comp.columns
+    assert "nmcs_lru_sim" in spares_comp.columns
+    assert "nmcs_engine_sim" in spares_comp.columns
+
 
 def test_audit_log_append_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Verify audit log is strictly append-only with no update or delete functions."""
