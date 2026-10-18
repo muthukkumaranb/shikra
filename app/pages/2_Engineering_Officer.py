@@ -421,3 +421,6 @@ if recent:
     st.dataframe(audit_df, use_container_width=True, hide_index=True)
 else:
     st.info("No audit entries yet.")
+st.divider()
+from app.lib.explain_panel import render_for_tail  # noqa: E402, I001
+render_for_tail(snap, tail_idx, R_star)

@@ -78,6 +78,53 @@ def test_byte_identical_and_frozen_files_untouched(tmp_path: Path):
     assert diff.stdout == ""
 
 
+def _panel_script(subset: str, unit: int, cycle: int, r_star: float, missing: bool) -> None:
+    from pathlib import Path as _Path
+
+    import app.lib.explain_panel as ep
+
+    if missing:
+        ep.CONTRIB_PATH = _Path("does/not/exist.csv")
+        ep.GLOBAL_PATH = _Path("does/not/exist_either.csv")
+    ep.render_why_flagged(subset, unit, cycle, r_star)
+
+
+def _pick_engine(flagged: bool) -> tuple[str, int, int, float]:
+    import json
+
+    r_star = float(json.loads((ROOT / "artifacts" / "policy_params.json").read_text())["R_star"])
+    rp = pd.read_parquet(
+        ROOT / "artifacts" / "replay_rul.parquet", columns=["subset", "unit", "cycle", "q10"]
+    ).sort_values(["subset", "unit", "cycle"])
+    row = rp[rp["q10"] <= r_star].iloc[0] if flagged else rp[rp["q10"] > r_star].iloc[0]
+    return str(row["subset"]), int(row["unit"]), int(row["cycle"]), r_star
+
+
+@pytest.mark.parametrize("flagged", [True, False])
+def test_panel_renders(flagged: bool):
+    from streamlit.testing.v1 import AppTest
+
+    if not CSV_PATH.exists():
+        pytest.skip("results/explain_contrib.csv not generated")
+    args = (*_pick_engine(flagged), False)
+    at = AppTest.from_function(_panel_script, args=args).run(timeout=60)
+    assert not at.exception
+    text = " ".join(m.value for m in at.markdown)
+    assert "Why is this engine flagged?" in text
+    assert ("REMOVAL DUE" in text) is flagged
+    assert ("→ OK" in text) is not flagged
+    assert "rul_true" not in text
+
+
+def test_panel_without_csv_does_not_crash():
+    from streamlit.testing.v1 import AppTest
+
+    args = (*_pick_engine(True), True)
+    at = AppTest.from_function(_panel_script, args=args).run(timeout=60)
+    assert not at.exception
+    assert any("make explain" in i.value for i in at.info)
+
+
 def test_csv_has_no_ground_truth():
     if not CSV_PATH.exists():
         pytest.skip("results/explain_contrib.csv not generated")
