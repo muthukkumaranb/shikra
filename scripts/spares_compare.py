@@ -167,6 +167,8 @@ def write_findings_doc(
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     t0_start = time.time()
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -178,7 +180,7 @@ def main() -> None:
         float(lru_item["cost_lakh"]) * (3 * int(lru_item["stock_base"]) + int(lru_item["stock_depot"]))
         for lru_item in base_cfg["lrus"]
     )
-    print(f"Total LRU capital budget: ₹{budget_lakh:.1f} lakh")
+    print(f"Total LRU capital budget: Rs. {budget_lakh:.1f} lakh")
 
     # 2. Run VARI-METRIC for each pipeline multiplier
     vm_allocs: dict[float, dict[str, dict]] = {}
