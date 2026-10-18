@@ -30,3 +30,4 @@ visualizer/
 # App data
 app_data/
 audit.key
+*.webm
