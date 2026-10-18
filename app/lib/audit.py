@@ -5,13 +5,18 @@ append-only: no update, no delete.
 
 Tamper evidence: every row carries prev_hash and row_hash, where
 row_hash = sha256(prev_hash + canonical(row)). Editing, deleting or
-reordering rows breaks the chain.
+reordering rows breaks the chain. Each UTC day is also sealed with a
+Merkle root over its row hashes, authenticated by an HMAC keyed from
+app_data/audit.key, so truncating the tail of the log is detectable.
 """
 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+import os
+import secrets
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -37,8 +42,93 @@ def _row_hash(prev_hash: str, row: dict) -> str:
     return hashlib.sha256((prev_hash + canonical(row)).encode()).hexdigest()
 
 
+def merkle_root(hashes: list[str]) -> str:
+    """Merkle root over hex row hashes; odd levels duplicate the last node."""
+    if not hashes:
+        return hashlib.sha256(b"").hexdigest()
+    level = [bytes.fromhex(h) for h in hashes]
+    while len(level) > 1:
+        if len(level) % 2:
+            level.append(level[-1])
+        level = [hashlib.sha256(level[i] + level[i + 1]).digest() for i in range(0, len(level), 2)]
+    return level[0].hex()
+
+
+def _load_key() -> bytes:
+    """Read the HMAC key, creating it (mode 0o600) on first use."""
+    path = Path(APP_DATA_DIR) / "audit.key"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    except FileExistsError:
+        return path.read_bytes()
+    with os.fdopen(fd, "wb") as f:
+        f.write(secrets.token_bytes(32))
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return path.read_bytes()
+
+
+def _root_hmac(key: bytes, date_utc: str, n_rows: int, root: str) -> str:
+    return hmac.new(key, f"{date_utc}|{n_rows}|{root}".encode(), hashlib.sha256).hexdigest()
+
+
+def _today_utc() -> str:
+    return datetime.now(UTC).date().isoformat()
+
+
+def _day_hashes(conn: sqlite3.Connection, date_utc: str) -> list[str]:
+    return [
+        r[0]
+        for r in conn.execute(
+            "SELECT row_hash FROM audit_log WHERE substr(ts_utc, 1, 10) = ? ORDER BY id",
+            (date_utc,),
+        )
+    ]
+
+
+def _seal(conn: sqlite3.Connection, date_utc: str, replace: bool) -> None:
+    """Write the day's root inside the caller's transaction."""
+    hashes = _day_hashes(conn, date_utc)
+    root = merkle_root(hashes)
+    verb = "INSERT OR REPLACE" if replace else "INSERT"
+    conn.execute(
+        f"{verb} INTO daily_roots (date_utc, n_rows, merkle_root, hmac) VALUES (?, ?, ?, ?)",
+        (date_utc, len(hashes), root, _root_hmac(_load_key(), date_utc, len(hashes), root)),
+    )
+
+
+def seal_day(date_utc: str | None = None) -> None:
+    """Seal (or re-seal) the current UTC day's Merkle root. Past days are final."""
+    today = _today_utc()
+    date_utc = date_utc or today
+    if date_utc != today:
+        raise ValueError(f"refusing to reseal past day {date_utc}; only {today} may be sealed")
+    conn = _get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            _seal(conn, date_utc, replace=True)
+            conn.execute("COMMIT")
+        except BaseException:
+            conn.execute("ROLLBACK")
+            raise
+    finally:
+        conn.close()
+
+
 def _ensure_schema(conn: sqlite3.Connection) -> None:
     """Create tables; add hash columns to an old DB and backfill the chain once."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS daily_roots (
+            date_utc TEXT PRIMARY KEY,
+            n_rows INT,
+            merkle_root TEXT,
+            hmac TEXT
+        )
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +165,13 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
                     (prev, h, r[0]),
                 )
                 prev = h
+            # First-time seal of every legacy day (not a reseal: the table is new).
+            today = _today_utc()
+            days = conn.execute(
+                "SELECT DISTINCT substr(ts_utc, 1, 10) FROM audit_log ORDER BY 1"
+            ).fetchall()
+            for (day,) in days:
+                _seal(conn, day, replace=(day == today))
         conn.execute("COMMIT")
     except BaseException:
         conn.execute("ROLLBACK")
@@ -125,6 +222,8 @@ def append(
                 """,
                 (*(row[k] for k in _FIELDS), prev, _row_hash(prev, row)),
             )
+            # seal_day() for the row's own (current) UTC day, in the same transaction.
+            _seal(conn, row["ts_utc"][:10], replace=True)
             conn.execute("COMMIT")
         except BaseException:
             conn.execute("ROLLBACK")
