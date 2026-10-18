@@ -70,12 +70,14 @@ The readiness forecast uses `shikra_v2` at `pipeline_mult=1.7` and operational s
 
 | Lead | Method | 80% Coverage | MAE | Brier | Snapshots |
 |------|--------|--------------|-----|-------|-----------|
-| 3 | shikra_forecast | 58.7% | 1.284 | 0.070 | 330 |
-| 3 | persistence | 32.2% | 0.963 | 0.073 | 330 |
-| 3 | climatology | 83.7% | 2.130 | 0.114 | 330 |
-| 7 | shikra_forecast | 40.9% | 2.261 | 0.131 | 330 |
-| 7 | persistence | 20.3% | 1.508 | 0.114 | 330 |
-| 7 | climatology | 85.0% | 2.055 | 0.110 | 330 |
+| 3 | shikra_forecast | 55.8% | 1.326 | 0.073 | 165 |
+| 3 | shikra_conformal | 86.3% | 1.326 | 0.073 | 165 |
+| 3 | persistence | 31.1% | 0.982 | 0.074 | 165 |
+| 3 | climatology | 81.2% | 2.240 | 0.119 | 165 |
+| 7 | shikra_forecast | 41.0% | 2.274 | 0.132 | 165 |
+| 7 | shikra_conformal | 95.0% | 2.274 | 0.132 | 165 |
+| 7 | persistence | 19.8% | 1.552 | 0.117 | 165 |
+| 7 | climatology | 82.4% | 2.136 | 0.115 | 165 |
 
 Calibration covers 330 snapshots (days 395-695, seeds 1-30) and compares against persistence and leave-one-seed-out climatology from days 365-729. At lead 7, the forecast is worse than persistence on MAE and Brier score; it is not a validated replacement for the baselines.
 
@@ -83,10 +85,10 @@ Action rankings are forecast-estimated gains, not validated in simulation. They 
 
 | Action | Share best | Mean expected-MC gain | Share positive |
 |--------|------------|------------------------|----------------|
-| Transfer spare engine depot to squadron | 70.3% | 0.000 | 0.0% |
+| Transfer spare engine depot to squadron | 67.0% | 0.000 | 0.0% |
 | Expedite earliest pending engine repair by 50% | 0.0% | 0.000 | 0.0% |
-| Defer planned removal within safety margin (q10 > 0) | 3.0% | 0.019 | 3.0% |
-| Transfer scarcest LRU (APU starter) depot to squadron | 26.7% | 0.004 | 27.0% |
+| Defer planned removal within safety margin (q10 > 0) | 4.5% | 0.018 | 4.5% |
+| Transfer scarcest LRU (APU starter) depot to squadron | 28.5% | 0.008 | 28.8% |
 
 ## Known Failure Modes and Robustness Findings
 
