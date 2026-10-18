@@ -27,13 +27,18 @@ from shikra.spares.demand import removal_prob  # noqa: E402
 
 start_time = time.perf_counter()
 
-st.set_page_config(page_title="SHIKRA — Scenario Walkthrough", page_icon="🦅", layout="wide")
-st.title("🎬 Scenario Walkthrough — Failure Injection")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Scenario Walkthrough",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Scenario Walkthrough — Failure Injection")
 st.caption("Deterministic demonstration of predictive advisory workflow. Synthetic wing.")
 
 config = load_config()
 params = load_params()
-R_star = params.get("R_star", 5)
+R_star = int(params["R_star"])
 pm = config.get("pipeline_mult", 1.7)
 depot_to_base_days = config.get("spares", {}).get("engines", {}).get("depot_to_base_days", 3)
 planned_days = config.get("maintenance", {}).get("planned_change_days", 2)
@@ -260,18 +265,35 @@ elif st.session_state.scenario_step == 5:
     transit_days = int(depot_to_base_days * pm)
     arrival_day = DAY + transit_days
 
+    # Build depot engine availability dynamically from simulation state
+    depot_stock_initial = int(config.get("spares", {}).get("engines", {}).get("depot", 3))
+    # Wing-wide NMCS count on day 485
+    nmcs_wing = int(sim_res.daily.loc[DAY].get("nmcs", 0))
+    # Available depot spare engines
+    depot_available = max(0, depot_stock_initial - min(depot_stock_initial, nmcs_wing // 8))
+
+    if depot_available > 0:
+        transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">PENDING EO APPROVAL</span>'
+        transfer_note = f"{depot_available} serviceable spare engine(s) available at central depot."
+    else:
+        transfer_status_html = '<span style="color:#ef4444; font-weight:bold;">no depot engine available</span>'
+        transfer_note = "Central depot spare engines exhausted; expedited overhaul return required."
+
     st.markdown(
         f"""
         <div style="background: #1e293b; border-left: 6px solid #38bdf8; border-radius: 8px;
                     padding: 1.2rem; margin-bottom: 1.5rem;">
-            <h4 style="margin-top:0; color: #38bdf8;">📦 Pre-Positioning Transfer Order</h4>
+            <h4 style="margin-top:0; color: #38bdf8;">Pre-Positioning Transfer Order</h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem;">
                 <div><strong>Source:</strong> Central Depot</div>
                 <div><strong>Destination:</strong> Squadron 2 Base (S2)</div>
                 <div><strong>Item:</strong> Serviceable Spare Engine</div>
                 <div><strong>Transit Time:</strong> {transit_days} days ({depot_to_base_days}d × {pm}× pipeline)</div>
                 <div><strong>Estimated Arrival:</strong> Day {arrival_day}</div>
-                <div><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PENDING EO APPROVAL</span></div>
+                <div><strong>Status:</strong> {transfer_status_html}</div>
+            </div>
+            <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8;">
+                <strong>Depot Status:</strong> {transfer_note}
             </div>
         </div>
         """,
@@ -279,9 +301,20 @@ elif st.session_state.scenario_step == 5:
     )
 
     st.markdown("#### Squadron 2 Hangar Plan (3 Slots Available)")
+    st.caption("illustrative layout; live hangar state after T1.7 merge")
+
+    # Derive S2 hangar occupancy from simulation state on DAY (tails 18 to 35)
+    s2_tails = list(range(18, 36))
+    s2_nmcm_tails = [f"T{t+1:02d}" for t in s2_tails if sim_res.tail_status[DAY][t] == "NMCM"]
+    s2_nmcs_tails = [f"T{t+1:02d}" for t in s2_tails if sim_res.tail_status[DAY][t] == "NMCS"]
+
+    slot1_tail = s2_nmcm_tails[0] if s2_nmcm_tails else (s2_nmcs_tails[0] if s2_nmcs_tails else "Vacant")
+    slot1_status = "Active Maintenance (Engine Change)" if s2_nmcm_tails else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
+    slot1_comp = DAY + 1 if slot1_tail != "Vacant" else "—"
+
     hangar_data = [
-        {"Slot": "Slot 1", "Current Tail": "T22", "Status": "Inspection", "Completion Day": DAY + 1},
-        {"Slot": "Slot 2", "Current Tail": f"{st.session_state.selected_tail} (Reserved)", "Status": "Scheduled Engine Change", "Completion Day": arrival_day + 2},
+        {"Slot": "Slot 1", "Current Tail": slot1_tail, "Status": slot1_status, "Completion Day": slot1_comp},
+        {"Slot": "Slot 2", "Current Tail": f"{st.session_state.selected_tail} (Reserved)", "Status": "Scheduled Engine Change", "Completion Day": arrival_day + planned_days},
         {"Slot": "Slot 3", "Current Tail": "Vacant", "Status": "Standby / Emergency Buffer", "Completion Day": "—"},
     ]
     st.dataframe(pd.DataFrame(hangar_data), use_container_width=True, hide_index=True)
@@ -289,13 +322,14 @@ elif st.session_state.scenario_step == 5:
     # Readiness forecast comparison
     st.markdown("#### D+3 Squadron Readiness Forecast")
     try:
-        from shikra.strategy import readiness  # noqa: F401
+        from shikra.strategy.readiness import forecast  # noqa: F401
         has_readiness = True
     except (ImportError, AttributeError):
         has_readiness = False
 
     if has_readiness:
-        st.info("Showing calibrated P(≥N MC) readiness forecast.")
+        # When forecast exists after T1.7 merge, invoke forecast and display actual numbers
+        st.markdown("#### Squadron Readiness Forecast (D+3)")
     else:
         st.markdown(
             '<div style="background: #374151; border-radius: 8px; padding: 0.8rem; '
