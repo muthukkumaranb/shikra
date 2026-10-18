@@ -34,13 +34,16 @@ BABU_CNN = {
 def generate_model_card() -> str:
     # ── Load results CSVs ────────────────────────────────────────────────
     rul_single = pd.read_csv(RESULTS_DIR / "rul_cmapss.csv")
-    rul_multi = pd.read_csv(RESULTS_DIR / "rul_cmapss_multi.csv")
+    multi_csv = RESULTS_DIR / "rul_cmapss_multi.csv"
+    if multi_csv.exists():
+        rul_multi = pd.read_csv(multi_csv)
+        all_rul = pd.concat([rul_single, rul_multi], ignore_index=True).sort_values("subset").reset_index(drop=True)
+    else:
+        all_rul = rul_single.sort_values("subset").reset_index(drop=True)
+
     cov_df = pd.read_csv(RESULTS_DIR / "coverage.csv")
     bias_df = pd.read_csv(RESULTS_DIR / "bias.csv")
     hm_df = pd.read_csv(RESULTS_DIR / "heatmap.csv")
-
-    # Combine RUL results
-    all_rul = pd.concat([rul_single, rul_multi], ignore_index=True).sort_values("subset").reset_index(drop=True)
 
     # Conformal coverage lookup
     cov_lookup: dict[tuple[str, str, float, bool], tuple[float, float, int]] = {}
@@ -53,17 +56,22 @@ def generate_model_card() -> str:
     bias_p10 = bias_df[bias_df["bias_cycles"] == 10].iloc[0]
     bias_0 = bias_df[bias_df["bias_cycles"] == 0].iloc[0]
 
-    # Heatmap 2x error metrics (pm=1.0 and pm=1.7)
+    # Heatmap 2x error metrics (pm=1.0 and pm=1.7 or 1.9)
+    pm_high = 1.7 if 1.7 in hm_df["pipeline_mult"].values else 1.9
     hm_10_q1 = hm_df[(hm_df["pipeline_mult"] == 1.0) & (hm_df["quality"] == 1.0)].iloc[0]
     hm_10_q2 = hm_df[(hm_df["pipeline_mult"] == 1.0) & (hm_df["quality"] == 2.0)].iloc[0]
-    hm_17_q1 = hm_df[(hm_df["pipeline_mult"] == 1.7) & (hm_df["quality"] == 1.0)].iloc[0]
-    hm_17_q2 = hm_df[(hm_df["pipeline_mult"] == 1.7) & (hm_df["quality"] == 2.0)].iloc[0]
+    hm_high_q1 = hm_df[(hm_df["pipeline_mult"] == pm_high) & (hm_df["quality"] == 1.0)].iloc[0]
+    hm_high_q2 = hm_df[(hm_df["pipeline_mult"] == pm_high) & (hm_df["quality"] == 2.0)].iloc[0]
 
     # Splits info
     with (ARTIFACTS_DIR / "splits.json").open("r", encoding="utf-8") as f:
         splits_single = json.load(f)
-    with (ARTIFACTS_DIR / "splits_multi.json").open("r", encoding="utf-8") as f:
-        splits_multi = json.load(f)
+    splits_multi_path = ARTIFACTS_DIR / "splits_multi.json"
+    if splits_multi_path.exists():
+        with splits_multi_path.open("r", encoding="utf-8") as f:
+            splits_multi = json.load(f)
+    else:
+        splits_multi = {"seed": 0, "FD002": {"train": [], "val": []}, "FD004": {"train": [], "val": []}}
 
     n_tr_single = len(splits_single["train"])
     n_cal_single = len(splits_single["calib"])
@@ -183,9 +191,9 @@ def generate_model_card() -> str:
         "   - At nominal pipeline speed (`pipeline_mult=1.0`):",
         f"     - SHIKRA nominal (quality 1.0, `shikra_v2`): {hm_10_q1['serviceability_mean']:.1%} serviceability (gain vs reactive: {hm_10_q1['gain_vs_reactive_mean']:+.1%}).",
         f"     - Poor quality (quality 2.0, 2× error): {hm_10_q2['serviceability_mean']:.1%} serviceability (loss vs reactive: {hm_10_q2['gain_vs_reactive_mean']:+.1%}), causing a net availability drop of {(hm_10_q1['serviceability_mean'] - hm_10_q2['serviceability_mean']) * 100:.1f} percentage points.",
-        "   - At wing pipeline speed (`pipeline_mult=1.7`):",
-        f"     - SHIKRA nominal (quality 1.0, `shikra_v2`): {hm_17_q1['serviceability_mean']:.1%} serviceability.",
-        f"     - Poor quality (quality 2.0): {hm_17_q2['serviceability_mean']:.1%} serviceability, causing an availability collapse of {(hm_17_q1['serviceability_mean'] - hm_17_q2['serviceability_mean']) * 100:.1f} percentage points due to hangar congestion and erratic queue spikes.",
+        f"   - At wing pipeline speed (`pipeline_mult={pm_high:.1f}`):",
+        f"     - SHIKRA nominal (quality 1.0, `shikra_v2`): {hm_high_q1['serviceability_mean']:.1%} serviceability.",
+        f"     - Poor quality (quality 2.0): {hm_high_q2['serviceability_mean']:.1%} serviceability, causing an availability collapse of {(hm_high_q1['serviceability_mean'] - hm_high_q2['serviceability_mean']) * 100:.1f} percentage points due to hangar congestion and erratic queue spikes.",
         "",
         "## Data Integrity and Leakage Prevention",
         "",
@@ -196,6 +204,55 @@ def generate_model_card() -> str:
         "- **Model of Record:** model of record re-frozen 17 Oct; previous replay model was not committed and was overwritten by a retrain; all results regenerated from the committed model.",
         "",
     ])
+
+    calib_csv = RESULTS_DIR / "readiness_calib.csv"
+    if calib_csv.exists():
+        calib_df = pd.read_csv(calib_csv)
+        lines.extend([
+            "",
+            "## A10 Readiness Forecast",
+            "",
+            "The A10 readiness forecast answers the commander's question: *\"What is the probability that squadron S has at least N aircraft mission-capable on day D+3, and what single action raises it most?\"*",
+            "",
+            "- **Inputs Used:** Current tail status (MC/NMCM/NMCS), return days, base/depot spare stock, current engine cycles, conformal RUL intervals ($q_{10}, q_{50}, q_{90}$), LRU sorties.",
+            "- **Inputs Strictly Isolated:** Never accesses `rul_true` during forecast inference or action evaluation.",
+            "",
+            "### Calibration Results",
+            "",
+            "Evaluated across operational snapshots under the calibrated baseline wing:",
+            "",
+            "| Lead Days | Method | 80% Coverage | MAE (Aircraft) | Brier Score ($P(\\ge N \\text{ MC})$) | Snapshots |",
+            "|-----------|--------|--------------|----------------|-------------------------------------|-----------|",
+        ])
+        for _, row in calib_df.iterrows():
+            lines.append(
+                f"| {int(row['lead_days'])} | `{row['method']}` | {row['coverage_80']:.1%} | "
+                f"{row['mae']:.2f} | {row['brier']:.4f} | {int(row['n_snapshots'])} |"
+            )
+
+        actions_csv = RESULTS_DIR / "readiness_actions_summary.csv"
+        if actions_csv.exists():
+            actions_df = pd.read_csv(actions_csv)
+            lines.extend([
+                "",
+                "### Action Ranking Evaluation",
+                "",
+                "Summary of top candidate actions evaluated at lead 7 days (label: forecast-estimated gain, not validated in simulation):",
+                "",
+                "| Action | Share Best (%) | Mean $\\Delta$ Expected MC | Share Positive Gain (%) |",
+                "|--------|----------------|---------------------------|--------------------------|",
+            ])
+            for _, row in actions_df.iterrows():
+                lines.append(
+                    f"| {row['action']} | {row['share_of_snapshots_best']:.1%} | "
+                    f"{row['mean_delta_expected_mc']:+.2f} | {row['share_with_positive_gain']:.1%} |"
+                )
+
+        lines.extend([
+            "",
+            "- **Limitations:** Action gains are forecast-estimated (not validated in simulation), parameters are synthetic, and LRU degradation is modeled per tail.",
+            "",
+        ])
 
     return "\n".join(lines)
 
