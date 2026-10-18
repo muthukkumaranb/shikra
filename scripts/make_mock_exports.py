@@ -24,14 +24,11 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
 import numpy as np
 import pandas as pd
 import yaml
 
+ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = ROOT / "config" / "wing.yaml"
 ARTIFACTS_DIR = ROOT / "artifacts"
 REPLAY_PATH = ARTIFACTS_DIR / "replay_rul.parquet"
@@ -95,6 +92,8 @@ def _engine_sn(pos: int) -> str:
 
 def _run_sim():
     """Run shikra_v2 seed 1 and return (config, SimResult, rul)."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
     from shikra.rul.variants import apply
     from shikra.sim.engine import run
 
