@@ -85,15 +85,20 @@ def render_why_flagged(subset: str, unit: int, cycle: int, r_star: float) -> Non
         .mark_bar()
         .encode(
             x=alt.X("contribution:Q", title="Contribution to q10 (cycles)"),
-            y=alt.Y("sensor_label:N", sort=alt.SortField("rank"), title=None),
+            y=alt.Y(
+                "sensor_label:N",
+                sort=alt.SortField("rank"),
+                title=None,
+                axis=alt.Axis(labelLimit=0, labelOverlap=False, labelFontSize=13),
+            ),
             color=alt.Color(
                 "direction:N",
                 scale=alt.Scale(domain=[UP_LABEL, DOWN_LABEL], range=[UP, DOWN]),
-                legend=alt.Legend(title=None, orient="bottom"),
+                legend=alt.Legend(title=None, orient="bottom", labelLimit=0, labelFontSize=13),
             ),
             tooltip=["sensor_label", "feature", alt.Tooltip("contribution:Q", format="+.2f")],
         )
-        .properties(height=230, title=f"{subset} unit {unit}, cycle {cycle}: top 5 features")
+        .properties(height=260, title=f"{subset} unit {unit}, cycle {cycle}: top 5 features")
     )
     st.altair_chart(chart, use_container_width=True)
 
