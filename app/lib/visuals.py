@@ -192,4 +192,5 @@ def render_aircraft_detail_svg(
                 modified_svg,
             )
 
-    return modified_svg
+    # Collapse all whitespace into single spaces so markdown never interprets indented lines as code blocks
+    return " ".join(modified_svg.split())

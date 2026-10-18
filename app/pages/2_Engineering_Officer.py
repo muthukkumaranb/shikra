@@ -109,7 +109,7 @@ if snap is not None:
             width=380,
             height=480,
         )
-        st.markdown(svg_detail, unsafe_allow_html=True)
+        st.html(svg_detail)
     with c_meta:
         st.markdown(f"#### Tail **{selected_tail}** Overview")
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
@@ -150,7 +150,7 @@ else:
         svg_detail = render_aircraft_detail_svg(
             selected_tail, tail_st, width=380, height=480
         )
-        st.markdown(svg_detail, unsafe_allow_html=True)
+        st.html(svg_detail)
     with c_meta:
         st.markdown(f"#### Tail **{selected_tail}** Overview")
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")

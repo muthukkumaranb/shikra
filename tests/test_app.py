@@ -302,3 +302,25 @@ def test_no_rul_true_reaches_any_page():
         for df_elem in at.dataframe:
             assert "rul_true" not in df_elem.value.columns, f"rul_true column leaked on {page_path}"
 
+
+def test_aircraft_detail_svg_no_codeblocks():
+    """Assert rendered SVG has no blank lines (\\n\\n) and no line starting with 4 spaces."""
+    from app.lib.visuals import render_aircraft_detail_svg
+
+    # Default rendering
+    svg_default = render_aircraft_detail_svg("T01", "MC")
+    assert "\n\n" not in svg_default
+    for line in svg_default.splitlines():
+        assert not line.startswith("    "), f"Line starts with 4 spaces: {line[:30]}"
+
+    # Custom engine states and component states
+    svg_custom = render_aircraft_detail_svg(
+        "T19",
+        "NMCS",
+        engine_states={"engine_0": "REMOVAL", "engine_1": "WATCH"},
+        component_states={"radar": "MISSING", "generator": "OK"},
+    )
+    assert "\n\n" not in svg_custom
+    for line in svg_custom.splitlines():
+        assert not line.startswith("    "), f"Line starts with 4 spaces: {line[:30]}"
+
