@@ -134,22 +134,6 @@ with tab_multi:
 
 st.divider()
 
-# ── Key Figures ──────────────────────────────────────────────────────────────
-st.markdown("### Key Figures")
-st.caption("Generated figures from results/ directory.")
-
-fig_paths = get_result_figures()
-if fig_paths:
-    cols = st.columns(2)
-    for idx, fpath in enumerate(fig_paths):
-        col = cols[idx % 2]
-        with col:
-            st.image(str(fpath), caption=fpath.name, use_column_width=True)
-else:
-    st.info("No PNG figures found in results/.")
-
-st.divider()
-
 # ── Audit Trail Integrity ────────────────────────────────────────────────────
 st.markdown("### Audit Trail")
 st.caption("Sign-off log: SHA-256 hash chain plus HMAC-authenticated daily Merkle roots.")
@@ -167,3 +151,19 @@ if chain["ok"]:
 else:
     st.markdown(f":red[Audit chain: BROKEN at row id={chain['first_bad_id']}]")
     st.caption(chain["reason"])
+
+st.divider()
+
+# ── Key Figures ──────────────────────────────────────────────────────────────
+st.markdown("### Key Figures")
+st.caption("Generated figures from results/ directory.")
+
+fig_paths = get_result_figures()
+if fig_paths:
+    cols = st.columns(2)
+    for idx, fpath in enumerate(fig_paths):
+        col = cols[idx % 2]
+        with col:
+            st.image(str(fpath), caption=fpath.name, use_column_width=True)
+else:
+    st.info("No PNG figures found in results/.")
