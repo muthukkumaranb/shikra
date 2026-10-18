@@ -17,20 +17,30 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.lib.data import load_heatmap, load_supply_shock  # noqa: E402
+from app.lib.state import get_sim_result  # noqa: E402
+
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 
 st.set_page_config(
     page_title="SHIKRA — Advisory Decision Support",
-    page_icon="🦅",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
+
+# ── Pre-warm Simulation Cache ──────────────────────────────────────────────
+with st.spinner("Pre-warming wing simulation cache..."):
+    _ = get_sim_result("shikra_v2", seed=1)
 
 # ── Header ──────────────────────────────────────────────────────────────────
 st.markdown(
     """
-    <div style="text-align:center; padding: 2rem 0 1rem 0;">
-        <h1 style="font-size:3rem; margin-bottom:0.2rem;">🦅 SHIKRA</h1>
+    <div style="text-align:center; padding: 1.5rem 0 0.5rem 0;">
+        <h1 style="font-size:3rem; margin-bottom:0.2rem; letter-spacing: 2px;">SHIKRA</h1>
         <p style="font-size:1.3rem; color:#888; font-style:italic;">
             "Predict the snag, place the spare, fly the sortie."
+        </p>
+        <p style="font-size:0.85rem; color:#64748b; margin-top: -0.5rem;">
+            Simulation cache pre-warmed for instant offline page access.
         </p>
     </div>
     """,
