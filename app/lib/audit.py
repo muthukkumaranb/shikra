@@ -253,3 +253,82 @@ def count() -> int:
     result = cursor.fetchone()[0]
     conn.close()
     return result
+
+
+def verify() -> dict:
+    """Recompute the hash chain and every daily root; report the first break.
+
+    Returns {ok, n_rows, n_days, first_bad_id, reason, latest_date, latest_root}.
+    """
+    conn = _get_connection()
+    try:
+        rows = conn.execute(
+            f"SELECT id, {', '.join(_FIELDS)}, prev_hash, row_hash FROM audit_log ORDER BY id"
+        ).fetchall()
+        roots = conn.execute(
+            "SELECT date_utc, n_rows, merkle_root, hmac FROM daily_roots ORDER BY date_utc"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    result = {
+        "ok": False,
+        "n_rows": len(rows),
+        "n_days": len(roots),
+        "first_bad_id": None,
+        "reason": "",
+        "latest_date": roots[-1][0] if roots else None,
+        "latest_root": roots[-1][2] if roots else None,
+    }
+
+    def broken(row_id: int | None, reason: str) -> dict:
+        result.update(first_bad_id=row_id, reason=reason)
+        return result
+
+    prev = GENESIS_HASH
+    by_day: dict[str, list[tuple[int, str]]] = {}
+    for r in rows:
+        row_id, row, stored_prev, stored_hash = r[0], dict(zip(_FIELDS, r[1:8])), r[8], r[9]
+        if stored_prev != prev:
+            return broken(row_id, "prev_hash does not link to previous row (deleted or reordered)")
+        if _row_hash(prev, row) != stored_hash:
+            return broken(row_id, "row_hash mismatch (row content edited)")
+        prev = stored_hash
+        by_day.setdefault(str(row["ts_utc"])[:10], []).append((row_id, stored_hash))
+
+    key = _load_key()
+    unsealed = sorted(set(by_day) - {d for d, *_ in roots})
+    if unsealed:
+        day = unsealed[0]
+        return broken(by_day[day][0][0], f"day {day} has rows but no sealed root")
+    for date_utc, n_rows, root, mac in roots:
+        day_rows = by_day.get(date_utc, [])
+        first_id = day_rows[0][0] if day_rows else None
+        expected_mac = _root_hmac(key, date_utc, n_rows, root)
+        if not hmac.compare_digest(expected_mac, mac or ""):
+            return broken(first_id, f"HMAC mismatch on daily root {date_utc}")
+        if n_rows != len(day_rows):
+            return broken(
+                first_id, f"day {date_utc} sealed {n_rows} rows but log has {len(day_rows)}"
+            )
+        if merkle_root([h for _, h in day_rows]) != root:
+            return broken(first_id, f"Merkle root mismatch for day {date_utc}")
+
+    result.update(ok=True, reason="chain intact")
+    return result
+
+
+if __name__ == "__main__":
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(prog="python -m app.lib.audit")
+    parser.add_argument("command", choices=["verify"])
+    parser.parse_args()
+    res = verify()
+    if res["ok"]:
+        latest = (res["latest_root"] or "none")[:12]
+        print(f"chain intact: {res['n_rows']} rows, {res['n_days']} days, latest root {latest}")
+        sys.exit(0)
+    print(f"BROKEN at row id={res['first_bad_id']}: {res['reason']}")
+    sys.exit(1)
