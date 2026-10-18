@@ -265,19 +265,8 @@ elif st.session_state.scenario_step == 5:
     transit_days = int(depot_to_base_days * pm)
     arrival_day = DAY + transit_days
 
-    # Build depot engine availability dynamically from simulation state
-    depot_stock_initial = int(config.get("spares", {}).get("engines", {}).get("depot", 3))
-    # Wing-wide NMCS count on day 485
-    nmcs_wing = int(sim_res.daily.loc[DAY].get("nmcs", 0))
-    # Available depot spare engines
-    depot_available = max(0, depot_stock_initial - min(depot_stock_initial, nmcs_wing // 8))
-
-    if depot_available > 0:
-        transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">PENDING EO APPROVAL</span>'
-        transfer_note = f"{depot_available} serviceable spare engine(s) available at central depot."
-    else:
-        transfer_status_html = '<span style="color:#ef4444; font-weight:bold;">no depot engine available</span>'
-        transfer_note = "Central depot spare engines exhausted; expedited overhaul return required."
+    transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">request raised; pending EO approval</span>'
+    transfer_note = "Depot stock: available after T1.7 merge"
 
     st.markdown(
         f"""
