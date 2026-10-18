@@ -429,7 +429,7 @@ def _write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
     """Write a CSV with a synthetic data header comment."""
     with path.open("w", newline="", encoding="utf-8") as f:
         f.write("# SYNTHETIC: not IAF data\n")
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
