@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import multiprocessing as mp
 import sys
 import time
@@ -152,7 +153,7 @@ def main() -> None:
     evaluation_seeds = [s for s in seeds if s >= 16]
     conformal_widening: dict[int, float] = {}
     for lead in LEAD_DAYS:
-        errors = []
+        scores = []
         for s in calibration_seeds:
             for d in SNAPSHOT_DAYS:
                 target_day = d + lead
@@ -162,9 +163,12 @@ def main() -> None:
                         (fc_lead["lead_days"] == lead)
                         & (fc_lead["sqn"] == sqn_idx + 1)
                     ].iloc[0]
-                    errors.append(abs(all_realised_mc[s][target_day][sqn_idx] - row_fc["expected_mc"]))
-        conformal_widening[lead] = float(np.percentile(errors, 80))
-    print(f"Conformal widening by lead: {conformal_widening}")
+                    y = all_realised_mc[s][target_day][sqn_idx]
+                    scores.append(max(float(row_fc["mc_q10"]) - y, y - float(row_fc["mc_q90"])))
+        n_scores = len(scores)
+        quantile_level = min(1.0, math.ceil((n_scores + 1) * 0.8) / n_scores)
+        conformal_widening[lead] = float(np.quantile(scores, quantile_level))
+    print(f"Conformal widening in aircraft by lead: {conformal_widening}")
 
     # Collectors for reliability diagram (lead 3)
     reliability_pairs: list[tuple[float, int]] = []
