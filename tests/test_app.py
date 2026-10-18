@@ -342,3 +342,49 @@ def test_scenario_step3_rstar_dynamic_caption():
     expected_caption = f"Red dashed line: R* = {r_star} cycles."
     assert expected_caption in all_captions
 
+
+def test_aircraft_detail_svg_valid_xml():
+    """Verify that render_aircraft_detail_svg produces well-formed XML for all tail/engine/component states."""
+    import xml.dom.minidom
+
+    from app.lib.visuals import render_aircraft_detail_svg
+
+    # Every tail status
+    for tail_status in ["MC", "NMCM", "NMCS"]:
+        svg = render_aircraft_detail_svg("T19", tail_status)
+        dom = xml.dom.minidom.parseString(svg)
+        assert dom.documentElement.tagName == "svg"
+
+    # Every engine state
+    for eng_st in ["OK", "WATCH", "REMOVAL"]:
+        svg = render_aircraft_detail_svg(
+            "T19",
+            "MC",
+            engine_states={"engine_0": eng_st, "engine_1": eng_st},
+        )
+        dom = xml.dom.minidom.parseString(svg)
+        assert dom.documentElement.tagName == "svg"
+
+    # Every component state
+    for comp_st in ["OK", "MISSING"]:
+        svg = render_aircraft_detail_svg(
+            "T19",
+            "MC",
+            component_states={"radar_tx": comp_st, "fuel_pump": comp_st},
+        )
+        dom = xml.dom.minidom.parseString(svg)
+        assert dom.documentElement.tagName == "svg"
+
+    # Combinations of tail, engine, and component states
+    for tail_status in ["MC", "NMCM", "NMCS"]:
+        for eng0 in ["OK", "WATCH", "REMOVAL"]:
+            for comp_st in ["OK", "MISSING"]:
+                svg = render_aircraft_detail_svg(
+                    "T01",
+                    tail_status,
+                    engine_states={"engine_0": eng0, "engine_1": "OK"},
+                    component_states={"radar_tx": comp_st},
+                )
+                dom = xml.dom.minidom.parseString(svg)
+                assert dom.documentElement.tagName == "svg"
+

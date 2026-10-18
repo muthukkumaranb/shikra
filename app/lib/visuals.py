@@ -173,24 +173,28 @@ def render_aircraft_detail_svg(
     # Set engine colors by replacing class or inline style
     modified_svg = base_svg
     for eng_id, col in engine_colors.items():
-        # Replace pod fill
-        pattern = rf'(<rect id="{eng_id}_pod"[^>]*)(style="[^"]*")?'
-        modified_svg = re.sub(
-            pattern,
-            rf'\1 style="fill: {col}; stroke: #ffffff; stroke-width: 2;"',
-            modified_svg,
-        )
+        pattern = rf'(<rect id="{eng_id}_pod"[^>]*?)(\s*/?>)'
+
+        def _replace_engine_pod(m: re.Match, color: str = col) -> str:
+            tag_content = re.sub(r'\s*style="[^"]*"', "", m.group(1))
+            closer = m.group(2)
+            return f'{tag_content} style="fill: {color}; stroke: #ffffff; stroke-width: 2;"{closer}'
+
+        modified_svg = re.sub(pattern, _replace_engine_pod, modified_svg)
 
     # Set component colors
     if component_states is not None:
         for comp_id, comp_st in component_states.items():
             comp_col = COLOR_COMP_MISSING if comp_st.upper() == "MISSING" else COLOR_COMP_OK
-            pattern = rf'(<g id="{comp_id}"[^>]*>\s*<circle class="component-marker"[^>]*)(\/>)'
-            modified_svg = re.sub(
-                pattern,
-                rf'\1 style="fill: {comp_col}; stroke: #ffffff; stroke-width: 2;" \2',
-                modified_svg,
-            )
+            pattern = rf'(<g id="{comp_id}"[^>]*>\s*)(<circle class="component-marker"[^>]*?)(\s*/?>)'
+
+            def _replace_comp_marker(m: re.Match, color: str = comp_col) -> str:
+                g_open = m.group(1)
+                circle_content = re.sub(r'\s*style="[^"]*"', "", m.group(2))
+                closer = m.group(3)
+                return f'{g_open}{circle_content} style="fill: {color}; stroke: #ffffff; stroke-width: 2;"{closer}'
+
+            modified_svg = re.sub(pattern, _replace_comp_marker, modified_svg)
 
     # Collapse all whitespace into single spaces so markdown never interprets indented lines as code blocks
     return " ".join(modified_svg.split())
