@@ -399,8 +399,7 @@ class FleetSim:
             for r in lru_returned:
                 lid = r["id"]
                 if lru_waiting[lid]:
-                    idx = int(rng_fair.integers(len(lru_waiting[lid])))
-                    wait_tail, wait_sqn = lru_waiting[lid].pop(idx)
+                    wait_tail, wait_sqn = lru_waiting[lid].pop(0)
                     ls = lru_state[wait_tail][lid]
                     ls["missing_until"] = day + transfer_days
                     lru_inbound_transfers.append({

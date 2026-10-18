@@ -11,24 +11,24 @@
 |------|---------|--------|
 | G0.3 — replay units ~40 | **PASS** | replay units = 40 (expected ~40) |
 | G0.4 — reactive serviceability 55–65% | **PASS** | reactive serviceability = 56.5% (target 55-65%) |
-| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.0 pp (threshold >= 5 pp) |
+| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.1 pp (threshold >= 5 pp) |
 
 **Serviceability per policy (mean over 30 seeds):**
 
 | Policy | Mean serviceability |
 |--------|-------------------|
 | reactive | 56.5% |
-| preventive | 47.5% |
+| preventive | 47.6% |
 | shikra | 56.2% |
-| oracle | 56.6% |
-| shikra_v2 | 56.2% |
-| oracle_v2 | 56.5% |
+| oracle | 56.5% |
+| shikra_v2 | 56.3% |
+| oracle_v2 | 56.6% |
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
-  mean = 1.742  95% CI [-0.225, 4.896]
+  mean = -3.451  95% CI [-7.504, -0.414]
 
-> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 72.1 per year) but, in this wing, serviceability is unchanged (56.2% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 >
-> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.8 pp over the halt); recovery takes 54 days after supply resumes. Ranking: apu_start (22.0 pp), ecs_valve (8.0 pp). Parameters are synthetic; the method is the claim.
+> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.1 pp over the halt); recovery takes 45 days after supply resumes. Ranking: apu_start (21.2 pp), ecs_valve (7.9 pp). Parameters are synthetic; the method is the claim.
 >
-> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes 2030 cycles; +10 raises unscheduled removals from 0 to 97.0.
+> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes 2019 cycles; +10 raises unscheduled removals from 0 to 97.8.

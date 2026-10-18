@@ -67,17 +67,17 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
 ## Known Failure Modes and Robustness Findings
 
 1. **Systematic Prediction Bias Sensitivity (§3.2b):**
-   - **Pessimistic Bias (−10 cycles):** Wastes 2030 cycles of usable engine life across the fleet due to premature removals, while maintaining 0 unscheduled removals.
-   - **Optimistic Bias (+10 cycles):** Causes severe late removals, raising unscheduled engine removals from 0.0 to 97.0 per fleet-year.
-   - **Zero Bias (Nominal):** Produces 0.0 unscheduled removals with 865 cycles wasted life.
+   - **Pessimistic Bias (−10 cycles):** Wastes 2019 cycles of usable engine life across the fleet due to premature removals, while maintaining 0 unscheduled removals.
+   - **Optimistic Bias (+10 cycles):** Causes severe late removals, raising unscheduled engine removals from 0.0 to 97.8 per fleet-year.
+   - **Zero Bias (Nominal):** Produces 0.0 unscheduled removals with 854 cycles wasted life.
 
 2. **Degraded Prediction Quality (2× Error Impact from Heatmap):**
    - At nominal pipeline speed (`pipeline_mult=1.0`):
-     - SHIKRA nominal (quality 1.0): 72.4% serviceability (gain vs reactive: +0.0%).
-     - Poor quality (quality 2.0, 2× error): 50.9% serviceability (loss vs reactive: -21.5%), causing a net availability drop of 21.5 percentage points.
+     - SHIKRA nominal (quality 1.0): 72.5% serviceability (gain vs reactive: +0.0%).
+     - Poor quality (quality 2.0, 2× error): 50.8% serviceability (loss vs reactive: -21.6%), causing a net availability drop of 21.6 percentage points.
    - At wing pipeline speed (`pipeline_mult=1.9`):
      - SHIKRA nominal (quality 1.0): 52.9% serviceability.
-     - Poor quality (quality 2.0): 33.9% serviceability, causing an availability collapse of 18.9 percentage points due to hangar congestion and erratic queue spikes.
+     - Poor quality (quality 2.0): 34.0% serviceability, causing an availability collapse of 18.9 percentage points due to hangar congestion and erratic queue spikes.
 
 ## Data Integrity and Leakage Prevention
 
