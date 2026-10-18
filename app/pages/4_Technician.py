@@ -27,6 +27,7 @@ st.set_page_config(
 )
 st.title("Technician's View — Snag List")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 config = load_config()
 warmup = config.get("warmup_days", 365)

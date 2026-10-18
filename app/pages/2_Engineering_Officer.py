@@ -35,6 +35,7 @@ st.set_page_config(
 )
 st.title("Engineering Officer's View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 # ── Load data ────────────────────────────────────────────────────────────────
 config = load_config()
