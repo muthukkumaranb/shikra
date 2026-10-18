@@ -271,18 +271,18 @@ elif st.session_state.scenario_step == 5:
     st.markdown(
         f"""
         <div style="background: #1e293b; border-left: 6px solid #38bdf8; border-radius: 8px;
-                    padding: 1.2rem; margin-bottom: 1.5rem;">
+                    padding: 1.2rem; margin-bottom: 1.5rem; color: #cbd5e1;">
             <h4 style="margin-top:0; color: #38bdf8;">Pre-Positioning Transfer Order</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem;">
-                <div><strong>Source:</strong> Central Depot</div>
-                <div><strong>Destination:</strong> Squadron 2 Base (S2)</div>
-                <div><strong>Item:</strong> Serviceable Spare Engine</div>
-                <div><strong>Transit Time:</strong> {transit_days} days ({depot_to_base_days}d × {pm}× pipeline)</div>
-                <div><strong>Estimated Arrival:</strong> Day {arrival_day}</div>
-                <div><strong>Status:</strong> {transfer_status_html}</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; color: #cbd5e1;">
+                <div><strong style="color: #cbd5e1;">Source:</strong> Central Depot</div>
+                <div><strong style="color: #cbd5e1;">Destination:</strong> Squadron 2 Base (S2)</div>
+                <div><strong style="color: #cbd5e1;">Item:</strong> Serviceable Spare Engine</div>
+                <div><strong style="color: #cbd5e1;">Transit Time:</strong> {transit_days} days ({depot_to_base_days}d × {pm}× pipeline)</div>
+                <div><strong style="color: #cbd5e1;">Estimated Arrival:</strong> Day {arrival_day}</div>
+                <div><strong style="color: #cbd5e1;">Status:</strong> {transfer_status_html}</div>
             </div>
-            <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8;">
-                <strong>Depot Status:</strong> {transfer_note}
+            <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #cbd5e1;">
+                <strong style="color: #cbd5e1;">Depot Status:</strong> {transfer_note}
             </div>
         </div>
         """,
