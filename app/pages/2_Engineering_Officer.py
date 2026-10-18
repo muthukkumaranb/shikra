@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import base64
 import sys
+import time
 from pathlib import Path
 
 import altair as alt
 import pandas as pd
 import streamlit as st
+
+start_time = time.perf_counter()
 
 ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
@@ -120,6 +123,9 @@ if snap is not None:
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
+        st.markdown(
+            f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+        )
 
         st.markdown("##### Propulsion Subsystems")
         for i, eng in enumerate(tail_engs[:2]):
@@ -149,9 +155,9 @@ if snap is not None:
         else:
             st.success("All 10 tracked LRU components serviceable.")
 else:
-    # Before T1.7 merge: show tail-level status only, captioned "engine detail after T1.7 merge"
+    # Snapshot not available: show tail-level status only
     with c_img:
-        st.caption("engine detail after T1.7 merge")
+        st.caption("Engine health (tail-level; per-engine RUL unavailable)")
         svg_detail = render_aircraft_detail_svg(
             selected_tail, tail_st, width=380, height=480
         )
@@ -166,9 +172,12 @@ else:
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
         st.markdown(
+            f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+        )
+        st.markdown(
             '<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #94a3b8; margin-top: 1rem;">'
-            "<b>Subsystem Health:</b> Live per-engine RUL quantiles (q10/q50/q90) and individual LRU component markers "
-            "are available after T1.7 merge."
+            "<b>Subsystem Health:</b> Per-engine RUL quantiles (q10/q50/q90) and LRU component markers "
+            "require a live snapshot (snapshot_at not available)."
             "</div>",
             unsafe_allow_html=True,
         )
@@ -227,7 +236,7 @@ if snap is not None:
     df_eng = df_eng.sort_values(["_sort", "q10 RUL"]).drop(columns=["_sort"])
     st.dataframe(df_eng, use_container_width=True, hide_index=True, height=400)
 else:
-    st.caption("Engine RUL table (q10/q50/q90) available after T1.7 merge")
+    st.caption("Engine RUL table (q10/q50/q90) — snapshot not available")
 
     # Derive engine state from the simulation events
     replay_rul = load_replay_rul()
@@ -301,6 +310,9 @@ else:
 
 
 st.markdown(f"**R* (removal threshold):** {R_star} cycles")
+st.markdown(
+    f"Removal threshold R\\* = {R_star} cycles · set by Engineering Officer · changes are audit-logged"
+)
 st.markdown("**Note:** Ground-truth RUL is never shown — only predictive quantiles (q10/q50/q90).")
 
 st.divider()
@@ -421,3 +433,7 @@ if recent:
     st.dataframe(audit_df, use_container_width=True, hide_index=True)
 else:
     st.info("No audit entries yet.")
+
+# ── Performance ──────────────────────────────────────────────────────────────
+elapsed = time.perf_counter() - start_time
+st.caption(f"Page load: {elapsed:.2f} s. SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
