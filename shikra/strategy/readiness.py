@@ -14,6 +14,8 @@ All data and parameters are for a synthetic wing.
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -28,8 +30,9 @@ N_AC = N_SQN * AC_PER_SQN
 N_ENG_PER_AC = 2
 
 
-def snapshot_at(policy: str, seed: int, day: int) -> dict:
-    """Run one simulation and return the requested end-of-day snapshot."""
+@lru_cache(maxsize=32)
+def _snapshot_at_cached(policy: str, seed: int, day: int) -> dict:
+    """Run one simulation and cache the requested end-of-day snapshot."""
     root = Path(__file__).resolve().parents[2]
     with (root / "config" / "wing.yaml").open(encoding="utf-8") as handle:
         import yaml
@@ -54,6 +57,11 @@ def snapshot_at(policy: str, seed: int, day: int) -> dict:
     if result.snapshots is None or day not in result.snapshots:
         raise ValueError(f"Simulation did not produce snapshot for day {day}")
     return result.snapshots[day]
+
+
+def snapshot_at(policy: str, seed: int, day: int) -> dict:
+    """Return a cached snapshot without exposing mutable cache state."""
+    return deepcopy(_snapshot_at_cached(policy, seed, day))
 
 
 def _weibull_conditional_survival_draw(
