@@ -23,7 +23,6 @@ RESULTS_DIR = ROOT / "results"
 def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    seed = 1
     snapshot_day = 485
     lead_day = 7
     target_day = snapshot_day + lead_day
