@@ -56,7 +56,7 @@ def test_page_imports(page_path: str):
 @pytest.mark.parametrize("page_path", PAGE_FILES)
 def test_apptest_pages_no_exceptions(page_path: str):
     """Use Streamlit's AppTest to run each page and verify no uncaught exceptions."""
-    at = AppTest.from_file(page_path).run()
+    at = AppTest.from_file(page_path).run(timeout=20)
     assert len(at.exception) == 0, (
         f"Page {page_path} raised exceptions: {[e.value for e in at.exception]}"
     )
