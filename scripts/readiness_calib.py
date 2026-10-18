@@ -15,8 +15,8 @@ Contract §6, T1.7 & Step B4:
 - Outputs:
     - results/readiness_calib.csv
     - results/fig_readiness_reliability.png
-    - results/readiness_example.csv (seed 0, D = 180)
-    - results/readiness_actions_example.csv (seed 0, D = 180, S2, lead 3)
+    - results/readiness_example.csv (seed 1, D = 485)
+    - results/readiness_actions_example.csv (seed 1, D = 485, S2, lead 7)
 
 All parameters and wings are synthetic.
 """
@@ -46,7 +46,7 @@ if str(ROOT) not in sys.path:
 
 from shikra.rul.variants import apply  # noqa: E402
 from shikra.sim.engine import AC_PER_SQN, N_SQN, run  # noqa: E402
-from shikra.strategy.readiness import forecast, rank_actions  # noqa: E402
+from shikra.strategy.readiness import forecast  # noqa: E402
 
 CONFIG_PATH = ROOT / "config" / "wing.yaml"
 PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
@@ -301,12 +301,6 @@ def main() -> None:
     ex_csv_path = RESULTS_DIR / "readiness_example.csv"
     ex_fc_df.to_csv(ex_csv_path, index=False)
     print(f"Wrote example forecast -> {ex_csv_path}")
-
-    # Action ranking for Squadron 2, lead day 3
-    actions_df = rank_actions(ex_snap, cfg, params, sqn=2, lead_days=7, n=200, seed=ex_seed)
-    actions_csv_path = RESULTS_DIR / "readiness_actions_example.csv"
-    actions_df.to_csv(actions_csv_path, index=False)
-    print(f"Wrote example actions -> {actions_csv_path}")
 
     # Step 6: Generate reliability diagram (fig_readiness_reliability.png)
     print("Step 5: Generating reliability diagram...")

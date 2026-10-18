@@ -86,6 +86,7 @@ def main() -> None:
                 group["delta_expected_mc"].std(ddof=1) / np.sqrt(len(group))
             ),
             "share_with_positive_gain": float((group["delta_expected_mc"] > 0).mean()),
+            "note": "share_of_snapshots_best is a tie-break artefact when mean delta is near zero",
         })
     summary = pd.DataFrame(summary_rows)
     summary.to_csv(RESULTS_DIR / "readiness_actions_summary.csv", index=False)

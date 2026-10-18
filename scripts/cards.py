@@ -266,7 +266,8 @@ persistence.
 Action results use {scope} at n={n_mc}. They are forecast-estimated gains, not
 validated in simulation. The action model is a one-step approximation and
 does not capture future policy feedback, competing squadron demand, or
-uncertainty in maintenance and transfer assumptions.
+uncertainty in maintenance and transfer assumptions. When mean delta is near
+zero, share_of_snapshots_best is a tie-break artefact.
 """
 
 
