@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest
 
 PY     ?= python
 PIP    ?= pip
@@ -64,6 +64,10 @@ readme:
 # ── Model card ───────────────────────────────────────────────────────────────
 cards:
 	$(PY) scripts/cards.py
+
+# ── Ingestion & DQ checks ──────────────────────────────────────────────────
+ingest:
+	$(PY) scripts/ingest.py
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 test:
