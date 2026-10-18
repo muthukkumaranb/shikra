@@ -42,8 +42,7 @@ st.caption("Verification gates, simulation results, model benchmarks, and audit 
 st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 # Audit chain integrity line at top
-from app.lib.audit import verify as _audit_verify_top  # noqa: E402
-_chain_top = _audit_verify_top()
+_chain_top = audit_verify()
 if _chain_top["ok"]:
     _top_root = (_chain_top["latest_root"] or "none")[:12]
     st.markdown(f":green[Audit chain: intact · {_chain_top['n_rows']} records · root `{_top_root}`]")
@@ -192,7 +191,7 @@ if fig_paths:
     for idx, fpath in enumerate(fig_paths):
         col = cols[idx % 2]
         with col:
-            st.image(str(fpath), caption=fpath.name, use_container_width=True)
+            st.image(str(fpath), caption=fpath.name, use_column_width=True)
 else:
     st.info("No PNG figures found in results/.")
 
