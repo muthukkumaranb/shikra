@@ -11,9 +11,9 @@ The forecast loses to persistence on MAE at both leads.
 
 ## Conformal calibration result
 
-The 80th percentile absolute-error widening is applied separately by lead,
+The CQR widening is measured in aircraft (MC count) and applied separately by lead,
 using seeds 1-15, and evaluated on seeds 16-30. Conformal coverage is
-0.8626 at D+3 and 0.9495
+0.8626 at D+3 and 0.8646
 at D+7. Conformal widening changes the interval coverage only; its MAE and
 Brier score remain the raw forecast values. Persistence remains better on MAE
 at both leads, and the conformal method is not a validated replacement for

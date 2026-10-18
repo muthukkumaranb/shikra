@@ -75,7 +75,7 @@ The readiness forecast uses `shikra_v2` at `pipeline_mult=1.7` and operational s
 | 3 | persistence | 31.1% | 0.982 | 0.074 | 165 |
 | 3 | climatology | 81.2% | 2.240 | 0.119 | 165 |
 | 7 | shikra_forecast | 41.0% | 2.274 | 0.132 | 165 |
-| 7 | shikra_conformal | 95.0% | 2.274 | 0.132 | 165 |
+| 7 | shikra_conformal | 86.5% | 2.274 | 0.132 | 165 |
 | 7 | persistence | 19.8% | 1.552 | 0.117 | 165 |
 | 7 | climatology | 82.4% | 2.136 | 0.115 | 165 |
 
