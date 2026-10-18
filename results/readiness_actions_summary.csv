@@ -1,0 +1,6 @@
+action,share_of_snapshots_best,mean_delta_expected_mc,share_with_positive_gain
+Transfer scarcest LRU (APU starter) depot to squadron,0.3242424242424242,0.007055555555555555,0.3464646464646465
+Transfer spare engine depot to squadron,0.602020202020202,0.0005707070707070707,0.00909090909090909
+Expedite earliest pending engine repair by 50%,0.005050505050505051,0.0,0.0
+Defer planned removal within safety margin (q10 > 0),0.06868686868686869,0.02642929292929293,0.07373737373737374
+Add 1 temporary hangar maintenance slot,0.0,0.0,0.0
