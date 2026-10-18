@@ -156,7 +156,7 @@ def test_audit_log_append_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 def test_scenario_deterministic_injection():
     """Verify the scenario injection rule is deterministic and yields the same unit twice."""
-    r_star = 5
+    r_star = int(load_params()["R_star"])
     run1 = get_deterministic_injection_trajectory(r_star)
     run2 = get_deterministic_injection_trajectory(r_star)
 

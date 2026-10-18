@@ -21,8 +21,13 @@ from app.lib.audit import get_recent as audit_recent  # noqa: E402
 from app.lib.data import load_config, load_params, load_replay_rul  # noqa: E402
 from app.lib.state import get_sim_result  # noqa: E402
 
-st.set_page_config(page_title="SHIKRA — Engineering Officer", page_icon="🦅", layout="wide")
-st.title("🔧 Engineering Officer's View")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Engineering Officer",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Engineering Officer's View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
 
 # ── Load data ────────────────────────────────────────────────────────────────
@@ -56,7 +61,7 @@ st.divider()
 
 # ── Engine Health Table ──────────────────────────────────────────────────────
 st.markdown("### Engine Health Table")
-st.caption(f"Wing state on day {selected_day} (seed 1, policy shikra_v2). Synthetic wing.")
+st.caption("Engine RUL table (q10/q50/q90) available after T1.7 merge")
 
 # Derive engine state from the simulation
 # We re-run to get the detailed engine state at the selected day
