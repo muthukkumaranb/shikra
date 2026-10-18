@@ -69,7 +69,7 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ### Verification Scope & Commands
 
-- **`scripts/verify.ps1` (default, ~8 min)**: Windows one-line validation executing the test suite (88 tests), every simulation (`sim`, `summary`, `heatmap`, `bias`, `figures`, `deck-figures`, `readme`) EXCEPT the ~65-min supply-shock run, followed by a bitwise byte-compare of ALL 17 committed results CSVs (`scripts/check_reproduce.py`) and a git working tree diff check. Add `-Full` to also regenerate supply shock (~73 min).
+- **`scripts/verify.ps1` (default, ~8 min)**: Windows one-line validation executing the full test suite (`pytest -q -m "not data"`), every simulation (`sim`, `summary`, `heatmap`, `bias`, `figures`, `deck-figures`, `readme`) EXCEPT the ~65-min supply-shock run, followed by a bitwise byte-compare of ALL 17 committed results CSVs (`scripts/check_reproduce.py`) and a git working tree diff check. Add `-Full` to also regenerate supply shock (~73 min).
 - **`make verify` (~70+ min)**: Full pipeline reproduction including the 545-day supply-shock simulation (`reproduce-sim`), followed by bitwise validation against all committed CSVs and git diff verification.
 
 **Linux / macOS:**
@@ -94,7 +94,7 @@ powershell -ExecutionPolicy Bypass -File scripts/verify.ps1 -Py .venv\Scripts\py
 - **`git clone`**: ~16.3s
 - **`python -m venv .venv`**: ~26.6s
 - **`pip install -r requirements.txt`**: ~4m 13.6s (253.6s)
-- **`pytest -q -m "not data"`**: ~48.5s (88 passed, 5 deselected)
+- **`pytest -q -m "not data"`**: ~48.5s (full test suite excluding raw data)
 - **`shikra.sim.runner` (30 seeds, 6 policies, `n_jobs=2`)**: ~2m 40.6s (160.6s)
 - **`scripts/verify.ps1` (default)**: ~7m 51.5s (471.5s) (tests + sim + summary + heatmap + bias + figures + deck figures + readme + byte-compare of all 17 CSVs)
 - **`scripts/verify.ps1 -Full` / `make verify`**: ~73 min (includes ~65 min 545-day supply shock run)

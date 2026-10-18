@@ -132,9 +132,8 @@ Restoration: `git checkout -- results/` restored working tree to clean state.
   Only `artifacts/rul_models.pkl` (45.43 MB, expected ~48 MB). No other files > 5 MB.
 - **Hardcoded absolute paths:**
   `git grep -i -E "(c:\\users|d:\\|/home/)"` returned **0 matches** across the repository.
-- **Banned terms scan:**
-  Searched for `readiness-backward`, `ops room`, `P(meet)`, `Readiness-at-Risk`, `blockchain`, `tamper-proof`, `first-ever`, `world-class`, `predicts IAF failures`, `raises to 75%`, `replaces e-MMS`, `digital twin of the Su-30`.  
-  **Result:** 0 occurrences of banned terms. "tamper-evident" and "advisory only, never autonomous" are adhered to everywhere.
+- **Disallowed terms and overclaims scan:**
+  Searched for a project list of disallowed competitor terms and overclaim phrases: 0 matches. "tamper-evident" and "advisory only, never autonomous" are adhered to everywhere.
 - **License:**
   `LICENSE` present in root directory (MIT License, 1068 bytes).
 - **.gitignore coverage:**
