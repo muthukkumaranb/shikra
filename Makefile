@@ -100,6 +100,7 @@ app:
 # Note: PNGs are excluded because platform-specific font/matplotlib rasterization
 # can introduce minor byte-level differences across OS platforms.
 verify:
+	$(PY) scripts/check_reproduce.py
 	$(PY) -m pytest -q -m "not data"
 	$(MAKE) reproduce-sim PY=$(PY)
 	$(PY) scripts/check_reproduce.py

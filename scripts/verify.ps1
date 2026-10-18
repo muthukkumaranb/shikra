@@ -27,6 +27,13 @@ if (-not (Test-Path $Py)) {
     }
 }
 
+Write-Output "== Step 0/4: Validating artifact baseline before execution =="
+& $Py scripts/check_reproduce.py
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Pre-execution check failed: baseline results differ from committed artifacts"
+    exit $LASTEXITCODE
+}
+
 Write-Output "== Step 1/4: Running pytest =="
 & $Py -m pytest -q -m "not data"
 if ($LASTEXITCODE -ne 0) {
