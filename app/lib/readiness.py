@@ -29,6 +29,30 @@ def get_readiness_module() -> Any | None:
     except (ImportError, AttributeError):
         pass
 
+    # Local testing hook: if SHIKRA_READINESS_PATH points to a temporary worktree
+    import os
+
+    wt_path = os.environ.get("SHIKRA_READINESS_PATH")
+    if wt_path:
+        wt_dir = Path(wt_path).resolve()
+        if (wt_dir / "shikra" / "strategy" / "readiness.py").exists():
+            import sys
+
+            import shikra
+
+            wt_shikra = str((wt_dir / "shikra").resolve())
+            if wt_shikra not in shikra.__path__:
+                shikra.__path__.insert(0, wt_shikra)
+            if str(wt_dir) not in sys.path:
+                sys.path.insert(0, str(wt_dir))
+            try:
+                import shikra.strategy.readiness as rd
+
+                if hasattr(rd, "snapshot_at") and hasattr(rd, "forecast"):
+                    return rd
+            except Exception:
+                pass
+
     return None
 
 
