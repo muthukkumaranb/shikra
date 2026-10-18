@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -76,8 +77,13 @@ def main() -> None:
     for action, group in details.groupby("action", sort=False):
         summary_rows.append({
             "action": action,
+            "evaluation_scope": "S2 only",
+            "n_mc": args.n_mc,
             "share_of_snapshots_best": float((group["rank"] == 1).mean()),
             "mean_delta_expected_mc": float(group["delta_expected_mc"].mean()),
+            "se_mean_delta_expected_mc": float(
+                group["delta_expected_mc"].std(ddof=1) / np.sqrt(len(group))
+            ),
             "share_with_positive_gain": float((group["delta_expected_mc"] > 0).mean()),
         })
     summary = pd.DataFrame(summary_rows)

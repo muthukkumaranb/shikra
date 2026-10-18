@@ -148,6 +148,23 @@ def main() -> None:
 
     # Step 4: Evaluate metrics for each lead day and method
     print("Step 3: Scoring forecasts and baselines (coverage, MAE, Brier)...")
+    calibration_seeds = [s for s in seeds if s <= 15]
+    evaluation_seeds = [s for s in seeds if s >= 16]
+    conformal_widening: dict[int, float] = {}
+    for lead in LEAD_DAYS:
+        errors = []
+        for s in calibration_seeds:
+            for d in SNAPSHOT_DAYS:
+                target_day = d + lead
+                for sqn_idx in range(N_SQN):
+                    fc_lead = forecast_lookup[(s, d)]
+                    row_fc = fc_lead[
+                        (fc_lead["lead_days"] == lead)
+                        & (fc_lead["sqn"] == sqn_idx + 1)
+                    ].iloc[0]
+                    errors.append(abs(all_realised_mc[s][target_day][sqn_idx] - row_fc["expected_mc"]))
+        conformal_widening[lead] = float(np.percentile(errors, 80))
+    print(f"Conformal widening by lead: {conformal_widening}")
 
     # Collectors for reliability diagram (lead 3)
     reliability_pairs: list[tuple[float, int]] = []
@@ -156,7 +173,7 @@ def main() -> None:
     eval_records: list[dict[str, Any]] = []
 
     for lead in LEAD_DAYS:
-        for s in seeds:
+        for s in evaluation_seeds:
             for d in SNAPSHOT_DAYS:
                 target_day = d + lead
                 if target_day >= days:
@@ -194,6 +211,16 @@ def main() -> None:
                         "lead_days": lead,
                         "method": "shikra_forecast",
                         "coverage_80": cov_fc,
+                        "mae": mae_fc,
+                        "brier": float(brier_fc),
+                    })
+
+                    conformal_q10 = max(0.0, q10 - conformal_widening[lead])
+                    conformal_q90 = min(float(AC_PER_SQN), q90 + conformal_widening[lead])
+                    eval_records.append({
+                        "lead_days": lead,
+                        "method": "shikra_conformal",
+                        "coverage_80": float(conformal_q10 <= y_realised <= conformal_q90),
                         "mae": mae_fc,
                         "brier": float(brier_fc),
                     })
@@ -238,10 +265,10 @@ def main() -> None:
     df_eval = pd.DataFrame(eval_records)
 
     calib_summary_rows = []
-    n_total_snaps = len(seeds) * len(SNAPSHOT_DAYS)
+    n_total_snaps = len(evaluation_seeds) * len(SNAPSHOT_DAYS)
 
     for lead in LEAD_DAYS:
-        for method in ["shikra_forecast", "persistence", "climatology"]:
+        for method in ["shikra_forecast", "shikra_conformal", "persistence", "climatology"]:
             sub = df_eval[(df_eval["lead_days"] == lead) & (df_eval["method"] == method)]
             calib_summary_rows.append({
                 "lead_days": lead,
