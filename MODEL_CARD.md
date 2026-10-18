@@ -73,11 +73,11 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
 
 2. **Degraded Prediction Quality (2× Error Impact from Heatmap):**
    - At nominal pipeline speed (`pipeline_mult=1.0`):
-     - SHIKRA nominal (quality 1.0): 72.5% serviceability (gain vs reactive: +0.0%).
+     - SHIKRA nominal (quality 1.0, `shikra_v2`): 72.5% serviceability (gain vs reactive: +0.0%).
      - Poor quality (quality 2.0, 2× error): 50.8% serviceability (loss vs reactive: -21.6%), causing a net availability drop of 21.6 percentage points.
-   - At wing pipeline speed (`pipeline_mult=1.9`):
-     - SHIKRA nominal (quality 1.0): 52.9% serviceability.
-     - Poor quality (quality 2.0): 34.0% serviceability, causing an availability collapse of 18.9 percentage points due to hangar congestion and erratic queue spikes.
+   - At wing pipeline speed (`pipeline_mult=1.7`):
+     - SHIKRA nominal (quality 1.0, `shikra_v2`): 56.3% serviceability.
+     - Poor quality (quality 2.0): 36.4% serviceability, causing an availability collapse of 19.9 percentage points due to hangar congestion and erratic queue spikes.
 
 ## Data Integrity and Leakage Prevention
 

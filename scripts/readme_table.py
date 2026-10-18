@@ -83,13 +83,29 @@ def generate_table() -> str:
         lines.append("### Fleet Simulation (synthetic wing, 30 replications)\n")
         lines.append("| Policy | Serviceability | 95% CI | Unscheduled removals |")
         lines.append("|--------|---------------|--------|---------------------|")
-        for p in ["reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2"]:
-            if p in svc.index:
-                row = svc.loc[p]
-                ur = uns.loc[p] if p in uns.index else None
+        if "shikra_v2" in svc.index:
+            policy_rows = [
+                ("reactive", "Reactive"),
+                ("preventive", "Preventive"),
+                ("shikra_v2", "SHIKRA"),
+                ("oracle_v2", "Oracle (perfect prediction)"),
+                ("shikra", "SHIKRA (ablation: without lead-time-aware prepositioning)"),
+                ("oracle", "Oracle (ablation: without lead-time-aware prepositioning)"),
+            ]
+        else:
+            policy_rows = [
+                ("reactive", "Reactive"),
+                ("preventive", "Preventive"),
+                ("shikra", "SHIKRA"),
+                ("oracle", "Oracle (perfect prediction)"),
+            ]
+        for p_key, label in policy_rows:
+            if p_key in svc.index:
+                row = svc.loc[p_key]
+                ur = uns.loc[p_key] if p_key in uns.index else None
                 ur_str = f"{ur['mean']:.1f}" if ur is not None else "—"
                 lines.append(
-                    f"| {p.capitalize()} | {row['mean']:.1%} | "
+                    f"| {label} | {row['mean']:.1%} | "
                     f"[{row['ci_lo']:.1%}, {row['ci_hi']:.1%}] | {ur_str} |"
                 )
         lines.append("")

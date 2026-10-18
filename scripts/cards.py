@@ -53,11 +53,11 @@ def generate_model_card() -> str:
     bias_p10 = bias_df[bias_df["bias_cycles"] == 10].iloc[0]
     bias_0 = bias_df[bias_df["bias_cycles"] == 0].iloc[0]
 
-    # Heatmap 2x error metrics (pm=1.0 and pm=1.9)
+    # Heatmap 2x error metrics (pm=1.0 and pm=1.7)
     hm_10_q1 = hm_df[(hm_df["pipeline_mult"] == 1.0) & (hm_df["quality"] == 1.0)].iloc[0]
     hm_10_q2 = hm_df[(hm_df["pipeline_mult"] == 1.0) & (hm_df["quality"] == 2.0)].iloc[0]
-    hm_19_q1 = hm_df[(hm_df["pipeline_mult"] == 1.9) & (hm_df["quality"] == 1.0)].iloc[0]
-    hm_19_q2 = hm_df[(hm_df["pipeline_mult"] == 1.9) & (hm_df["quality"] == 2.0)].iloc[0]
+    hm_17_q1 = hm_df[(hm_df["pipeline_mult"] == 1.7) & (hm_df["quality"] == 1.0)].iloc[0]
+    hm_17_q2 = hm_df[(hm_df["pipeline_mult"] == 1.7) & (hm_df["quality"] == 2.0)].iloc[0]
 
     # Splits info
     with (ARTIFACTS_DIR / "splits.json").open("r", encoding="utf-8") as f:
@@ -181,11 +181,11 @@ def generate_model_card() -> str:
         "",
         "2. **Degraded Prediction Quality (2× Error Impact from Heatmap):**",
         "   - At nominal pipeline speed (`pipeline_mult=1.0`):",
-        f"     - SHIKRA nominal (quality 1.0): {hm_10_q1['serviceability_mean']:.1%} serviceability (gain vs reactive: {hm_10_q1['gain_vs_reactive_mean']:+.1%}).",
+        f"     - SHIKRA nominal (quality 1.0, `shikra_v2`): {hm_10_q1['serviceability_mean']:.1%} serviceability (gain vs reactive: {hm_10_q1['gain_vs_reactive_mean']:+.1%}).",
         f"     - Poor quality (quality 2.0, 2× error): {hm_10_q2['serviceability_mean']:.1%} serviceability (loss vs reactive: {hm_10_q2['gain_vs_reactive_mean']:+.1%}), causing a net availability drop of {(hm_10_q1['serviceability_mean'] - hm_10_q2['serviceability_mean']) * 100:.1f} percentage points.",
-        "   - At wing pipeline speed (`pipeline_mult=1.9`):",
-        f"     - SHIKRA nominal (quality 1.0): {hm_19_q1['serviceability_mean']:.1%} serviceability.",
-        f"     - Poor quality (quality 2.0): {hm_19_q2['serviceability_mean']:.1%} serviceability, causing an availability collapse of {(hm_19_q1['serviceability_mean'] - hm_19_q2['serviceability_mean']) * 100:.1f} percentage points due to hangar congestion and erratic queue spikes.",
+        "   - At wing pipeline speed (`pipeline_mult=1.7`):",
+        f"     - SHIKRA nominal (quality 1.0, `shikra_v2`): {hm_17_q1['serviceability_mean']:.1%} serviceability.",
+        f"     - Poor quality (quality 2.0): {hm_17_q2['serviceability_mean']:.1%} serviceability, causing an availability collapse of {(hm_17_q1['serviceability_mean'] - hm_17_q2['serviceability_mean']) * 100:.1f} percentage points due to hangar congestion and erratic queue spikes.",
         "",
         "## Data Integrity and Leakage Prevention",
         "",

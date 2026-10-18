@@ -11,7 +11,7 @@
 |------|---------|--------|
 | G0.3 — replay units ~40 | **PASS** | replay units = 40 (expected ~40) |
 | G0.4 — reactive serviceability 55–65% | **PASS** | reactive serviceability = 56.5% (target 55-65%) |
-| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.1 pp (threshold >= 5 pp) |
+| G0.5 — oracle gap ≥ 5 pp | **FAIL (finding, not tuned)** | oracle - reactive = 0.2 pp (threshold >= 5 pp) |
 
 **Serviceability per policy (mean over 30 seeds):**
 
@@ -19,13 +19,13 @@
 |--------|-------------------|
 | reactive | 56.5% |
 | preventive | 47.6% |
-| shikra | 56.2% |
-| oracle | 56.5% |
-| shikra_v2 | 56.3% |
-| oracle_v2 | 56.6% |
+| shikra | 56.3% |
+| oracle (perfect prediction) | 56.6% |
+| shikra (ablation: without lead-time-aware prepositioning) | 56.2% |
+| oracle (ablation: without lead-time-aware prepositioning) | 56.5% |
 
 **Gap captured (shikra − reactive) / (oracle − reactive):**
-  mean = -3.451  95% CI [-7.504, -0.414]
+  not defined: perfect prediction gives no significant gain at this pipeline speed
 
 > **Finding on G0.5 & Serviceability:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 >

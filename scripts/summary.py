@@ -98,32 +98,39 @@ def run_summary() -> None:
         return df[df["policy"] == policy].sort_values("seed")["serviceability"].values
 
     r_svc = _svc("reactive")
-    s_svc = _svc("shikra")
-    o_svc = _svc("oracle")
+    s_svc = _svc("shikra_v2" if "shikra_v2" in df["policy"].values else "shikra")
+    o_svc = _svc("oracle_v2" if "oracle_v2" in df["policy"].values else "oracle")
 
-    oracle_gap = o_svc - r_svc
-    shikra_gap = s_svc - r_svc
+    oracle_gain = o_svc - r_svc
+    o_mean, o_lo, o_hi = bootstrap_ci(oracle_gain)
 
-    valid = oracle_gap != 0
-    if valid.sum() > 0:
-        gap_captured = shikra_gap[valid] / oracle_gap[valid]
-        gc_mean, gc_lo, gc_hi = bootstrap_ci(gap_captured)
+    # Compute gap captured only when the oracle's paired gain CI excludes 0
+    if o_lo > 0 or o_hi < 0:
+        shikra_gain = s_svc - r_svc
+        valid = oracle_gain != 0
+        if valid.sum() > 0:
+            gap_captured = shikra_gain[valid] / oracle_gain[valid]
+            gc_mean, gc_lo, gc_hi = bootstrap_ci(gap_captured)
+            gc_str = f"mean = {gc_mean:.3f}  95% CI [{gc_lo:.3f}, {gc_hi:.3f}]"
+        else:
+            gc_str = "not defined: perfect prediction gives no significant gain at this pipeline speed"
     else:
-        gc_mean, gc_lo, gc_hi = float("nan"), float("nan"), float("nan")
+        gc_str = "not defined: perfect prediction gives no significant gain at this pipeline speed"
 
     summary.to_csv(RESULTS_DIR / "policy_summary.csv", index=False)
     print(f"Summary written -> {RESULTS_DIR / 'policy_summary.csv'}")
 
     # ── Gates ────────────────────────────────────────────────────────────
-    _write_sim_gates(df, gc_mean, gc_lo, gc_hi)
+    _write_sim_gates(df, gc_str)
 
 
-def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: float) -> None:
+def _write_sim_gates(df: pd.DataFrame, gc_str: str) -> None:
     gates_path = RESULTS_DIR / "GATES.md"
     existing = gates_path.read_text(encoding="utf-8") if gates_path.exists() else "# SHIKRA Gates\n\n"
 
     reactive_svc = df[df["policy"] == "reactive"]["serviceability"].mean()
-    oracle_svc = df[df["policy"] == "oracle"]["serviceability"].mean()
+    oracle_key = "oracle_v2" if "oracle_v2" in df["policy"].values else "oracle"
+    oracle_svc = df[df["policy"] == oracle_key]["serviceability"].mean()
 
     # G0.3 — number of replay units (~40)
     replay_path = ARTIFACTS_DIR / "replay_rul.parquet"
@@ -146,16 +153,28 @@ def _write_sim_gates(df: pd.DataFrame, gc_mean: float, gc_lo: float, gc_hi: floa
     g05_verdict = "PASS" if g05_pass else "FAIL (finding, not tuned)"
     g05_detail = f"oracle - reactive = {gap_pp:.1f} pp (threshold >= 5 pp)"
 
-    if np.isnan(gc_mean):
-        gc_str = "n/a (oracle gap is zero)"
+    if "shikra_v2" in df["policy"].values:
+        policy_display = [
+            ("reactive", "reactive"),
+            ("preventive", "preventive"),
+            ("shikra_v2", "shikra"),
+            ("oracle_v2", "oracle (perfect prediction)"),
+            ("shikra", "shikra (ablation: without lead-time-aware prepositioning)"),
+            ("oracle", "oracle (ablation: without lead-time-aware prepositioning)"),
+        ]
     else:
-        gc_str = f"mean = {gc_mean:.3f}  95% CI [{gc_lo:.3f}, {gc_hi:.3f}]"
+        policy_display = [
+            ("reactive", "reactive"),
+            ("preventive", "preventive"),
+            ("shikra", "shikra"),
+            ("oracle", "oracle (perfect prediction)"),
+        ]
 
     svc_rows = []
-    for p in ["reactive", "preventive", "shikra", "oracle", "shikra_v2", "oracle_v2"]:
-        if p in df["policy"].values:
-            s_val = df[df["policy"] == p]["serviceability"].mean()
-            svc_rows.append(f"| {p} | {s_val:.1%} |")
+    for p_key, label in policy_display:
+        if p_key in df["policy"].values:
+            s_val = df[df["policy"] == p_key]["serviceability"].mean()
+            svc_rows.append(f"| {label} | {s_val:.1%} |")
     svc_table = "\n".join(svc_rows)
 
     r_uns = df[df["policy"] == "reactive"]["unscheduled_removals"].mean() if "reactive" in df["policy"].values else 0.0

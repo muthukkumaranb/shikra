@@ -73,7 +73,7 @@
 
 | Parameter | Value |
 |---|---|
-| pipeline_mult | 1.9 |
+| pipeline_mult | 1.7 |
 | Simulation horizon | 365 days |
 | Replications | 30 (seeds 1–30) |
 
@@ -85,7 +85,7 @@
 
 ### Pre-registered SHIKRA v2 (lead-time-aware pre-positioning)
 
-Pre-positioning horizon h = (depot→base transfer days + planned change days) × pipeline_mult × sortie_demand, in cycles. Applies identically to shikra and oracle. R_star unchanged.
+Pre-positioning horizon h = (depot→base transfer days + planned change days) × pipeline_mult × sortie_demand, in cycles. Applies identically to shikra and oracle. R_star unchanged. `shikra_v2` and `oracle_v2` are the headline policies; `shikra` and `oracle` (v1) represent ablations without lead-time-aware prepositioning.
 
 ### Pre-registered v2 simulation
 

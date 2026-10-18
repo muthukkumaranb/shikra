@@ -36,10 +36,10 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 |--------|---------------|--------|---------------------|
 | Reactive | 56.5% | [56.0%, 56.9%] | 72.7 |
 | Preventive | 47.6% | [47.2%, 48.1%] | 13.2 |
-| Shikra | 56.2% | [55.6%, 56.8%] | 0.0 |
-| Oracle | 56.5% | [56.0%, 57.1%] | 0.0 |
-| Shikra_v2 | 56.3% | [55.7%, 56.8%] | 0.0 |
-| Oracle_v2 | 56.6% | [56.1%, 57.2%] | 0.0 |
+| SHIKRA | 56.3% | [55.7%, 56.8%] | 0.0 |
+| Oracle (perfect prediction) | 56.6% | [56.1%, 57.2%] | 0.0 |
+| SHIKRA (ablation: without lead-time-aware prepositioning) | 56.2% | [55.6%, 56.8%] | 0.0 |
+| Oracle (ablation: without lead-time-aware prepositioning) | 56.5% | [56.0%, 57.1%] | 0.0 |
 
 > **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 
