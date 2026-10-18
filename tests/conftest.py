@@ -1,13 +1,16 @@
-"""Pytest configuration and shared fixtures for SHIKRA tests.
+﻿"""Pytest configuration and shared fixtures for SHIKRA tests.
 
 All fixtures here generate synthetic data so CI runs without raw NASA files.
 Tests requiring the real C-MAPSS dataset are marked @pytest.mark.data and
 skipped in CI.
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
+import torch  # noqa: F401
 
 
 def pytest_configure(config: pytest.Config) -> None:
