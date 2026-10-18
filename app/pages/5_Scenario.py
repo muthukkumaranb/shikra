@@ -478,7 +478,7 @@ elif st.session_state.scenario_step == 5:
                     f'<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
                     f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600;">BEFORE INJECTION (Baseline S2 at D+3)</div>'
                     f'<div style="font-size: 1.5rem; font-weight: 700; color: #38bdf8; margin: 0.25rem 0;">{exp_b:.2f} MC</div>'
-                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">80% Confidence Band: [{q10_b:.1f}, {q90_b:.1f}] MC</div>'
+                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_b:.1f}, {q90_b:.1f}] MC</div>'
                     f'<div style="font-size: 0.85rem; color: #fde047; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_b:.1f}%</b></div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -490,7 +490,7 @@ elif st.session_state.scenario_step == 5:
                     f'<div style="background: #1e293b; border: 1px solid #0284c7; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
                     f'<div style="color: #38bdf8; font-size: 0.85rem; font-weight: 600;">AFTER INJECTED CHANGE (Mitigated S2 at D+3)</div>'
                     f'<div style="font-size: 1.5rem; font-weight: 700; color: #4ade80; margin: 0.25rem 0;">{exp_a:.2f} MC <span style="font-size: 0.95rem; color: #4ade80;">({delta_exp:+.2f})</span></div>'
-                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">80% Confidence Band: [{q10_a:.1f}, {q90_a:.1f}] MC</div>'
+                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_a:.1f}, {q90_a:.1f}] MC</div>'
                     f'<div style="font-size: 0.85rem; color: #4ade80; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_a:.1f}%</b> ({delta_p:+.1f} pp)</div>'
                     f'</div>',
                     unsafe_allow_html=True,

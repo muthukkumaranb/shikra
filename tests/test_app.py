@@ -282,8 +282,9 @@ def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
     )
     assert "illustrative layout; live hangar state after T1.7 merge" not in all_sc_text
     assert "Live hangar state from Day 485 simulation snapshot" in all_sc_text
-    assert "BEFORE INJECTION (Baseline S2 at D+3)" in all_sc_text
     assert ("raw forecast band; held-out coverage" in all_sc_text or "coverage: pending" in all_sc_text)
+    assert "Forecast band (q10–q90)" in all_sc_text
+    assert "80% Confidence Band" not in all_sc_text
     assert "58.7%" not in all_sc_text
     assert "rul_true" not in all_sc_text
 
