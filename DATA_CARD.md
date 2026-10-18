@@ -98,6 +98,11 @@ v2 simulation:
 
 Whatever G0.5 shows afterwards is reported as is.
 
+#### Recalibration log (v2 simulation, max 3 tries)
+- **Try 1 (`pipeline_mult: 1.9`)**: reactive serviceability = 53.4% (below 55% target; slope = +0.002586).
+- **Try 2 (`pipeline_mult: 1.5`)**: reactive serviceability = 60.9% (satisfies G0.4, but slope = -0.006162).
+- **Try 3 (`pipeline_mult: 1.7`)**: reactive serviceability = 56.5% (satisfies G0.4 55%–65%; daily MC trajectory slope = -0.000662, 95% CI [-0.001882, +0.000558], slope CI includes 0). Calibrated value set to 1.7.
+
 ---
 
 ## 3. Model Parameters

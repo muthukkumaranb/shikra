@@ -34,18 +34,18 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 | Policy | Serviceability | 95% CI | Unscheduled removals |
 |--------|---------------|--------|---------------------|
-| Reactive | 60.9% | [60.4%, 61.4%] | 79.6 |
-| Preventive | 51.8% | [51.4%, 52.3%] | 13.5 |
-| Shikra | 60.5% | [59.9%, 61.1%] | 0.0 |
-| Oracle | 60.9% | [60.4%, 61.4%] | 0.0 |
-| Shikra_v2 | 60.6% | [60.0%, 61.1%] | 0.0 |
-| Oracle_v2 | 60.9% | [60.4%, 61.5%] | 0.0 |
+| Reactive | 56.5% | [56.0%, 57.0%] | 72.1 |
+| Preventive | 47.5% | [47.1%, 48.0%] | 13.8 |
+| Shikra | 56.2% | [55.7%, 56.7%] | 0.0 |
+| Oracle | 56.6% | [56.0%, 57.1%] | 0.0 |
+| Shikra_v2 | 56.2% | [55.7%, 56.7%] | 0.0 |
+| Oracle_v2 | 56.5% | [55.9%, 57.1%] | 0.0 |
 
-> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 79.6 per year) but, in this wing, serviceability is unchanged (60.6% vs 60.9%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.1 per year) but, in this wing, serviceability is unchanged (56.2% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
 
-> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 29 extra aircraft of 54 (15.7 pp over the halt); recovery takes 100 days after supply resumes. Ranking: apu_start (13.6 pp), ecs_valve (3.7 pp). Parameters are synthetic; the method is the claim.
+> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.8 pp over the halt); recovery takes 54 days after supply resumes. Ranking: apu_start (22.0 pp), ecs_valve (8.0 pp). Parameters are synthetic; the method is the claim.
 
-> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes 1978 cycles; +10 raises unscheduled removals from 0 to 94.8.
+> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes 2030 cycles; +10 raises unscheduled removals from 0 to 97.0.
 
 ---
 
