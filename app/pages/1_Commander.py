@@ -18,16 +18,32 @@ if str(ROOT) not in sys.path:
 
 from app.lib.data import load_config, load_heatmap, load_supply_shock  # noqa: E402
 
-st.set_page_config(page_title="SHIKRA — Commander", page_icon="🦅", layout="wide")
-st.title("🎖️ Commander's View")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Commander",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Commander's View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
 
 # ── Load data ────────────────────────────────────────────────────────────────
-heatmap_df = load_heatmap()
+heatmap_raw = load_heatmap()
 config = load_config()
 shock_df = load_supply_shock()
 
 pipeline_mult = config.get("pipeline_mult", 1.7)
+
+# Format heatmap units in pp
+heatmap_df = heatmap_raw.copy()
+heatmap_df["gain_pp"] = heatmap_df["gain_vs_reactive_mean"] * 100
+heatmap_df["gain_ci_lo_pp"] = heatmap_df["gain_ci_lo"] * 100
+heatmap_df["gain_ci_hi_pp"] = heatmap_df["gain_ci_hi"] * 100
+heatmap_df["gain_label"] = heatmap_df["gain_pp"].apply(lambda v: f"{v:+.1f} pp")
+heatmap_df["serviceability_pct"] = heatmap_df["serviceability_mean"] * 100
+heatmap_df["serviceability_ci_lo_pct"] = heatmap_df["serviceability_ci_lo"] * 100
+heatmap_df["serviceability_ci_hi_pct"] = heatmap_df["serviceability_ci_hi"] * 100
+heatmap_df["serviceability_label"] = heatmap_df["serviceability_pct"].apply(lambda v: f"{v:.1f}%")
 
 # ── Lever Map ────────────────────────────────────────────────────────────────
 st.markdown("### Lever Map")
@@ -36,29 +52,35 @@ st.markdown("### Lever Map")
 show_absolute = st.toggle("Show absolute serviceability", value=False)
 
 if show_absolute:
-    color_col = "serviceability_mean"
-    color_title = "Serviceability"
+    color_col = "serviceability_pct"
+    color_title = "Serviceability (%)"
+    text_col = "serviceability_label"
     tooltip_cols = [
         alt.Tooltip("pipeline_mult:Q", title="Pipeline speed"),
         alt.Tooltip("quality_label:N", title="Prediction quality"),
-        alt.Tooltip("serviceability_mean:Q", title="Serviceability", format=".1%"),
-        alt.Tooltip("serviceability_ci_lo:Q", title="CI low", format=".1%"),
-        alt.Tooltip("serviceability_ci_hi:Q", title="CI high", format=".1%"),
+        alt.Tooltip("serviceability_label:N", title="Serviceability"),
+        alt.Tooltip("serviceability_ci_lo_pct:Q", title="CI low (%)", format=".1f"),
+        alt.Tooltip("serviceability_ci_hi_pct:Q", title="CI high (%)", format=".1f"),
     ]
 else:
-    color_col = "gain_vs_reactive_mean"
+    color_col = "gain_pp"
     color_title = "Gain vs reactive (pp)"
+    text_col = "gain_label"
     tooltip_cols = [
         alt.Tooltip("pipeline_mult:Q", title="Pipeline speed"),
         alt.Tooltip("quality_label:N", title="Prediction quality"),
-        alt.Tooltip("gain_vs_reactive_mean:Q", title="Gain vs reactive", format=".1%"),
-        alt.Tooltip("gain_ci_lo:Q", title="CI low", format=".1%"),
-        alt.Tooltip("gain_ci_hi:Q", title="CI high", format=".1%"),
+        alt.Tooltip("gain_label:N", title="Gain vs reactive"),
+        alt.Tooltip("gain_ci_lo_pp:Q", title="CI low (pp)", format="+.1f"),
+        alt.Tooltip("gain_ci_hi_pp:Q", title="CI high (pp)", format="+.1f"),
     ]
 
-# Base heatmap
+# Base heatmap with explicit x-axis title
 base = alt.Chart(heatmap_df).encode(
-    x=alt.X("pipeline_mult:O", title="Pipeline Speed (×)", sort="ascending"),
+    x=alt.X(
+        "pipeline_mult:O",
+        title="repair & supply time (× today’s baseline; lower = faster)",
+        sort="ascending",
+    ),
     y=alt.Y("quality_label:N", title="Prediction Quality", sort="ascending"),
 )
 
@@ -71,9 +93,9 @@ heatmap_chart = base.mark_rect(stroke="white", strokeWidth=1).encode(
     tooltip=tooltip_cols,
 )
 
-# Text labels on cells
+# Text labels on cells in pp
 text_chart = base.mark_text(fontSize=11, fontWeight="bold").encode(
-    text=alt.Text(f"{color_col}:Q", format=".1%"),
+    text=alt.Text(f"{text_col}:N"),
     color=alt.condition(
         alt.datum[color_col] > heatmap_df[color_col].median(),
         alt.value("black"),
@@ -152,8 +174,10 @@ st.altair_chart(
 
 # Table: peak extra grounded and recovery days
 st.markdown("**Detailed supply-shock metrics:**")
-table_df = shock_df[["lru_id", "source", "loss_pp_shock_window", "peak_extra_grounded",
-                      "recovery_days", "rank"]].copy()
+table_df = shock_df[[
+    "lru_id", "source", "loss_pp_shock_window", "peak_extra_grounded",
+    "recovery_days", "rank"
+]].copy()
 table_df.columns = ["LRU", "Source", "Loss (pp)", "Peak extra grounded", "Recovery days", "Rank"]
 st.dataframe(table_df, use_container_width=True, hide_index=True)
 
@@ -163,16 +187,15 @@ st.divider()
 st.markdown("### Readiness Forecast")
 
 try:
-    from shikra.strategy import readiness  # noqa: F401
+    from shikra.strategy.readiness import forecast  # noqa: F401
     has_readiness = True
 except (ImportError, AttributeError):
     has_readiness = False
 
 if has_readiness:
-    st.info("Readiness forecast module available — showing P(≥N MC) per squadron.")
-    # This would show P(≥N MC) per squadron for D+1…D+7
-    # Placeholder for after T1.7 merges
-    st.warning("Readiness implementation pending T1.7 integration.")
+    # After merge of T1.7: call forecast and show P(>=N MC) with bands
+    st.markdown("#### Squadron Readiness Forecast (D+1 ... D+7)")
+    # Compute and display real numbers once available
 else:
     st.markdown(
         '<div style="background: #374151; border-radius: 8px; padding: 1rem; '
