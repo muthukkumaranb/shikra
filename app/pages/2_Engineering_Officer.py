@@ -5,6 +5,7 @@ Engine health table, RUL band chart, and sign-off queue.
 
 from __future__ import annotations
 
+import base64
 import sys
 from pathlib import Path
 
@@ -109,7 +110,11 @@ if snap is not None:
             width=380,
             height=480,
         )
-        st.html(svg_detail)
+        b64 = base64.b64encode(svg_detail.encode("utf-8")).decode()
+        st.markdown(
+            f'<img src="data:image/svg+xml;base64,{b64}" width="320" alt="aircraft">',
+            unsafe_allow_html=True,
+        )
     with c_meta:
         st.markdown(f"#### Tail **{selected_tail}** Overview")
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
@@ -150,7 +155,11 @@ else:
         svg_detail = render_aircraft_detail_svg(
             selected_tail, tail_st, width=380, height=480
         )
-        st.html(svg_detail)
+        b64 = base64.b64encode(svg_detail.encode("utf-8")).decode()
+        st.markdown(
+            f'<img src="data:image/svg+xml;base64,{b64}" width="320" alt="aircraft">',
+            unsafe_allow_html=True,
+        )
     with c_meta:
         st.markdown(f"#### Tail **{selected_tail}** Overview")
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
