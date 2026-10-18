@@ -4,6 +4,6 @@ lead_days,method,coverage_80,mae,brier,n_snapshots
 3,persistence,0.3111,0.9818,0.0738,165
 3,climatology,0.8121,2.2397,0.1186,165
 7,shikra_forecast,0.4101,2.2738,0.1318,165
-7,shikra_conformal,0.9495,2.2738,0.1318,165
+7,shikra_conformal,0.8646,2.2738,0.1318,165
 7,persistence,0.198,1.5515,0.1175,165
 7,climatology,0.8242,2.1364,0.1152,165
