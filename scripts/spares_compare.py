@@ -1,4 +1,4 @@
-﻿"""Compare current vs VARI-METRIC spares allocations via simulation (T1.6).
+"""Compare current vs VARI-METRIC spares allocations via simulation (T1.6).
 
 Runs full wing simulation across pipeline multipliers {1.7, 1.0, 0.5},
 comparing the baseline flat stock against the two-echelon VARI-METRIC allocation
@@ -184,8 +184,7 @@ def write_findings_doc(
         "- **Remaining Analytic vs Simulation Gap**: While the direction of movement is consistent across all pipeline multipliers, "
         "the simulated LRU backorders exceed stationary Poisson expectations under severe logistics strain (e.g. at 1.7×: "
         "simulated LRU NMCS vs analytic). This gap reflects non-stationary Weibull wear-out, discrete depot-to-base transit lag, "
-        "and flight cancellations preventing sortie-dependent maintenance progress.",
-        f"- **Execution Time**: 360 simulation runs completed in {wall_time_sec:.1f}s.\n",
+        "and flight cancellations preventing sortie-dependent maintenance progress.\n",
     ])
 
     out_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

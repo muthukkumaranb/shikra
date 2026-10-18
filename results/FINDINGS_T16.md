@@ -55,5 +55,5 @@ Paired differences vs current stock evaluated on identical seeds with 2,000 boot
 - **Magnitude of Impact**: The availability gain is largest under severe logistics strain (pipeline multiplier 1.7), where repair queues and depot stockouts dominate downtime. Under faster resupply (0.5×), the marginal benefit of re-allocation narrows because pipelines clear quickly even under sub-optimal stocking.
 - **Measured Root-Cause Decomposition**: Disaggregating simulated NMCS demonstrates that engine spare shortages and repair turnaround times (mean ~60 days × pipeline multiplier) account for the majority of grounded aircraft (~14–17 fleet aircraft across operating regimes). The LRU-attributable simulated NMCS isolates the component governed by VARI-METRIC and confirms consistent backorder reduction across pipeline regimes.
 - **Remaining Analytic vs Simulation Gap**: While the direction of movement is consistent across all pipeline multipliers, the simulated LRU backorders exceed stationary Poisson expectations under severe logistics strain (e.g. at 1.7×: simulated LRU NMCS vs analytic). This gap reflects non-stationary Weibull wear-out, discrete depot-to-base transit lag, and flight cancellations preventing sortie-dependent maintenance progress.
-- **Execution Time**: 360 simulation runs completed in 938.3s.
+
 
