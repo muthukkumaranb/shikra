@@ -105,7 +105,7 @@ def lever_map(out: Path, wing: dict) -> dict:
     vals = grid.to_numpy()
 
     fig, ax = _new_fig()
-    fig.subplots_adjust(left=0.15, right=0.93)
+    fig.subplots_adjust(left=0.15, right=0.93, top=0.72)
     norm = TwoSlopeNorm(vmin=min(vals.min(), -1e-9), vcenter=0.0, vmax=max(vals.max(), 1e-9))
     im = ax.imshow(vals, cmap="PuOr", norm=norm, aspect="auto")
     for i in range(len(quals)):
@@ -126,8 +126,24 @@ def lever_map(out: Path, wing: dict) -> dict:
     shikra_q = next(q for q in quals if "SHIKRA" in labels[q])
     j0, i0 = pipes.index(today), quals.index(shikra_q)
     ax.add_patch(Rectangle((j0 - 0.5, i0 - 0.5), 1, 1, fill=False, lw=4, ec=OI["black"]))
-    ax.annotate("Today", xy=(j0, i0 - 0.5), xytext=(j0, -0.75), ha="center",
-                fontsize=15, fontweight="bold", annotation_clip=False)
+    ax.text(j0, i0 + 0.32, "Today", ha="center", va="center", fontsize=14, fontweight="bold")
+
+    # Reactive serviceability per pipeline column, above the heatmap (y grows downward).
+    reactive = (
+        hm.drop_duplicates("pipeline_mult").set_index("pipeline_mult")
+        ["reactive_serviceability_mean"].reindex(pipes) * 100
+    )
+    ax.text(-0.6, -0.72, "Reactive:", ha="right", va="center", fontsize=15)
+    for j, p in enumerate(pipes):
+        ax.text(j, -0.72, f"{reactive[p]:.1f}%", ha="center", va="center", fontsize=15)
+    j_fast = 0  # pipes is sorted ascending, so column 0 is the fastest pipeline
+    speed_pp = reactive[pipes[j_fast]] - reactive[today]
+    ax.annotate("", xy=(j_fast, -1.12), xytext=(j0, -1.12), annotation_clip=False,
+                arrowprops={"arrowstyle": "-|>", "lw": 2.5, "color": OI["black"],
+                            "mutation_scale": 25})
+    ax.text((j0 + j_fast) / 2, -1.2, f"{speed_pp:+.1f} pp from pipeline speed",
+            ha="center", va="bottom", fontsize=16, fontweight="bold")
+    ax.set_ylim(len(quals) - 0.5, -0.5)
     cb = fig.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
     cb.set_label("Serviceability gain vs reactive (pp)")
     cb.outline.set_visible(False)
@@ -138,7 +154,8 @@ def lever_map(out: Path, wing: dict) -> dict:
         "figure": "lever_map.png",
         "source_csv": "results/heatmap.csv;config/wing.yaml",
         "rows_used": len(hm),
-        "key_value": f"gain_pp_today={vals[i0, j0]:+.2f}",
+        "key_value": f"gain_pp_today={vals[i0, j0]:+.2f};"
+        f"reactive_pp_from_pipeline_speed={speed_pp:+.2f}",
     }
 
 
@@ -248,7 +265,7 @@ def indigenise(out: Path, wing: dict) -> dict:
     ax.text(0.99, 0.2, "Domestic LRUs, not halted:\n" + ", ".join(domestic),
             transform=ax.transAxes, ha="right", va="bottom", fontsize=14,
             color="#444444", wrap=True)
-    _finish(fig, "What to make in India", _sim_caption(wing, _n_reps()), out / "indigenise.png")
+    _finish(fig, "What to make in India first", _sim_caption(wing, _n_reps()), out / "indigenise.png")
     top = per_lru.iloc[-1]
     return {
         "figure": "indigenise.png",
