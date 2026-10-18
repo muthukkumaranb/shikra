@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures deck-figures explain readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest app verify
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures deck-figures explain aircraft-eq readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest app verify
 
 PY     ?= python
 PIP    ?= pip
@@ -63,6 +63,10 @@ deck-figures:
 # ── Per-engine q10 explanations (needs data/raw: make data) ──────────────────
 explain:
 	$(PY) scripts/explain_contrib.py
+
+# ── Aircraft-per-day equivalents of headline results ─────────────────────────
+aircraft-eq:
+	$(PY) scripts/aircraft_equivalents.py
 
 # ── README table ─────────────────────────────────────────────────────────────
 readme:
