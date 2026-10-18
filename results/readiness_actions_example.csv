@@ -1,5 +1,5 @@
-rank,action,target,delta_expected_mc,delta_p_ge_8,seed,snapshot_day,sqn
-1,Transfer spare engine depot to squadron,S2 Engine Pool,0.0,0.0,1,485,2
-2,Transfer scarcest LRU (APU starter) depot to squadron,S2 APU starter,0.0,0.0,1,485,2
-3,Expedite earliest pending engine repair by 50%,S2 Depot Repair Queue,0.0,0.0,1,485,2
-4,Defer planned removal within safety margin (q10 > 0),S2 Engine on Wing,0.0,0.0,1,485,2
+rank,action,target,delta_expected_mc,se_delta_expected_mc,delta_p_ge_8,seed,snapshot_day,sqn
+1,Transfer spare engine depot to squadron,S2 Engine Pool,0.0,0.0,0.0,1,485,2
+2,Transfer scarcest LRU (APU starter) depot to squadron,S2 APU starter,0.0,0.0,0.0,1,485,2
+3,Expedite earliest pending engine repair by 50%,S2 Depot Repair Queue,0.0,0.0,0.0,1,485,2
+4,Defer planned removal within safety margin (q10 > 0),S2 Engine on Wing,0.0,0.0,0.0,1,485,2
