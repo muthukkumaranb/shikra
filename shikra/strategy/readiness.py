@@ -51,7 +51,7 @@ def _snapshot_at_cached(policy: str, seed: int, day: int) -> dict:
         apply(rul, 1),
         params,
         seed=seed,
-        days=day + 1,
+        days=int(config["ops"]["days"]),
         snapshot_days=[day],
     )
     if result.snapshots is None or day not in result.snapshots:
