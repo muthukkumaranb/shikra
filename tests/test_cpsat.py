@@ -44,6 +44,8 @@ def test_hand_built_known_optimum_single_bay() -> None:
     # 2. CP-SAT solver
     cpsat_res = solve(problem, time_limit_s=5.0)
     assert cpsat_res.status == "OPTIMAL"
+    assert cpsat_res.method == "cpsat"
+    assert cpsat_res.metadata.get("solver") == "ortools_cpsat"
     assert cpsat_res.total_weighted_tardiness == pytest.approx(2.0)
 
     # Job B must be scheduled first
@@ -56,6 +58,19 @@ def test_hand_built_known_optimum_single_bay() -> None:
     # Validation
     eval_res = evaluate(problem, cpsat_res)
     assert eval_res["is_valid"] is True
+
+
+def test_ortools_path_on_hand_built_optimum() -> None:
+    """Explicit test verifying the OR-Tools solver path finds known optimum 2.0 with method='cpsat'."""
+    job_a = Job(job_id="A", tail=101, duration=4, release_date=0, due_date=4, weight=1.0)
+    job_b = Job(job_id="B", tail=102, duration=2, release_date=0, due_date=5, weight=10.0)
+    problem = Problem(jobs=[job_a, job_b], capacity=1, horizon=10, name="hand_built_opt")
+
+    result = solve(problem, max_deterministic_time=5.0)
+    assert result.status == "OPTIMAL"
+    assert result.method == "cpsat"
+    assert result.metadata.get("solver") == "ortools_cpsat"
+    assert result.total_weighted_tardiness == pytest.approx(2.0)
 
 
 def test_capacity_limits() -> None:
