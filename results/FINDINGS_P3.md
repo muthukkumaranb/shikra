@@ -58,13 +58,26 @@ Across 330 snapshot evaluations (30 seeds $\times$ 11 snapshots, calibrated base
 
 ### 2. Plain-Language Comparison Against Persistence
 Per ground rule 7, we report honestly: **persistence achieves lower MAE and lower Brier scores than the forecast at both lead 3 and lead 7**.
-- **Why?** Fleet downtime cycles for major depot overhauls (engine overhauls take ~20 days, transfer takes 2 days) have high autocorrelation. A naive persistence heuristic predicting $MC_{D+k} = MC_D$ incurs minimal penalty during calm stretches where no tail finishes repair.
-- **Why persistence fails operational command:** Persistence has severe coverage deficiency (only 58% of true outcomes fall inside its trivial interval at D+3, dropping to 43% at D+7). Crucially, persistence offers zero sensitivity to impending engine wear-out (q10 approaching threshold) or upcoming repair returns, and cannot perform counterfactual ranking of candidate interventions.
+- **Why?** Fleet downtime cycles for major depot overhauls (engine overhauls take ~20 days, transfer takes 2 days $\times 1.9 \approx 4\text{--}5$ days) have high autocorrelation. A naive persistence heuristic predicting $MC_{D+k} = MC_D$ incurs minimal penalty during calm stretches where no tail finishes repair.
+- **Why persistence fails operational command:** Persistence has severe coverage deficiency (only 58% of true outcomes fall inside its trivial interval at D+3, dropping to 43% at D+7). Crucially, persistence offers zero sensitivity to impending engine wear-out ($q_{10}$ approaching threshold) or upcoming repair returns, and cannot perform counterfactual ranking of candidate interventions.
 - **Why climatology fails:** Pooling across other seeds ignores current squadron state, yielding large pointwise errors (MAE 4.84 aircraft).
 
-### 3. Action Ranking Demonstration
-At snapshot day 180 (seed 0), Squadron S2 suffers severe serviceability depression under supply shock (`expected_mc` = 0.005 at D+3).
-Evaluating the commander's question via `scripts/readiness_demo.py`:
-> "Squadron S2, day 183: P(≥12 MC) = 0.00. Best single action: Transfer spare engine depot to squadron (S2 Engine Pool), which raises expected MC by +0.0."
+### 3. Action Ranking Evaluation at Lead 7 (`results/readiness_actions_summary.csv`)
+Candidate actions were systematically evaluated at horizon $D+7$ across all 990 snapshot-squadron evaluations (30 seeds $\times$ 11 days $\times$ 3 squadrons). At lead 7, depot-to-base transfers (which require ~5 days at $1.9\times$ latency) have sufficient transit time to reach the squadron shelf:
 
-The candidate action ranking (`results/readiness_actions_example.csv`) demonstrates the prospective decision support provided to base logistics commanders.
+| Action | Share of Snapshots Best | Mean $\Delta$ Expected MC | Share with Positive Gain |
+|---|---|---|---|
+| **Transfer spare engine depot to squadron** | **60.20%** | +0.0006 | 0.91% |
+| **Transfer scarcest LRU (APU starter) depot to squadron** | **32.42%** | +0.0071 | **34.65%** |
+| **Defer planned removal within safety margin ($q_{10} > 0$)** | **6.87%** | **+0.0264** | 7.37% |
+| **Expedite earliest pending engine repair by 50%** | 0.51% | +0.0000 | 0.00% |
+| **Add 1 temporary hangar maintenance slot** | 0.00% | +0.0000 | 0.00% |
+
+*Label: forecast-estimated gain (not validated in simulation).*
+
+### 4. Pre-Registered Example Snapshot Selection
+To avoid hand-picking snapshots by eye, the illustrative snapshot was pre-registered as the snapshot with the **median best-action gain** across all 990 evaluated tuples:
+- **Selected Snapshot:** Seed 25, Snapshot Day 90, Squadron S1 (median best-action gain = +0.00 MC).
+- **Recorded Files:** `results/readiness_actions_example.csv` and `results/readiness_example.csv`.
+- **Commander's Question Output (`scripts/readiness_demo.py`):**
+  > "Squadron S1, day 93: P(≥12 MC) = 1.00. Best single action: Transfer spare engine depot to squadron (S1 Engine Pool), which raises expected MC by +0.0."
