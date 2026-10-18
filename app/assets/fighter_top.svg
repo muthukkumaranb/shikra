@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="100%" height="100%" style="overflow: visible;">
+  <defs>
+    <style>
+      .airframe { fill: #1e293b; stroke: #64748b; stroke-width: 2; stroke-linejoin: round; }
+      .canopy { fill: #0ea5e9; fill-opacity: 0.35; stroke: #38bdf8; stroke-width: 1.5; }
+      .panel-line { fill: none; stroke: #475569; stroke-width: 1; stroke-dasharray: 3 3; }
+      .fin { fill: #1e293b; stroke: #64748b; stroke-width: 1.5; }
+      .engine-pod { fill: #334155; stroke: #94a3b8; stroke-width: 1.5; }
+      .engine-nozzle { fill: #475569; stroke: #cbd5e1; stroke-width: 1.5; }
+      .component-marker { fill: #0ea5e9; stroke: #ffffff; stroke-width: 1.5; r: 7; cursor: pointer; }
+      .component-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 9px; fill: #cbd5e1; font-weight: 600; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Wing & Fuselage Main Body -->
+  <g id="airframe-group">
+    <!-- Main Planform: Radome, LERX, Swept Wings, Twin Tail Booms -->
+    <path id="airframe" class="airframe" d="
+      M 200,30 
+      C 205,45 208,65 210,90
+      L 214,150
+      L 230,190
+      L 365,315
+      C 370,320 368,326 360,328
+      L 315,335
+      L 245,340
+      L 255,420
+      L 245,445
+      L 215,445
+      L 210,430
+      L 200,435
+      L 190,430
+      L 185,445
+      L 155,445
+      L 145,420
+      L 155,340
+      L 85,335
+      L 40,328
+      C 32,326 30,320 35,315
+      L 170,190
+      L 186,150
+      L 190,90
+      C 192,65 195,45 200,30
+      Z
+    " />
+
+    <!-- Twin Vertical Tails / Fins -->
+    <polygon id="tail_fin_left" class="fin" points="145,370 120,465 138,470 156,415" />
+    <polygon id="tail_fin_right" class="fin" points="255,370 280,465 262,470 244,415" />
+
+    <!-- Canopy -->
+    <path id="canopy" class="canopy" d="
+      M 200,95
+      C 207,105 208,135 207,155
+      C 205,165 195,165 193,155
+      C 192,135 193,105 200,95
+      Z
+    " />
+
+    <!-- Wing Panel Lines -->
+    <line class="panel-line" x1="170" y1="210" x2="85" y2="330" />
+    <line class="panel-line" x1="230" y1="210" x2="315" y2="330" />
+    <line class="panel-line" x1="155" y1="340" x2="185" y2="340" />
+    <line class="panel-line" x1="215" y1="340" x2="245" y2="340" />
+  </g>
+
+  <!-- Left Engine Assembly -->
+  <g id="engine_0" class="engine-unit">
+    <rect id="engine_0_pod" class="engine-pod" x="157" y="345" width="26" height="85" rx="5" />
+    <path id="engine_0_nozzle" class="engine-nozzle" d="M 159,430 L 181,430 L 183,450 L 157,450 Z" />
+  </g>
+
+  <!-- Right Engine Assembly -->
+  <g id="engine_1" class="engine-unit">
+    <rect id="engine_1_pod" class="engine-pod" x="217" y="345" width="26" height="85" rx="5" />
+    <path id="engine_1_nozzle" class="engine-nozzle" d="M 219,430 L 241,430 L 243,450 L 217,450 Z" />
+  </g>
+
+  <!-- 10 Tracked Components (LRUs) with IDs matching wing.yaml -->
+  <g id="lru_markers">
+    <!-- 1. Radar Transmitter (Nose Radome) -->
+    <g id="radar_tx" class="lru-target">
+      <circle class="component-marker" cx="200" cy="55" />
+    </g>
+
+    <!-- 2. Inertial Navigation Unit (Avionics Bay Behind Canopy) -->
+    <g id="ins_unit" class="lru-target">
+      <circle class="component-marker" cx="200" cy="170" />
+    </g>
+
+    <!-- 3. ECS Valve (Environmental Control System / Dorsal) -->
+    <g id="ecs_valve" class="lru-target">
+      <circle class="component-marker" cx="200" cy="215" />
+    </g>
+
+    <!-- 4. Fuel Pump (Center Fuselage Main Tank) -->
+    <g id="fuel_pump" class="lru-target">
+      <circle class="component-marker" cx="200" cy="265" />
+    </g>
+
+    <!-- 5. Hydraulic Pump (Port Wing Root Hydraulic Module) -->
+    <g id="hyd_pump" class="lru-target">
+      <circle class="component-marker" cx="155" cy="275" />
+    </g>
+
+    <!-- 6. AC Generator (Starboard Wing Root Accessory Bay) -->
+    <g id="gen_ac" class="lru-target">
+      <circle class="component-marker" cx="245" cy="275" />
+    </g>
+
+    <!-- 7. Brake Controller (Port Main Gear Bay) -->
+    <g id="brake_ctrl" class="lru-target">
+      <circle class="component-marker" cx="115" cy="315" />
+    </g>
+
+    <!-- 8. Engine Controller (Port FADEC on Left Engine Bay) -->
+    <g id="eng_ctrl" class="lru-target">
+      <circle class="component-marker" cx="170" cy="370" />
+    </g>
+
+    <!-- 9. Fire Detection Unit (Starboard Engine Bay Thermal Module) -->
+    <g id="fire_detect" class="lru-target">
+      <circle class="component-marker" cx="230" cy="370" />
+    </g>
+
+    <!-- 10. APU Starter (Tailcone Between Engines) -->
+    <g id="apu_start" class="lru-target">
+      <circle class="component-marker" cx="200" cy="415" />
+    </g>
+  </g>
+</svg>

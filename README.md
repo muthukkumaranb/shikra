@@ -59,7 +59,41 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ---
 
-## Quickstart
+## Judge quickstart
+
+### Environment and Python Requirement
+- **Python Version**: **Python 3.11.x strictly required** (tested and verified on CPython 3.11.16).
+- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `torch==2.2.2`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers.
+
+### Full Reproducibility in a Single Command
+
+**Linux / macOS:**
+```bash
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make verify PY=.venv/bin/python
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1 -Py .venv\Scripts\python.exe
+```
+
+#### Measured Benchmark Runtimes (Clean Fresh Clone, Python 3.11.16)
+- **`git clone`**: ~16.3s
+- **`python -m venv .venv`**: ~26.6s
+- **`pip install -r requirements.txt`**: ~4m 13.6s (253.6s)
+- **`pytest -q -m "not data"`**: ~1m 52.3s (112.3s) (89 passed, 2 skipped, 4 deselected)
+- **`shikra.sim.runner` (30 seeds, 6 policies)**: ~2m 40.6s (160.6s)
+- **`make verify` / `verify.ps1`**: Executes test suite, full simulation reproduction, bitwise verification against committed CSVs, and git working tree diff check in one command.
+
+---
 
 ## Judge quickstart
 

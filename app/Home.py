@@ -17,7 +17,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.lib.data import load_heatmap, load_supply_shock  # noqa: E402
-from app.lib.state import get_sim_result  # noqa: E402
+from app.lib.state import get_sim_result, get_wing_state_on_day  # noqa: E402
+from app.lib.visuals import render_flight_line_html  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 
@@ -46,6 +47,44 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# ── Flight-Line View (Opening Shot) ─────────────────────────────────────────
+st.markdown("### Fleet Flight-Line View")
+st.caption(
+    "Operational status across all 54 aircraft on the selected simulation day. "
+    "Synthetic wing."
+)
+
+col_slider, col_summary = st.columns([2, 3])
+with col_slider:
+    flight_day = st.slider(
+        "Simulation Day (Measured Window: 365–729)",
+        min_value=365,
+        max_value=729,
+        value=485,
+        step=1,
+        help="Day 485 = Day 120 of the measured window (post-warmup)",
+    )
+
+wing_state = get_wing_state_on_day(flight_day, policy="shikra_v2", seed=1)
+
+with col_summary:
+    mc_total = wing_state["mc_count"]
+    pct_total = (mc_total / 54.0) * 100.0
+    st.markdown(
+        f'<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.6rem 1rem; margin-top: 0.4rem;">'
+        f'<span style="color: #94a3b8; font-size: 0.85rem;">Day {flight_day} Fleet Serviceability:</span> '
+        f'<span style="font-size: 1.15rem; font-weight: 700; color: #4ade80;">{mc_total} / 54 MC</span> '
+        f'<span style="font-size: 0.9rem; color: #38bdf8;">({pct_total:.1f}%)</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+flight_line_html = render_flight_line_html(
+    wing_state["tail_statuses"], wing_state["sqn_mc"]
+)
+st.markdown(flight_line_html, unsafe_allow_html=True)
+st.caption("synthetic wing")
 
 st.divider()
 

@@ -109,9 +109,19 @@ def load_gates_md() -> str:
     return "*GATES.md not found.*"
 
 
+@st.cache_data
 def load_spares_alloc() -> pd.DataFrame | None:
     """Load results/spares_alloc.csv if it exists (after T1.6 merge)."""
     path = RESULTS_DIR / "spares_alloc.csv"
+    if path.exists():
+        return pd.read_csv(path)
+    return None
+
+
+@st.cache_data
+def load_spares_compare() -> pd.DataFrame | None:
+    """Load results/spares_compare.csv if it exists (after T1.6 merge)."""
+    path = RESULTS_DIR / "spares_compare.csv"
     if path.exists():
         return pd.read_csv(path)
     return None
