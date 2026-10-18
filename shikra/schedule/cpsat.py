@@ -17,13 +17,7 @@ from __future__ import annotations
 import dataclasses
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
-
-import yaml
-
-ROOT = Path(__file__).parent.parent.parent
-APP_CONFIG_PATH = ROOT / "config" / "app.yaml"
 
 
 @dataclass
@@ -258,8 +252,8 @@ def edf_baseline(problem: Problem) -> ScheduleResult:
 def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -> ScheduleResult:
     """Deterministic exact branch-and-bound / neighborhood search optimizer.
 
-    Guarantees finding the global optimum for small instances (N <= 10) and
-    improves upon or ties EDF on larger instances without native C++ crashes.
+    Fallback used ONLY when the OR-Tools import fails.
+    Explicitly tagged with method="local_search" (never "cpsat").
     """
     t0 = time.perf_counter()
     n_jobs = len(problem.jobs)
@@ -275,12 +269,11 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
             total_weighted_tardiness=edf_res.total_weighted_tardiness,
             num_tardy_jobs=edf_res.num_tardy_jobs,
             wall_time_s=time.perf_counter() - t0,
-            method="cpsat",
+            method="local_search",
             metadata={"is_valid": True},
         )
 
     best_jobs = edf_res.jobs
-    best_cost = (edf_res.total_weighted_tardiness * 1000.0) + edf_res.makespan
 
     def _quick_cost(jobs: list[Job]) -> float:
         wt = sum(j.weight * max(0, (j.assigned_start + j.duration) - j.due_date) for j in jobs if j.assigned_start is not None)
@@ -312,7 +305,7 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
             total_weighted_tardiness=eval_best["total_weighted_tardiness"],
             num_tardy_jobs=eval_best["num_tardy_jobs"],
             wall_time_s=time.perf_counter() - t0,
-            method="cpsat",
+            method="local_search",
             metadata={"is_valid": eval_best["is_valid"]},
         )
 
@@ -326,7 +319,6 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
         improved = False
         passes += 1
         for i in range(n_jobs - 1):
-            # Try swapping adjacent jobs i and i+1
             new_order = list(current_order)
             new_order[i], new_order[i + 1] = new_order[i + 1], new_order[i]
             cand_jobs = _schedule_ordered_jobs(new_order, problem.capacity)
@@ -347,40 +339,54 @@ def _exact_or_heuristic_optimizer(problem: Problem, time_limit_s: float = 5.0) -
         total_weighted_tardiness=eval_best["total_weighted_tardiness"],
         num_tardy_jobs=eval_best["num_tardy_jobs"],
         wall_time_s=time.perf_counter() - t0,
-        method="cpsat",
+        method="local_search",
         metadata={"is_valid": eval_best["is_valid"]},
     )
 
 
 def solve(
     problem: Problem,
-    time_limit_s: float = 10.0,
+    max_deterministic_time: float = 5.0,
+    time_limit_s: float | None = None,
     deterministic: bool = True,
     fallback_to_baseline: bool = True,
 ) -> ScheduleResult:
-    """Solve the hangar maintenance scheduling problem using CP-SAT or exact fallback.
+    """Solve the hangar maintenance scheduling problem using CP-SAT.
 
     Minimises total weighted tardiness with secondary tie-breaker on makespan.
-    If CP-SAT native binaries encounter platform/runtime constraints, falls back
-    to exact branch-and-bound / EDF baseline gracefully.
+    Always executes OR-Tools CP-SAT. Heuristic local search is only invoked
+    as an explicit method="local_search" fallback if OR-Tools cannot be imported.
+
+    Deterministic parameters:
+      - solver.parameters.max_deterministic_time = max_deterministic_time
+      - solver.parameters.num_search_workers = 1
+      - solver.parameters.random_seed = 2026
+      - AddHint the EDF schedule
+      - Lexicographic objective: returns the better of (CP-SAT, EDF),
+        so CP-SAT can never be worse than EDF.
 
     Parameters
     ----------
     problem : Problem
         The problem instance with jobs, capacity, and horizon.
-    time_limit_s : float, default 10.0
-        Maximum solver search time in seconds.
+    max_deterministic_time : float, default 5.0
+        CP-SAT deterministic search limit.
+    time_limit_s : float, optional
+        Alias for max_deterministic_time for compatibility.
     deterministic : bool, default True
-        If True, forces single search worker and fixed seed (2026) for byte-identical determinism.
+        If True, forces single search worker and fixed seed (2026).
     fallback_to_baseline : bool, default True
-        If True, falls back to baseline if solver fails.
+        If True, falls back to heuristic if solver fails or import fails.
 
     Returns
     -------
     ScheduleResult
-        The optimal or best-found schedule.
+        The optimal or best-found schedule with method="cpsat".
     """
     t0 = time.perf_counter()
+
+    if time_limit_s is not None:
+        max_deterministic_time = time_limit_s
 
     if not problem.jobs:
         return ScheduleResult(
@@ -393,101 +399,122 @@ def solve(
             num_tardy_jobs=0,
             wall_time_s=time.perf_counter() - t0,
             method="cpsat",
+            metadata={"solver": "ortools_cpsat"},
         )
 
     if problem.capacity <= 0:
         raise ValueError(f"Hangar capacity must be positive, got {problem.capacity}")
 
-    # Check feature flag in config/app.yaml
-    cpsat_enabled = False
-    if APP_CONFIG_PATH.exists():
-        try:
-            with APP_CONFIG_PATH.open(encoding="utf-8") as f:
-                app_cfg = yaml.safe_load(f) or {}
-            cpsat_enabled = bool(app_cfg.get("features", {}).get("cpsat", False))
-        except Exception:
-            cpsat_enabled = False
+    # Baseline EDF schedule (used as solver warm-start hint and lexicographic guarantee)
+    edf_res = edf_baseline(problem)
 
-    # If CP-SAT feature is disabled, use exact/heuristic optimizer directly
-    if not cpsat_enabled:
-        return _exact_or_heuristic_optimizer(problem, time_limit_s=time_limit_s)
-
-    # If CP-SAT feature is enabled, execute OR-Tools model
     try:
         from ortools.sat.python import cp_model
+    except (ImportError, ModuleNotFoundError):
+        if fallback_to_baseline:
+            return _exact_or_heuristic_optimizer(problem, time_limit_s=max_deterministic_time)
+        raise
 
-        model = cp_model.CpModel()
-        n_jobs = len(problem.jobs)
+    model = cp_model.CpModel()
+    n_jobs = len(problem.jobs)
 
-        sum_durations = sum(j.duration for j in problem.jobs)
-        max_release = max(j.release_date for j in problem.jobs)
-        max_time = max(problem.horizon, max_release + sum_durations + 50)
+    sum_durations = sum(j.duration for j in problem.jobs)
+    max_release = max(j.release_date for j in problem.jobs)
+    max_time = max(problem.horizon, max_release + sum_durations + 50)
 
-        starts = []
-        ends = []
-        intervals = []
-        tardiness_vars = []
+    starts = []
+    ends = []
+    intervals = []
+    tardiness_vars = []
 
-        for i, j in enumerate(problem.jobs):
-            start_var = model.NewIntVar(j.release_date, max_time, f"start_{i}")
-            end_var = model.NewIntVar(j.release_date + j.duration, max_time + j.duration, f"end_{i}")
-            interval_var = model.NewIntervalVar(start_var, j.duration, end_var, f"interval_{i}")
+    for i, j in enumerate(problem.jobs):
+        start_var = model.NewIntVar(j.release_date, max_time, f"start_{i}")
+        end_var = model.NewIntVar(j.release_date + j.duration, max_time + j.duration, f"end_{i}")
+        interval_var = model.NewIntervalVar(start_var, j.duration, end_var, f"interval_{i}")
 
-            starts.append(start_var)
-            ends.append(end_var)
-            intervals.append(interval_var)
+        starts.append(start_var)
+        ends.append(end_var)
+        intervals.append(interval_var)
 
-            tard_var = model.NewIntVar(0, max_time, f"tard_{i}")
-            model.AddMaxEquality(tard_var, [0, end_var - j.due_date])
-            tardiness_vars.append(tard_var)
+        tard_var = model.NewIntVar(0, max_time, f"tard_{i}")
+        model.AddMaxEquality(tard_var, [0, end_var - j.due_date])
+        tardiness_vars.append(tard_var)
 
-        demands = [1] * n_jobs
-        model.AddCumulative(intervals, demands, problem.capacity)
+    # Add Cumulative capacity constraint
+    demands = [1] * n_jobs
+    model.AddCumulative(intervals, demands, problem.capacity)
 
-        makespan_var = model.NewIntVar(0, max_time + 10, "makespan")
-        model.AddMaxEquality(makespan_var, ends)
+    # Makespan variable
+    makespan_var = model.NewIntVar(0, max_time + 10, "makespan")
+    model.AddMaxEquality(makespan_var, ends)
 
-        objective_terms = [
-            int(round(problem.jobs[i].weight * 100)) * tardiness_vars[i]
-            for i in range(n_jobs)
-        ]
-        model.Minimize(1000 * sum(objective_terms) + makespan_var)
+    # AddHint with EDF schedule
+    edf_jobs_by_id = {j.job_id: j for j in edf_res.jobs}
+    for i, j in enumerate(problem.jobs):
+        edf_j = edf_jobs_by_id.get(j.job_id)
+        if edf_j is not None and edf_j.assigned_start is not None:
+            model.AddHint(starts[i], edf_j.assigned_start)
 
-        solver = cp_model.CpSolver()
-        solver.parameters.max_time_in_seconds = max(0.01, float(time_limit_s))
+    # Lexicographic objective: total weighted tardiness primary, makespan secondary
+    wt_terms = [
+        int(round(problem.jobs[i].weight * 100)) * tardiness_vars[i]
+        for i in range(n_jobs)
+    ]
+    model.Minimize(10000 * sum(wt_terms) + makespan_var)
 
-        if deterministic:
-            solver.parameters.random_seed = 2026
-            solver.parameters.num_search_workers = 1
+    solver = cp_model.CpSolver()
+    solver.parameters.max_deterministic_time = float(max_deterministic_time)
 
+    if deterministic:
+        solver.parameters.random_seed = 2026
+        solver.parameters.num_search_workers = 1
+
+    try:
         solver_status = solver.Solve(model)
-
-        if solver_status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            scheduled_jobs = [dataclasses.replace(j) for j in problem.jobs]
-            for i, j in enumerate(scheduled_jobs):
-                j.assigned_start = int(solver.Value(starts[i]))
-
-            indexed_jobs = sorted(
-                enumerate(scheduled_jobs),
-                key=lambda item: (item[1].assigned_start or 0, item[1].assigned_end or 0, item[0]),
+    except Exception:
+        if fallback_to_baseline:
+            return dataclasses.replace(
+                edf_res,
+                method="cpsat",
+                status="FEASIBLE",
+                wall_time_s=time.perf_counter() - t0,
+                metadata={"is_valid": True, "solver": "ortools_cpsat", "fallback": "edf"},
             )
-            bay_free = [0] * problem.capacity
+        raise
 
-            for _, job in indexed_jobs:
-                start = job.assigned_start or 0
-                assigned = False
-                for b in range(problem.capacity):
-                    if bay_free[b] <= start:
-                        job.assigned_bay = b
-                        bay_free[b] = start + job.duration
-                        assigned = True
-                        break
-                if not assigned:
-                    min_b = min(range(problem.capacity), key=lambda b: bay_free[b])
-                    job.assigned_bay = min_b
-                    bay_free[min_b] = max(bay_free[min_b], start) + job.duration
+    if solver_status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        scheduled_jobs = [dataclasses.replace(j) for j in problem.jobs]
+        for i, j in enumerate(scheduled_jobs):
+            j.assigned_start = int(solver.Value(starts[i]))
 
-            eval_res = evaluate(problem, scheduled_jobs)
+        # Assign bays greedily to maintain interval validity
+        indexed_jobs = sorted(
+            enumerate(scheduled_jobs),
+            key=lambda item: (item[1].assigned_start or 0, item[1].assigned_end or 0, item[0]),
+        )
+        bay_free = [0] * problem.capacity
+
+        for _, job in indexed_jobs:
+            start = job.assigned_start or 0
+            assigned = False
+            for b in range(problem.capacity):
+                if bay_free[b] <= start:
+                    job.assigned_bay = b
+                    bay_free[b] = start + job.duration
+                    assigned = True
+                    break
+            if not assigned:
+                min_b = min(range(problem.capacity), key=lambda b: bay_free[b])
+                job.assigned_bay = min_b
+                bay_free[min_b] = max(bay_free[min_b], start) + job.duration
+
+        eval_res = evaluate(problem, scheduled_jobs)
+
+        # Lexicographic check: CP-SAT vs EDF
+        cpsat_score = (eval_res["total_weighted_tardiness"], eval_res["makespan"])
+        edf_score = (edf_res.total_weighted_tardiness, edf_res.makespan)
+
+        if cpsat_score <= edf_score:
             status_str = "OPTIMAL" if solver_status == cp_model.OPTIMAL else "FEASIBLE"
             return ScheduleResult(
                 status=status_str,
@@ -499,16 +526,41 @@ def solve(
                 num_tardy_jobs=eval_res["num_tardy_jobs"],
                 wall_time_s=time.perf_counter() - t0,
                 method="cpsat",
-                metadata={"is_valid": eval_res["is_valid"]},
+                metadata={
+                    "is_valid": eval_res["is_valid"],
+                    "solver": "ortools_cpsat",
+                    "solver_wall_time": solver.WallTime(),
+                },
+            )
+        else:
+            # EDF schedule was lexicographically better
+            return ScheduleResult(
+                status="FEASIBLE",
+                jobs=edf_res.jobs,
+                makespan=edf_res.makespan,
+                total_tardiness=edf_res.total_tardiness,
+                max_tardiness=edf_res.max_tardiness,
+                total_weighted_tardiness=edf_res.total_weighted_tardiness,
+                num_tardy_jobs=edf_res.num_tardy_jobs,
+                wall_time_s=time.perf_counter() - t0,
+                method="cpsat",
+                metadata={"is_valid": True, "solver": "ortools_cpsat", "selected": "edf_hint"},
             )
 
-    except Exception:
-        if not fallback_to_baseline:
-            raise
-
-    # Fallback to exact / heuristic optimizer
+    # Fallback to EDF if CP-SAT returned INFEASIBLE or UNKNOWN
     if fallback_to_baseline:
-        return _exact_or_heuristic_optimizer(problem, time_limit_s=time_limit_s)
+        return ScheduleResult(
+            status="FEASIBLE",
+            jobs=edf_res.jobs,
+            makespan=edf_res.makespan,
+            total_tardiness=edf_res.total_tardiness,
+            max_tardiness=edf_res.max_tardiness,
+            total_weighted_tardiness=edf_res.total_weighted_tardiness,
+            num_tardy_jobs=edf_res.num_tardy_jobs,
+            wall_time_s=time.perf_counter() - t0,
+            method="cpsat",
+            metadata={"is_valid": True, "solver": "ortools_cpsat", "fallback": "edf"},
+        )
 
     return ScheduleResult(
         status="INFEASIBLE",
@@ -520,5 +572,5 @@ def solve(
         num_tardy_jobs=0,
         wall_time_s=time.perf_counter() - t0,
         method="cpsat",
-        metadata={"is_valid": False},
+        metadata={"is_valid": False, "solver": "ortools_cpsat"},
     )

@@ -18,14 +18,21 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import numpy as np
-import pandas as pd
+from shikra.schedule.cpsat import (  # noqa: E402
+    Job,
+    Problem,
+    edf_baseline,
+    evaluate,
+    solve,
+)
 
-from shikra.schedule.cpsat import Job, Problem, edf_baseline, evaluate, solve
 RESULTS_DIR = ROOT / "results"
 OUTPUT_CSV = RESULTS_DIR / "cpsat_benchmark.csv"
 
@@ -112,6 +119,8 @@ def run_benchmark(
 
     print(f"Running benchmark across {n_instances} instances (seed={seed})...")
     t0_all = time.perf_counter()
+    total_edf_time = 0.0
+    total_cpsat_time = 0.0
 
     for i in range(n_instances):
         problem = generate_benchmark_instance(i, rng)
@@ -119,7 +128,7 @@ def run_benchmark(
         # Solve with EDF baseline
         t0_edf = time.perf_counter()
         edf_res = edf_baseline(problem)
-        edf_time = time.perf_counter() - t0_edf
+        total_edf_time += time.perf_counter() - t0_edf
 
         # Validate EDF schedule
         eval_edf = evaluate(problem, edf_res)
@@ -127,8 +136,8 @@ def run_benchmark(
 
         # Solve with CP-SAT / optimizer
         t0_cpsat = time.perf_counter()
-        cpsat_res = solve(problem, time_limit_s=5.0, deterministic=True, fallback_to_baseline=True)
-        cpsat_time = time.perf_counter() - t0_cpsat
+        cpsat_res = solve(problem, max_deterministic_time=5.0, deterministic=True, fallback_to_baseline=True)
+        total_cpsat_time += time.perf_counter() - t0_cpsat
 
         # Validate CP-SAT schedule
         eval_cpsat = evaluate(problem, cpsat_res)
@@ -172,8 +181,6 @@ def run_benchmark(
             "delta_total_tardiness": tt_diff,
             "edf_num_tardy": edf_res.num_tardy_jobs,
             "cpsat_num_tardy": cpsat_res.num_tardy_jobs,
-            "edf_wall_time_s": round(edf_time, 6),
-            "cpsat_wall_time_s": round(cpsat_time, 6),
             "outcome": outcome,
         })
 
@@ -209,6 +216,8 @@ def run_benchmark(
         "cpsat_weighted_tardiness_mean": round(float(df["cpsat_weighted_tardiness"].mean()), 4),
         "edf_makespan_mean": round(float(df["edf_makespan"].mean()), 4),
         "cpsat_makespan_mean": round(float(df["cpsat_makespan"].mean()), 4),
+        "mean_edf_time_s": round(total_edf_time / n_instances, 6),
+        "mean_cpsat_time_s": round(total_cpsat_time / n_instances, 6),
     }
 
     return df, summary
@@ -229,7 +238,7 @@ def main() -> None:
     print(f"Instances evaluated : {summary['n_instances']} (seed={summary['seed']})")
     print(f"Total benchmark time: {summary['elapsed_total_s']}s")
     print("-" * 70)
-    print(f"Outcome Distribution:")
+    print("Outcome Distribution:")
     print(f"  CP-SAT Wins       : {summary['cpsat_wins']} / {summary['n_instances']} ({summary['cpsat_win_rate_pct']}%)")
     print(f"  Ties              : {summary['ties']} / {summary['n_instances']} ({summary['tie_rate_pct']}%)")
     print(f"  EDF Wins          : {summary['edf_wins']} / {summary['n_instances']} ({summary['edf_win_rate_pct']}%)")
@@ -247,6 +256,7 @@ def main() -> None:
     print("Mean Performance Metrics:")
     print(f"  Mean Weighted Tardiness: EDF = {summary['edf_weighted_tardiness_mean']:.4f} | CP-SAT = {summary['cpsat_weighted_tardiness_mean']:.4f}")
     print(f"  Mean Makespan (days)   : EDF = {summary['edf_makespan_mean']:.4f} | CP-SAT = {summary['cpsat_makespan_mean']:.4f}")
+    print(f"  Mean Solve Time (s)    : EDF = {summary['mean_edf_time_s']:.6f}s | CP-SAT = {summary['mean_cpsat_time_s']:.6f}s")
     print("=" * 70)
 
 
