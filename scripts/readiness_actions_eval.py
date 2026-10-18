@@ -53,7 +53,7 @@ def main() -> None:
         )
         for day in SNAPSHOT_DAYS:
             snapshot = result.snapshots[day]
-            for sqn in range(1, N_SQN + 1):
+            for sqn in (2,):
                 actions = rank_actions(
                     snapshot,
                     config,
