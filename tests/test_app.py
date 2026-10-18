@@ -192,3 +192,113 @@ def test_lib_audit_module_integrity():
     assert hasattr(mod, "append")
     assert hasattr(mod, "get_recent")
     assert hasattr(mod, "count")
+
+
+def test_pages_without_readiness_fallback():
+    """Verify pages display fallback notes when readiness is missing and never show numbers."""
+    # Ensure readiness module is not on sys.path
+    import sys
+
+    # Remove any stray shikra-rd path from sys.path
+    sys.path = [p for p in sys.path if "shikra-rd" not in p]
+    if "shikra.strategy.readiness" in sys.modules:
+        del sys.modules["shikra.strategy.readiness"]
+
+    # 1. Engineering Officer page fallback
+    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    assert len(at_eo.exception) == 0
+    all_eo_text = " ".join(
+        [c.value for c in at_eo.caption]
+        + [m.value for m in at_eo.markdown]
+    )
+    assert "engine detail after T1.7 merge" in all_eo_text
+    assert "Engine RUL table (q10/q50/q90) available after T1.7 merge" in all_eo_text
+    assert "rul_true" not in all_eo_text
+
+    # 2. Scenario page step 5 fallback
+    at_sc = AppTest.from_file("app/pages/5_Scenario.py")
+    at_sc.session_state["scenario_step"] = 5
+    at_sc.run(timeout=20)
+    assert len(at_sc.exception) == 0
+    all_sc_text = " ".join(
+        [c.value for c in at_sc.caption]
+        + [m.value for m in at_sc.markdown]
+    )
+    assert "illustrative layout; live hangar state after T1.7 merge" in all_sc_text
+    assert "Readiness forecast: available after merge of T1.7" in all_sc_text
+    assert "BEFORE INJECTION (Baseline S2 at D+3)" not in all_sc_text
+    assert "rul_true" not in all_sc_text
+
+
+def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
+    """Verify pages display real data and drop illustrative captions when readiness is present."""
+    import sys
+
+    rd_worktree = Path(__file__).parent.parent.parent / "shikra-rd"
+    if not (rd_worktree / "shikra" / "strategy" / "readiness.py").exists():
+        pytest.skip("Temporary shikra-rd worktree not found")
+
+    import shikra
+
+    p = str((rd_worktree / "shikra").resolve())
+    monkeypatch.syspath_prepend(str(rd_worktree))
+    monkeypatch.setattr(shikra, "__path__", [p] + list(shikra.__path__))
+
+    for mod_name in list(sys.modules.keys()):
+        if any(
+            k in mod_name
+            for k in ("readiness", "spares", "strategy", "sim", "app.lib")
+        ):
+            del sys.modules[mod_name]
+
+    # 1. Engineering Officer page with readiness
+    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    assert len(at_eo.exception) == 0
+    all_eo_text = " ".join(
+        [c.value for c in at_eo.caption]
+        + [m.value for m in at_eo.markdown]
+    )
+    assert "engine detail after T1.7 merge" not in all_eo_text
+    assert "Engine RUL table (q10/q50/q90) available after T1.7 merge" not in all_eo_text
+    assert "Live propulsion and subsystem health" in all_eo_text
+    assert "rul_true" not in all_eo_text
+
+    # Check dataframe columns on EO page
+    for df_elem in at_eo.dataframe:
+        df = df_elem.value
+        assert "rul_true" not in df.columns
+        if "q10 RUL" in df.columns:
+            assert "q50 Median" in df.columns
+            assert "q90 RUL" in df.columns
+
+    # 2. Scenario step 5 with readiness
+    at_sc = AppTest.from_file("app/pages/5_Scenario.py")
+    at_sc.session_state["scenario_step"] = 5
+    at_sc.run(timeout=25)
+    assert len(at_sc.exception) == 0
+    all_sc_text = " ".join(
+        [c.value for c in at_sc.caption]
+        + [m.value for m in at_sc.markdown]
+    )
+    assert "illustrative layout; live hangar state after T1.7 merge" not in all_sc_text
+    assert "Live hangar state from Day 485 simulation snapshot" in all_sc_text
+    assert "BEFORE INJECTION (Baseline S2 at D+3)" in all_sc_text
+    assert "AFTER INJECTED CHANGE (Mitigated S2 at D+3)" in all_sc_text
+    assert "forecast; 80% band coverage on held-out seeds =" in all_sc_text
+    assert "rul_true" not in all_sc_text
+
+
+def test_no_rul_true_reaches_any_page():
+    """Verify that rul_true is never exposed or rendered on any dashboard page."""
+    for page_path in PAGE_FILES:
+        at = AppTest.from_file(page_path).run(timeout=20)
+        assert len(at.exception) == 0
+
+        # Inspect all text/caption/markdown
+        for elem in list(at.markdown) + list(at.caption) + list(at.info) + list(at.warning):
+            assert "rul_true" not in elem.value.lower(), f"rul_true leaked on {page_path}"
+
+        # Inspect all dataframes
+        for df_elem in at.dataframe:
+            assert "rul_true" not in df_elem.value.columns, f"rul_true column leaked on {page_path}"
+
