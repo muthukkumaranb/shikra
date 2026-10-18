@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest app
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures deck-figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest app
 
 PY     ?= python
 PIP    ?= pip
@@ -56,6 +56,9 @@ shock:
 # ── Figures ──────────────────────────────────────────────────────────────────
 figures:
 	$(PY) scripts/figures.py
+
+deck-figures:
+	$(PY) scripts/deck_figures.py
 
 # ── README table ─────────────────────────────────────────────────────────────
 readme:
