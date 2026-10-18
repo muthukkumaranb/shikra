@@ -80,6 +80,33 @@ def test_snapshots_identical_results():
     assert res_no_snap.tail_status == res_with_snap.tail_status
 
 
+def test_snapshot_at_matches_full_horizon_day():
+    """Verify snapshot_at preserves the full-horizon random trajectory."""
+    from shikra.strategy.readiness import snapshot_at
+
+    with CONFIG_PATH.open(encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    with PARAMS_PATH.open(encoding="utf-8") as f:
+        params = json.load(f)
+
+    rul_shikra = apply(pd.read_parquet(REPLAY_PATH), 1)
+    full_run = run(
+        "shikra_v2",
+        cfg,
+        rul_shikra,
+        params,
+        seed=1,
+        days=cfg["ops"]["days"],
+    )
+    snapshot = snapshot_at("shikra_v2", 1, 485)
+    snapshot_repeat = snapshot_at("shikra_v2", 1, 485)
+
+    assert snapshot == snapshot_repeat
+    expected_mc = int(full_run.daily.loc[485, "mc"])
+    actual_mc = sum(tail["status"] == "MC" for tail in snapshot["tails"])
+    assert actual_mc == expected_mc
+
+
 def test_snapshot_structure_and_fields():
     """Verify snapshot dictionary schema contains all required wing and logistics fields."""
     with CONFIG_PATH.open(encoding="utf-8") as f:

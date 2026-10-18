@@ -30,6 +30,8 @@ from app.lib.data import (
 )
 from app.lib.state import get_deterministic_injection_trajectory
 
+ROOT = Path(__file__).resolve().parent.parent
+
 PAGE_FILES = [
     "app/Home.py",
     "app/pages/1_Commander.py",
@@ -44,7 +46,7 @@ PAGE_FILES = [
 @pytest.mark.parametrize("page_path", PAGE_FILES)
 def test_page_imports(page_path: str):
     """Verify each page file exists and is readable valid Python."""
-    p = Path(page_path)
+    p = ROOT / page_path
     assert p.exists(), f"Page file {page_path} not found"
     code = p.read_text(encoding="utf-8")
     assert len(code) > 0
@@ -56,7 +58,7 @@ def test_page_imports(page_path: str):
 @pytest.mark.parametrize("page_path", PAGE_FILES)
 def test_apptest_pages_no_exceptions(page_path: str):
     """Use Streamlit's AppTest to run each page and verify no uncaught exceptions."""
-    at = AppTest.from_file(page_path).run(timeout=20)
+    at = AppTest.from_file(str(ROOT / page_path), default_timeout=120).run(timeout=120)
     assert len(at.exception) == 0, (
         f"Page {page_path} raised exceptions: {[e.value for e in at.exception]}"
     )

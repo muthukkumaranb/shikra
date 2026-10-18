@@ -51,7 +51,41 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ---
 
-## Quickstart
+## Judge quickstart
+
+### Environment and Python Requirement
+- **Python Version**: **Python 3.11.x strictly required** (tested and verified on CPython 3.11.16).
+- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `torch==2.2.2`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers.
+
+### Full Reproducibility in a Single Command
+
+**Linux / macOS:**
+```bash
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make verify PY=.venv/bin/python
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1 -Py .venv\Scripts\python.exe
+```
+
+#### Measured Benchmark Runtimes (Clean Fresh Clone, Python 3.11.16)
+- **`git clone`**: ~16.3s
+- **`python -m venv .venv`**: ~26.6s
+- **`pip install -r requirements.txt`**: ~4m 13.6s (253.6s)
+- **`pytest -q -m "not data"`**: ~1m 52.3s (112.3s) (89 passed, 2 skipped, 4 deselected)
+- **`shikra.sim.runner` (30 seeds, 6 policies)**: ~2m 40.6s (160.6s)
+- **`make verify` / `verify.ps1`**: Executes test suite, full simulation reproduction, bitwise verification against committed CSVs, and git working tree diff check in one command.
+
+---
 
 ### 1. Environment Setup
 
@@ -122,18 +156,31 @@ docker run --network none shikra
 
 ---
 
-## Repository layout
+## What is not claimed
 
-```
-shikra/          Python package (data, rul, sim, spares, strategy, ingest, nlp)
-config/          wing.yaml — synthetic wing parameters
-artifacts/       frozen artefacts: splits.json, policy_params.json, replay_rul.parquet, model files
-results/         every CSV/figure committed here
-tests/           pytest suite (no raw data needed in CI)
-scripts/         utility scripts (readme_table.py, …)
-DATA_CARD.md     data sources, checksums, licences, all synthetic parameters
-LIMITATIONS.md   honest limitations
-```
+- **Synthetic wing, not IAF data**: All fleet structures, flight schedules, failure rates, and spares budgets represent a synthetic 54-aircraft wing for research and demonstration; no classified or proprietary IAF operational data is used (see [DATA_CARD.md](DATA_CARD.md)).
+- **Advisory, not autonomous**: SHIKRA provides offline recommendations and risk bounds to assist maintenance engineers; it does not issue automated dispatch directives or replace maintenance authority (see [LIMITATIONS.md](LIMITATIONS.md)).
+- **Readiness forecast does not beat persistence**: Multi-step readiness point forecasting models evaluated in development did not outperform a simple persistence baseline (see [FINDINGS_A10.md](results/FINDINGS_A10.md)).
+- **Attention-LSTM did not beat LightGBM**: The 2-layer temporal attention-LSTM comparison member achieved comparable RMSE but ~2x worse NASA penalty score on FD003 compared to the LightGBM quantile ensemble of record (see [FINDINGS_T14.md](results/FINDINGS_T14.md)).
+- **CP-SAT gave no gain on the simulated wing**: Exact constraint programming (OR-Tools CP-SAT) for hangar co-scheduling heuristics yielded no availability gain over standard threshold-based removals on the simulated wing structure ([FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md), once merged; link anyway).
+- **Tamper-evident, not tamper-proof audit log**: The SHA-256 HMAC cryptographic chain guarantees tamper-evidence and detection of post-hoc modifications, but is not tamper-proof against root adversaries because the signing key is stored locally in deployment (see [LIMITATIONS.md](LIMITATIONS.md)).
+
+---
+
+## Repository map
+
+- `shikra/`: Core Python library containing data loaders, RUL estimation, discrete-event fleet simulation, spares allocation, and strategy.
+- `app/`: Streamlit interactive offline decision-support dashboard (Commander, Engineering Officer, Logistics, Technician, Scenario, and Evidence pages).
+- `artifacts/`: Frozen reproducibility artifacts (unit splits, RUL models, baseline replay parquet, calibration parameters).
+- `config/`: Simulation configuration (`wing.yaml`) specifying synthetic wing parameters, LRU Weibull rates, and squadron structure.
+- `data/`: Ingestion pipelines and mock enterprise extracts (`emms`, `immols`, `hums`, `brd`).
+- `results/`: Committed benchmark CSVs, validation gates, and analytical evaluation figures.
+- `scripts/`: Operational utilities for model training, reproduction verification, deck generation, and README table updates.
+- `tests/`: Pytest test suite covering simulation mechanics, RUL variants, audit chaining, and application components.
+- `results/FINDINGS_A10.md`: Conformal quantile regression (CQR) readiness forecasting findings vs persistence baseline.
+- `results/FINDINGS_T14.md`: Performance and penalty evaluation of Attention-LSTM comparison vs LightGBM ensemble.
+- `results/FINDINGS_T16.md`: Two-echelon VARI-METRIC spares inventory optimization findings and consistency checks.
+- `results/FINDINGS_CPSAT.md`: Constraint programming (CP-SAT) hangar schedule evaluation (link pre-registered).
 
 ---
 
