@@ -1,8 +1,8 @@
 ﻿"""A10 Readiness Forecast Calibration & Reliability Evaluation.
 
 Contract §6, T1.7 & Step B4:
-- Runs policy shikra at pipeline_mult = 1.9 (calibrated baseline), 30 seeds (0..29).
-- Captures snapshots at D in {30, 60, ..., 330} (11 days * 30 seeds = 330 snapshots).
+- Runs policy shikra_v2 at pipeline_mult = 1.7, 30 seeds (1..30).
+- Captures snapshots at D in {395, 425, ..., 695} (11 days * 30 seeds = 330 snapshots).
 - Evaluates 7-day Monte Carlo forecast (n=200, seed=run_seed) against realised MC counts
   at lead days 3 and 7.
 - Evaluates against two naive baselines:
@@ -52,7 +52,7 @@ PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
 REPLAY_PATH = ROOT / "artifacts" / "replay_rul.parquet"
 RESULTS_DIR = ROOT / "results"
 
-SNAPSHOT_DAYS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
+SNAPSHOT_DAYS = list(range(395, 696, 30))
 LEAD_DAYS = [3, 7]
 MC_THRESHOLDS = list(range(6, 19))  # N in 6..18
 
@@ -63,7 +63,7 @@ def _run_seed_simulation(args: tuple) -> tuple[int, dict, list[list[int]]]:
     rul_raw = pd.read_parquet(REPLAY_PATH)
     rul_shikra = apply(rul_raw, 1)
 
-    res = run("shikra", cfg_dict, rul_shikra, params_dict, seed=seed, days=days, snapshot_days=SNAPSHOT_DAYS)
+    res = run("shikra_v2", cfg_dict, rul_shikra, params_dict, seed=seed, days=days, snapshot_days=SNAPSHOT_DAYS)
 
     # Precompute daily realised MC per squadron: shape (days, N_SQN)
     daily_sqn_mc = []
@@ -82,7 +82,7 @@ def _run_seed_simulation(args: tuple) -> tuple[int, dict, list[list[int]]]:
 def _forecast_worker(args: tuple) -> tuple[int, int, pd.DataFrame]:
     """Compute forecast for one snapshot."""
     seed, snap_day, snap_dict, cfg_dict, params_dict, n_mc = args
-    fc_df = forecast(snap_dict, cfg_dict, params_dict, policy="shikra", horizon_days=7, n=n_mc, seed=seed)
+    fc_df = forecast(snap_dict, cfg_dict, params_dict, policy="shikra_v2", horizon_days=7, n=n_mc, seed=seed)
     return seed, snap_day, fc_df
 
 
@@ -98,15 +98,15 @@ def main() -> None:
 
     with CONFIG_PATH.open(encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    cfg["pipeline_mult"] = 1.9  # Calibrated baseline
+    cfg["pipeline_mult"] = 1.7
     with PARAMS_PATH.open(encoding="utf-8") as f:
         params = json.load(f)
 
     days = cfg["ops"]["days"]
-    seeds = list(range(args.seeds))
+    seeds = list(range(1, args.seeds + 1))
     n_workers = args.jobs or max(1, mp.cpu_count() - 1)
 
-    print(f"Step 1: Running {len(seeds)} fleet simulations (pipeline_mult=1.9, seeds={seeds[0]}..{seeds[-1]})...")
+    print(f"Step 1: Running {len(seeds)} fleet simulations (policy=shikra_v2, pipeline_mult=1.7, seeds={seeds[0]}..{seeds[-1]})...")
     sim_tasks = [(s, cfg, params, days) for s in seeds]
     with mp.Pool(processes=n_workers) as pool:
         sim_outputs = pool.map(_run_seed_simulation, sim_tasks)
@@ -142,7 +142,7 @@ def main() -> None:
         for sqn_idx in range(N_SQN):
             pooled = []
             for os in other_seeds:
-                for day_idx in range(days):
+                for day_idx in range(365, days):
                     pooled.append(all_realised_mc[os][day_idx][sqn_idx])
             climatology_pools[(s_eval, sqn_idx)] = np.array(pooled)
 
@@ -258,12 +258,12 @@ def main() -> None:
     print(f"Wrote calibration summary -> {calib_csv_path}")
     print(calib_df.to_string(index=False))
 
-    # Step 5: Generate illustrative example outputs (seed 0, D = 180)
-    print("\nStep 4: Writing illustrative example outputs for seed 0, day 180...")
-    ex_seed = 0
-    ex_day = 180
+    # Step 5: Generate illustrative example outputs (seed 1, D = 485)
+    print("\nStep 4: Writing illustrative example outputs for seed 1, day 485...")
+    ex_seed = 1
+    ex_day = 485
     ex_snap = all_snapshots[(ex_seed, ex_day)]
-    ex_fc_df = forecast(ex_snap, cfg, params, policy="shikra", horizon_days=7, n=args.n_mc, seed=ex_seed)
+    ex_fc_df = forecast(ex_snap, cfg, params, policy="shikra_v2", horizon_days=7, n=args.n_mc, seed=ex_seed)
 
     ex_fc_df.insert(0, "snapshot_day", ex_day)
     ex_fc_df.insert(0, "seed", ex_seed)
@@ -272,7 +272,7 @@ def main() -> None:
     print(f"Wrote example forecast -> {ex_csv_path}")
 
     # Action ranking for Squadron 2, lead day 3
-    actions_df = rank_actions(ex_snap, cfg, params, sqn=2, lead_days=3, n=args.n_mc, seed=ex_seed)
+    actions_df = rank_actions(ex_snap, cfg, params, sqn=2, lead_days=7, n=args.n_mc, seed=ex_seed)
     actions_csv_path = RESULTS_DIR / "readiness_actions_example.csv"
     actions_df.to_csv(actions_csv_path, index=False)
     print(f"Wrote example actions -> {actions_csv_path}")

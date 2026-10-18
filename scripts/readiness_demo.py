@@ -1,6 +1,6 @@
-﻿"""Readiness demonstration script for commander's question (Step B5).
+"""Readiness demonstration script for commander's question (Step B5).
 
-Answers the commander's question for the illustrative snapshot (seed 0, D = 180, Squadron S2, day 183):
+Answers the commander's question for the illustrative snapshot (seed 1, D = 485, Squadron S2, day 492):
     "Squadron S2, day 183: P(>=12 MC) = 0.xx. Best single action: ..., which raises expected MC by +y.y."
 
 Computes every number dynamically. No hand-typed figures.
@@ -34,25 +34,25 @@ def main() -> None:
         sys.stdout.reconfigure(encoding="utf-8")
     with CONFIG_PATH.open(encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    cfg["pipeline_mult"] = 1.9
+    cfg["pipeline_mult"] = 1.7
     with PARAMS_PATH.open(encoding="utf-8") as f:
         params = json.load(f)
 
     rul_raw = pd.read_parquet(REPLAY_PATH)
     rul_shikra = apply(rul_raw, 1)
 
-    seed = 0
-    snapshot_day = 180
-    lead_day = 3
+    seed = 1
+    snapshot_day = 485
+    lead_day = 7
     target_day = snapshot_day + lead_day
     sqn = 2  # Squadron S2
 
     # Run simulation to snapshot day
-    res = run("shikra", cfg, rul_shikra, params, seed=seed, days=snapshot_day + 1, snapshot_days=[snapshot_day])
+    res = run("shikra_v2", cfg, rul_shikra, params, seed=seed, days=snapshot_day + 1, snapshot_days=[snapshot_day])
     snap = res.snapshots[snapshot_day]
 
     # Forecast
-    fc_df = forecast(snap, cfg, params, policy="shikra", horizon_days=lead_day, n=200, seed=seed)
+    fc_df = forecast(snap, cfg, params, policy="shikra_v2", horizon_days=lead_day, n=200, seed=seed)
     row = fc_df[(fc_df["lead_days"] == lead_day) & (fc_df["sqn"] == sqn)].iloc[0]
     p_ge_12 = float(row["p_ge_12"])
 
