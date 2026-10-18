@@ -11,7 +11,6 @@ from shikra.ingest import (
     EMMSAdapter,
     HUMSAdapter,
     IMMOLSAdapter,
-    generate_reports,
     init_db,
     load_all,
 )
@@ -250,7 +249,6 @@ def test_row_conservation_on_mock_exports(tmp_path: Path) -> None:
 def test_deterministic_seed(tmp_path: Path) -> None:
     """Same random seed produces identical mock exports."""
     import pandas as pd
-    from scripts.make_mock_exports import generate
 
     out1 = tmp_path / "run1"
     out2 = tmp_path / "run2"
