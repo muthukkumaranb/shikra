@@ -1,0 +1,5 @@
+# Application configuration
+# Synthetic wing operational parameters and feature flags
+
+features:
+  cpsat: false
