@@ -127,3 +127,32 @@ Whatever G0.5 shows afterwards is reported as is.
 - **Sensor Telemetry**: HUMS sensor readings (`s2, s3, s4, s7, s11, s12, s15`) represent synthetic noise and baseline values, not true engine physical degradation.
 - **Fault Detection Scope**: Detection covers the three modelled fault types only (missing primary keys, mismatched serial numbers, and stale stock rows older than 30 days). Perfect recall reported in `results/dq_detection.csv` is therefore by construction against this closed fault model.
 - **Stale Stock Policy**: Stale IMMOLS stock records (>30 days old) are loaded into `lru_stock` with `stale = 1` instead of being quarantined, preserving the latest known stock state for operations while flagging it for data refresh.
+
+---
+
+## 5. Spares Allocation (T1.6)
+
+> **All parameters and inventory levels are SYNTHETIC and for research/demonstration only.**
+
+### Budget and Valuation
+- **Baseline Budget**: **₹2508.0 lakh**, calculated as the total capital of LRU spares in `config/wing.yaml`:
+  $$\text{Budget} = \sum_{i \in \text{LRUs}} \text{cost\_lakh}_i \times (3 \times \text{stock\_base}_i + \text{stock\_depot}_i)$$
+- **Zero-Sum Reallocation**: VARI-METRIC reallocates this fixed budget without requiring additional capital expenditure.
+
+### Assumptions
+- **One Installed Unit per Tail**: Each of the 54 aircraft tails (3 squadrons × 18 aircraft) contains exactly 1 installed unit of each LRU type (fleet size $N_{\text{tails}} = 54$).
+- **Symmetric Squadrons**: The 3 squadrons are identical in fleet size (18 tails each), operational tempo (0.8 sorties/day), and maintenance capabilities. Base inventory is allocated symmetrically across all three squadrons in increments of 1 unit per squadron (3 units per step), maintaining equal base stock and conforming to the engine's `stock_base` configuration format without requiring simulation engine modifications.
+- **Stationary Poisson Demand**: LRU failures are modelled as Poisson arrivals with fleet rate:
+  $$\lambda_i = \frac{N_{\text{tails}} \times \text{sortie\_demand}}{\eta_i \cdot \Gamma\left(1 + \frac{1}{\beta_i}\right)}$$
+  where $\beta_i$ and $\eta_i$ are the synthetic Weibull shape and scale parameters from `config/wing.yaml`.
+- **Exclusion of Engines**: Engine spare levels (1 per base, 3 at depot) are held fixed and excluded from the optimization because `config/wing.yaml` does not specify engine acquisition or overhaul unit costs.
+
+### Engine-to-METRIC Mapping
+The two-echelon VARI-METRIC optimization model maps to the simulation engine mechanics as follows:
+- **Repair Routing**: In `shikra/sim/engine.py`, failed LRUs are routed to the central depot for repair ($r_i = 1.0$).
+- **Depot Repair Pipeline**: Depot repair turnaround time is $T_i^{\text{depot}} = \text{repair\_tat\_days}_i \times \text{pipeline\_mult}$. Under infinite repair capacity (M/G/$\infty$ queue), the expected number of items in depot repair is $D_i = \lambda_i \times T_i^{\text{depot}}$.
+- **Depot Delay & Base Resupply**: The physical transit time from depot to base is $O_i = \text{transfer\_days} \times \text{pipeline\_mult}$ (nominal 3 days $\times$ `pipeline_mult`). When depot stock is depleted, replacement LRUs wait in a first-come-first-served (FCFS) queue. By Little's Law, the expected depot delay is $\text{EBO}_{\text{depot}}(s_{0,i}) / \lambda_i$.
+- **Base Pipeline & Expected Backorders (EBO)**: The effective resupply time to each base is $T_{j,i}^{\text{base}} = O_i + \frac{\text{EBO}_{\text{depot}}(s_{0,i})}{\lambda_i}$. The expected base pipeline is $\mu_{j,i} = \frac{\lambda_i}{3} \times T_{j,i}^{\text{base}}$. Expected backorders at base $j$ for LRU $i$ with stock $s_{j,i}$ are calculated via exact Poisson expectation:
+  $$\text{EBO}(s, \mu) = \sum_{x > s} (x - s) \frac{\mu^x e^{-\mu}}{x!} = \mu \left(1 - \sum_{k=0}^{s-1} \frac{\mu^k e^{-\mu}}{k!}\right) - s \left(1 - \sum_{k=0}^{s} \frac{\mu^k e^{-\mu}}{k!}\right)$$
+- **Expected NMCS Aircraft**: Fleet expected Not Mission Capable due to Supply (NMCS) aircraft is evaluated as $\sum_{i} \sum_{j=1}^3 \text{EBO}_{j,i}$.
+
