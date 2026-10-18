@@ -20,6 +20,7 @@ from app.lib.audit import append as audit_append  # noqa: E402
 from app.lib.audit import get_recent as audit_recent  # noqa: E402
 from app.lib.data import load_config, load_params, load_replay_rul  # noqa: E402
 from app.lib.state import get_sim_result  # noqa: E402
+from app.lib.visuals import render_aircraft_detail_svg  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
@@ -56,6 +57,53 @@ selected_day = st.slider(
     value=default_day,
     help="Day 485 = 365 warm-up + 120 measured",
 )
+
+st.divider()
+
+# ── Aircraft Visual Detail ──────────────────────────────────────────────────
+st.markdown("### Aircraft Detail")
+
+tail_options = [f"T{i:02d}" for i in range(1, 55)]
+c_sel, _ = st.columns([1, 2])
+with c_sel:
+    selected_tail = st.selectbox("Select Aircraft Tail", tail_options, index=18)  # default T19
+
+tail_idx = int(selected_tail[1:]) - 1
+day_status = tail_status_list[selected_day]
+tail_st = day_status[tail_idx]
+
+# Check if readiness snapshot_at is available
+snapshot_fn = None
+try:
+    import shikra.strategy.readiness as rd
+
+    if hasattr(rd, "snapshot_at") and hasattr(rd, "forecast"):
+        snapshot_fn = rd.snapshot_at
+except (ImportError, AttributeError):
+    pass
+
+c_img, c_meta = st.columns([1, 1])
+
+if snapshot_fn is None:
+    # Before T1.7 merge: show tail-level status only, captioned "engine detail after T1.7 merge"
+    with c_img:
+        st.caption("engine detail after T1.7 merge")
+        svg_detail = render_aircraft_detail_svg(
+            selected_tail, tail_st, width=380, height=480
+        )
+        st.markdown(svg_detail, unsafe_allow_html=True)
+    with c_meta:
+        st.markdown(f"#### Tail **{selected_tail}** Overview")
+        st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
+        st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
+        st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
+        st.markdown(
+            '<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #94a3b8; margin-top: 1rem;">'
+            "<b>Subsystem Health:</b> Live per-engine RUL quantiles (q10/q50/q90) and individual LRU component markers "
+            "are available after T1.7 merge."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
 st.divider()
 
