@@ -63,7 +63,7 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ### Environment and Python Requirement
 - **Python Version**: **Python 3.11.x strictly required** (tested and verified on CPython 3.11.16).
-- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `torch==2.2.2`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers.
+- *Compatibility Finding*: Python 3.13 and 3.14 fail during installation because pre-built wheels for pinned packages (`numpy==1.26.4`, `scipy==1.13.1`, `lightgbm==4.3.0`) are not available on PyPI for 3.13+; pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran compilers (the optional LSTM extras, `requirements-lstm.txt`, add torch).
 
 ### Full Reproducibility in a Single Command
 

@@ -38,7 +38,7 @@ ed7bebb docs(readme): add Judge quickstart, non-claims, and repository map
       Using cached numpy-1.26.4.tar.gz (15.8 MB)
       Installing build dependencies ...
     ```
-    PyPI does not provide pre-compiled wheels for `numpy==1.26.4`, `torch==2.2.2`, or `lightgbm==4.3.0` for Python 3.13+. Pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran toolchains.
+    PyPI does not provide pre-compiled wheels for `numpy==1.26.4`, `scipy==1.13.1`, or `lightgbm==4.3.0` for Python 3.13+ (the optional LSTM extras, `requirements-lstm.txt`, add torch). Pip falls back to building `numpy-1.26.4.tar.gz` from source, which fails without configured MSVC C/C++ and Fortran toolchains.
 
 ---
 
