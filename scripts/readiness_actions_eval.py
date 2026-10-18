@@ -14,9 +14,9 @@ ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from shikra.rul.variants import apply
-from shikra.sim.engine import AC_PER_SQN, N_SQN, run
-from shikra.strategy.readiness import rank_actions
+from shikra.rul.variants import apply  # noqa: E402
+from shikra.sim.engine import run  # noqa: E402
+from shikra.strategy.readiness import rank_actions  # noqa: E402
 
 CONFIG_PATH = ROOT / "config" / "wing.yaml"
 PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
