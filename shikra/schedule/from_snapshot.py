@@ -88,7 +88,7 @@ def problem_from_snapshot(
     engine_transfers = queues.get("engine_transfers", [])
     sqn_transfers: dict[int, list[int]] = {0: [], 1: [], 2: []}
     for tr in engine_transfers:
-        if isinstance(tr, (tuple, list)) and len(tr) >= 2:
+        if isinstance(tr, tuple | list) and len(tr) >= 2:
             eta, tr_sqn = int(tr[0]), int(tr[1])
             if tr_sqn in sqn_transfers and eta >= cur_day:
                 sqn_transfers[tr_sqn].append(eta)
