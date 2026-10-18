@@ -1,0 +1,9 @@
+source,fault_type,injected,detected,tp,fp,fn,precision,recall
+brd_repairs.csv,missing_key,6,6,6,0,0,1.0,1.0
+emms_workorders.csv,mismatched_sn,1,1,1,0,0,1.0,1.0
+emms_workorders.csv,missing_key,6,6,6,0,0,1.0,1.0
+hums_engine.csv,mismatched_sn,26,26,26,0,0,1.0,1.0
+hums_engine.csv,missing_key,82,82,82,0,0,1.0,1.0
+immols_stock.csv,missing_key,1,1,1,0,0,1.0,1.0
+immols_stock.csv,stale,2,2,2,0,0,1.0,1.0
+ALL,ALL,124,124,124,0,0,1.0,1.0
