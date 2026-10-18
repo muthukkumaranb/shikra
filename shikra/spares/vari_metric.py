@@ -162,7 +162,7 @@ def evaluate(config: dict, alloc: dict) -> dict[str, Any]:
         s_depot = int(stock_spec.get("depot", 0))
 
         raw_base = stock_spec.get("base", [0] * n_sqn)
-        if isinstance(raw_base, (int, float)):
+        if isinstance(raw_base, int | float):
             s_base = [int(raw_base)] * n_sqn
         else:
             s_base = [int(x) for x in raw_base]
