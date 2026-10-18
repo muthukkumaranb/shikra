@@ -66,3 +66,23 @@ def removal_prob(q10: float, q50: float, q90: float, h: float) -> float:
             return float(np.clip(y0 + frac * (y1 - y0), 0.0, 1.0))
 
     return 1.0  # fallback
+
+
+def inverse_removal_prob(q10: float, q50: float, q90: float, u: float) -> float:
+    """Sample remaining life from the inverse piecewise-linear CDF."""
+    u = float(np.clip(u, 0.0, 1.0))
+    q10, q50, q90 = float(q10), float(q50), float(q90)
+
+    if q90 <= q10:
+        return max(0.0, q50)
+    if u <= 0.10:
+        return max(0.0, (u / 0.10) * q10) if q10 > 0 else 0.0
+    if u <= 0.50:
+        return max(0.0, q10 + ((u - 0.10) / 0.40) * (q50 - q10))
+    if u <= 0.90:
+        return max(0.0, q50 + ((u - 0.50) / 0.40) * (q90 - q50))
+
+    span = q90 - q50
+    if span <= 0:
+        return max(0.0, q90)
+    return max(0.0, q90 + (u - 0.90) * span / 0.10)
