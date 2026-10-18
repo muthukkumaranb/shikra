@@ -165,8 +165,8 @@ All 7 pages were tested end-to-end via `streamlit.testing.v1.AppTest`:
    - *Resolution:* Combined both targets in `.PHONY` line; committed and pushed.
 3. **`test_pages_without_readiness_fallback` on origin/main:**
    - *Error:* `AssertionError: assert 'engine detail after T1.7 merge' in ...`
-   - *Cause:* `origin/main` commit `ef9cad8` merged T1.10 app Phase 2, which had a test expecting fallback text when `shikra.strategy.readiness` is absent. Because `shikra/strategy/readiness.py` is present on disk (merged in 3c611cd), `del sys.modules["shikra.strategy.readiness"]` does not prevent `AppTest` from re-importing the real module.
-   - *Resolution:* Identified and logged; not modifying `tests/` per hard rules.
+   - *Cause:* `origin/main` commit `ef9cad8` merged T1.10 app Phase 2, which had a test expecting fallback text when `shikra.strategy.readiness` is absent. Because `shikra/strategy/readiness.py` is present on disk (merged in 3c611cd), `del sys.modules["shikra.strategy.readiness"]` does not prevent `AppTest` from re-importing the real module. Fixed on main in 42303b1 (simulated missing readiness).
+   - *Resolution:* Fixed on main in 42303b1 (simulated missing readiness). Merged cleanly from origin/main into `t2/judge-ready`.
 4. **Memory Constraint / WinError 1455 / ArrowMemoryError:**
    - *Error:* `pyarrow.lib.ArrowMemoryError: malloc of size 64 failed` and PowerShell `800705af` (commit limit exceeded).
    - *Cause:* On a 12-thread CPU with ~3 GB available RAM, launching 11 worker processes simultaneously importing pyarrow and pandas exhausts page file commit limit.
@@ -177,3 +177,6 @@ All 7 pages were tested end-to-end via `streamlit.testing.v1.AppTest`:
 6. **Browser Subagent Driver Download:**
    - *Error:* `failed to create browser context: failed to run playwright manager: failed to install playwright: could not install driver: error: got non 200 status code: 404 (404 Not Found) from https://playwright.azureedge.net/builds/driver/playwright-1.57.0-win32_x64.zip`
    - *Resolution:* Playwright driver binary is blocked/unavailable from external CDN in this environment. Streamlit pages were verified programmatically via `streamlit.testing.v1.AppTest`, rendering with 0 exceptions across all 7 pages.
+7. **Deck Figures Manifest Line-Ending Sensitivity (Windows CRLF):**
+   - *Behavior:* Running `python scripts/deck_figures.py` on Windows writes `results/deck/figures_manifest.csv` with OS-standard newlines. Git flags `warning: in the working copy of 'results/deck/figures_manifest.csv', LF will be replaced by CRLF the next time Git touches it`.
+   - *Diff Analysis:* Running `git diff --stat results/deck/figures_manifest.csv` and `git diff --ignore-cr-at-eol --stat results/deck/figures_manifest.csv` confirms 0 content differences; the diff is strictly a Windows CRLF/LF line-ending effect. The script and committed files are identical in content.
