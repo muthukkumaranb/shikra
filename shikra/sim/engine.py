@@ -151,7 +151,12 @@ class FleetSim:
         self.rul = rul.copy()
         self.params = params
         self.seed = seed
-        self.days = days
+        if days is not None:
+            self.days = days
+        else:
+            self.days = int(self.cfg.get("ops", {}).get("days", 365))
+        self.warmup_days = int(self.cfg.get("warmup_days", 0))
+        self.init_ages = str(self.cfg.get("init_ages", "deterministic"))
         self.pm = self.cfg.get("pipeline_mult", 1.0)
 
         # Pre-build O(1) RUL lookup dictionary:
@@ -265,10 +270,10 @@ class FleetSim:
         sortie_draws = rng_sortie.uniform(size=(N_AC, self.days))  # (54, 365)
 
         # ── Pre-draw engine trajectory queues ────────────────────────────
-        eng_queues = _draw_engine_queues(rng_eng, self.rul, N_ENG, queue_len=60)
+        eng_queues = _draw_engine_queues(rng_eng, self.rul, N_ENG, queue_len=100)
 
         # ── Pre-draw LRU lifetime queues ──────────────────────────────────
-        lru_queues = _draw_lru_queues(rng_lru, self.lru_list, N_AC, queue_len=100)
+        lru_queues = _draw_lru_queues(rng_lru, self.lru_list, N_AC, queue_len=150)
 
         # ── Initial engine state ──────────────────────────────────────────
         # Each engine position: {subset, unit, cycle, life, queue_ptr}
@@ -276,7 +281,10 @@ class FleetSim:
         for pos in range(N_ENG):
             subset, unit = eng_queues[pos][0]
             life = self._engine_lives.get((str(subset), int(unit)), 100)
-            start_cycle = int(rng_init.uniform(0, 0.6 * life))
+            if self.init_ages == "random":
+                start_cycle = int(rng_init.uniform(0, life))
+            else:
+                start_cycle = int(rng_init.uniform(0, 0.6 * life))
             eng_state.append(
                 {
                     "subset": subset,
@@ -325,9 +333,14 @@ class FleetSim:
             lru_state[tail] = {}
             for lru in self.lru_list:
                 lid = lru["id"]
+                first_life = lru_queues[lid][tail][0]
+                if self.init_ages == "random":
+                    init_sorties = float(rng_init.uniform(0, first_life))
+                else:
+                    init_sorties = 0.0
                 lru_state[tail][lid] = {
-                    "sorties_until_fail": lru_queues[lid][tail][0],
-                    "sorties_flown": 0.0,
+                    "sorties_until_fail": first_life,
+                    "sorties_flown": init_sorties,
                     "missing": False,
                     "missing_until": -1,
                     "has_lru": True,
@@ -458,7 +471,8 @@ class FleetSim:
                     es["maint_done_day"] = None
                     es["installed"] = False
                     es["removal_type"] = "unscheduled"
-                    unscheduled_removals += 1
+                    if day >= self.warmup_days:
+                        unscheduled_removals += 1
 
                     # Send old engine to repair
                     repair_time = int(
@@ -484,8 +498,9 @@ class FleetSim:
                     es["maint_done_day"] = None
                     es["installed"] = False
                     es["removal_type"] = "planned"
-                    planned_removals += 1
-                    wasted_life_cycles += wasted
+                    if day >= self.warmup_days:
+                        planned_removals += 1
+                        wasted_life_cycles += wasted
 
                     repair_time = int(
                         np.exp(self.repair_mu + self.repair_sigma * rng_repair.standard_normal())
@@ -555,12 +570,15 @@ class FleetSim:
             for tail in range(N_AC):
                 sqn = tail // AC_PER_SQN
                 demanded = 1 if sortie_draws[tail, day] < self.sortie_p else 0
-                sorties_demanded += demanded
+                if day >= self.warmup_days:
+                    sorties_demanded += demanded
                 if demanded and tail_mc[tail]:
-                    sorties_flown += 1
+                    if day >= self.warmup_days:
+                        sorties_flown += 1
                     sqn_sorties[sqn] += 1
                 elif demanded and not tail_mc[tail]:
-                    aog_days += 1
+                    if day >= self.warmup_days:
+                        aog_days += 1
 
             # --- Advance engine cycles ----------------------------------
             for tail in range(N_AC):
@@ -727,10 +745,15 @@ class FleetSim:
             columns=["day", "pos", "type", "cycle"]
         )
 
-        serviceability = float(daily_df["mc"].mean() / N_AC)
+        eval_daily = (
+            daily_df[daily_df["day"] >= self.warmup_days]
+            if (self.warmup_days > 0 and self.warmup_days < self.days)
+            else daily_df
+        )
+        serviceability = float(eval_daily["mc"].mean() / N_AC)
         mc_rate = serviceability
-        nmcm_pct = float(daily_df["nmcm"].mean() / N_AC)
-        nmcs_pct = float(daily_df["nmcs"].mean() / N_AC)
+        nmcm_pct = float(eval_daily["nmcm"].mean() / N_AC)
+        nmcs_pct = float(eval_daily["nmcs"].mean() / N_AC)
 
         kpis = {
             "policy": self.policy,
@@ -831,7 +854,7 @@ def run(
     rul: pd.DataFrame,
     params: dict,
     seed: int,
-    days: int = 365,
+    days: int | None = None,
     overrides: dict | None = None,
 ) -> SimResult:
     """Run one simulation replication.

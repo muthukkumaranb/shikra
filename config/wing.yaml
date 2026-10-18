@@ -6,9 +6,12 @@ fleet:
   aircraft_per_sqn: 18  # Tail IDs T01–T54
   engines_per_ac: 2
 
+init_ages: random
+warmup_days: 365
+
 ops:
   sortie_demand: 0.8    # sorties per MC tail per day
-  days: 365
+  days: 730
 
 maintenance:
   hangar_slots_per_sqn: 3
@@ -25,7 +28,7 @@ spares:
     depot: 3
     depot_to_base_days: 3
 
-pipeline_mult: 1.9      # multiplies all repair TATs, transfer and lead times
+pipeline_mult: 1.7      # multiplies all repair TATs, transfer and lead times
 
 lrus:
   - id: fuel_pump

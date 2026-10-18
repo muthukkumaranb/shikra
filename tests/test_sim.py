@@ -286,8 +286,8 @@ def test_spare_waiting_aircraft_is_nmcs() -> None:
     cfg = dict(_TINY_CONFIG)
     cfg["ops"] = {"sortie_demand": 1.0, "days": 15}
     cfg["maintenance"]["unscheduled_change_days"] = 5
-    # Base stock 0, depot 1, transfer time 3 days
-    cfg["spares"] = {"engines": {"base_per_sqn": 0, "depot": 1, "depot_to_base_days": 3}}
+    # Base stock 0, depot 6, transfer time 3 days
+    cfg["spares"] = {"engines": {"base_per_sqn": 0, "depot": 6, "depot_to_base_days": 3}}
     cfg["pipeline_mult"] = 1.0
 
     res = run("reactive", cfg, rul_use, _TINY_PARAMS, seed=1, days=15)
@@ -347,6 +347,48 @@ def test_squadron_symmetry() -> None:
         f"Per-squadron mean MC difference ({max_diff:.4f}) exceeds 95% CI ({avg_ci:.4f}). "
         f"Means: {means}"
     )
+
+
+def test_daily_mc_trajectory_no_trend() -> None:
+    """The daily MC trajectory has no trend between days 365–729: slope's 95% CI includes 0 for reactive."""
+    import json
+    from pathlib import Path
+
+    import numpy as np
+    import pandas as pd
+    import yaml
+    from scipy import stats
+
+    from shikra.sim.engine import run
+
+    root = Path(__file__).parent.parent
+    config_path = root / "config" / "wing.yaml"
+    params_path = root / "artifacts" / "policy_params.json"
+    replay_path = root / "artifacts" / "replay_rul.parquet"
+
+    with config_path.open() as f:
+        cfg = yaml.safe_load(f)
+    with params_path.open() as f:
+        params = json.load(f)
+    rul = pd.read_parquet(replay_path)
+
+    daily_mcs = []
+    for seed in range(1, 31):
+        res = run("reactive", cfg, rul, params, seed=seed, days=730)
+        daily_mcs.append(res.daily["mc"].values)
+
+    daily_mat = np.array(daily_mcs)
+    mean_daily = daily_mat[:, 365:730].mean(axis=0)
+    x = np.arange(len(mean_daily))
+    slope, intercept, r_val, p_val, std_err = stats.linregress(x, mean_daily)
+    ci_lo = slope - 1.96 * std_err
+    ci_hi = slope + 1.96 * std_err
+
+    assert ci_lo <= 0 <= ci_hi, (
+        f"MC trajectory has significant trend over days 365–729: "
+        f"slope={slope:.6f}, 95% CI=[{ci_lo:.6f}, {ci_hi:.6f}], p={p_val:.4f}"
+    )
+
 
 
 

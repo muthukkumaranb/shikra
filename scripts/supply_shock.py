@@ -39,10 +39,11 @@ RESULTS_DIR = ROOT / "results"
 N_SEEDS = 30
 N_BOOT = 2000
 BOOT_SEED = 42
-SHOCK_START = 90
+WARMUP_DAYS = 365
+SHOCK_START = WARMUP_DAYS + 90
 SHOCK_DURATION = 180
 SHOCK_END = SHOCK_START + SHOCK_DURATION
-HORIZON_DAYS = 545
+HORIZON_DAYS = WARMUP_DAYS + 545
 SUSTAINED_DAYS = 30
 
 
@@ -91,13 +92,13 @@ def _run_shock_seed_worker(args: tuple) -> dict:
     # loss_pp_shock_window: mean over days 90-269 (180-day halt)
     loss_sw = float((b_mc.loc[SHOCK_START:SHOCK_END - 1].mean() - s_mc.loc[SHOCK_START:SHOCK_END - 1].mean()) / 54 * 100)
 
-    # loss_pp_year1: mean over days 0-364 (year 1 horizon)
-    loss_y1 = float((b_mc.loc[:364].mean() - s_mc.loc[:364].mean()) / 54 * 100)
+    # loss_pp_year1: mean over evaluated post-warmup year (days 365-729)
+    loss_y1 = float((b_mc.loc[WARMUP_DAYS:WARMUP_DAYS + 364].mean() - s_mc.loc[WARMUP_DAYS:WARMUP_DAYS + 364].mean()) / 54 * 100)
 
-    # peak_extra_grounded: max of 14-day rolling mean of (baseline MC - shock MC)
+    # peak_extra_grounded: max of 14-day rolling mean of (baseline MC - shock MC) over evaluated horizon
     gap = b_mc - s_mc
     roll_gap = gap.rolling(14, min_periods=1).mean()
-    peak_grounded = float(roll_gap.max())
+    peak_grounded = float(roll_gap.loc[WARMUP_DAYS:].max())
 
     # recovery_days: first day after 269 from which the 14-day rolling gap
     # stays at or below 1 aircraft for 30 consecutive days, else not recovered
@@ -268,9 +269,9 @@ def plot_supply_shock(df: pd.DataFrame, daily_gaps: dict[str, np.ndarray], out_p
 
     # ── Panel B: Daily gap curves ──────────────────────────────────────────
     days_arr = np.arange(HORIZON_DAYS)
-    ax_b.axvspan(SHOCK_START, SHOCK_END, color="mistyrose", alpha=0.5, label="Foreign halt (days 90–270)")
+    ax_b.axvspan(SHOCK_START, SHOCK_END, color="mistyrose", alpha=0.5, label=f"Foreign halt (days {SHOCK_START}–{SHOCK_END})")
     ax_b.axvline(SHOCK_START, color="red", linestyle="--", linewidth=1.2)
-    ax_b.axvline(SHOCK_END, color="darkgreen", linestyle="--", linewidth=1.2, label="Supply resumes (day 270)")
+    ax_b.axvline(SHOCK_END, color="darkgreen", linestyle="--", linewidth=1.2, label=f"Supply resumes (day {SHOCK_END})")
     ax_b.axhline(1.0, color="gray", linestyle=":", linewidth=1.5, label="Recovery threshold (≤ 1 aircraft)")
 
     series_info = [
@@ -286,7 +287,7 @@ def plot_supply_shock(df: pd.DataFrame, daily_gaps: dict[str, np.ndarray], out_p
 
     ax_b.set_xlabel("Simulation Day", fontsize=10, fontweight="bold")
     ax_b.set_ylabel("Extra Grounded Aircraft (14-day rolling mean)", fontsize=10, fontweight="bold")
-    ax_b.set_title("(B) Mean Daily Gap vs Baseline (0–545 days)", fontsize=11, fontweight="bold")
+    ax_b.set_title(f"(B) Mean Daily Gap vs Baseline (0–{HORIZON_DAYS} days)", fontsize=11, fontweight="bold")
     ax_b.set_xlim(0, HORIZON_DAYS)
     ax_b.set_ylim(-0.5, 35)
     ax_b.grid(True, linestyle=":", alpha=0.6)
