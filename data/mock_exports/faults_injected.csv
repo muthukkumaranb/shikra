@@ -1,0 +1,126 @@
+# SYNTHETIC: not IAF data
+source,row_id,fault_type,detail
+emms_workorders.csv,0,missing_key,wo_id blanked (was WO-00001)
+emms_workorders.csv,75,missing_key,tail_id blanked (was T34)
+emms_workorders.csv,71,missing_key,wo_id blanked (was WO-00072)
+emms_workorders.csv,27,missing_key,tail_id blanked (was T22)
+emms_workorders.csv,196,missing_key,wo_id blanked (was WO-00197)
+emms_workorders.csv,20,missing_key,wo_id blanked (was WO-00021)
+emms_workorders.csv,73,mismatched_sn,"engine_sn ENG-1006 belongs to T03, not T20"
+immols_stock.csv,29,stale,last_updated 2025-10-02 is >30 days old
+immols_stock.csv,23,stale,last_updated 2025-11-20 is >30 days old
+immols_stock.csv,19,missing_key,lru_id blanked (was gen_ac)
+hums_engine.csv,1900,missing_key,engine_sn blanked (was ENG-1076)
+hums_engine.csv,2607,missing_key,engine_sn blanked (was ENG-1103)
+hums_engine.csv,1711,missing_key,engine_sn blanked (was ENG-1069)
+hums_engine.csv,1791,missing_key,engine_sn blanked (was ENG-1072)
+hums_engine.csv,2733,missing_key,engine_sn blanked (was ENG-1108)
+hums_engine.csv,894,missing_key,engine_sn blanked (was ENG-1035)
+hums_engine.csv,1101,missing_key,engine_sn blanked (was ENG-1045)
+hums_engine.csv,547,missing_key,engine_sn blanked (was ENG-1021)
+hums_engine.csv,1026,missing_key,engine_sn blanked (was ENG-1042)
+hums_engine.csv,1116,missing_key,engine_sn blanked (was ENG-1046)
+hums_engine.csv,2161,missing_key,engine_sn blanked (was ENG-1087)
+hums_engine.csv,559,missing_key,engine_sn blanked (was ENG-1021)
+hums_engine.csv,439,missing_key,engine_sn blanked (was ENG-1017)
+hums_engine.csv,373,missing_key,engine_sn blanked (was ENG-1015)
+hums_engine.csv,965,missing_key,engine_sn blanked (was ENG-1039)
+hums_engine.csv,1279,missing_key,engine_sn blanked (was ENG-1052)
+hums_engine.csv,1601,missing_key,engine_sn blanked (was ENG-1063)
+hums_engine.csv,2277,missing_key,engine_sn blanked (was ENG-1092)
+hums_engine.csv,2617,missing_key,engine_sn blanked (was ENG-1104)
+hums_engine.csv,2239,missing_key,engine_sn blanked (was ENG-1091)
+hums_engine.csv,354,missing_key,engine_sn blanked (was ENG-1015)
+hums_engine.csv,1129,missing_key,engine_sn blanked (was ENG-1046)
+hums_engine.csv,1778,missing_key,engine_sn blanked (was ENG-1071)
+hums_engine.csv,516,missing_key,engine_sn blanked (was ENG-1020)
+hums_engine.csv,2448,missing_key,engine_sn blanked (was ENG-1098)
+hums_engine.csv,696,missing_key,engine_sn blanked (was ENG-1027)
+hums_engine.csv,1784,missing_key,engine_sn blanked (was ENG-1071)
+hums_engine.csv,167,missing_key,engine_sn blanked (was ENG-1008)
+hums_engine.csv,1168,missing_key,engine_sn blanked (was ENG-1049)
+hums_engine.csv,2532,missing_key,engine_sn blanked (was ENG-1101)
+hums_engine.csv,31,missing_key,engine_sn blanked (was ENG-1003)
+hums_engine.csv,2527,missing_key,engine_sn blanked (was ENG-1101)
+hums_engine.csv,1295,missing_key,engine_sn blanked (was ENG-1053)
+hums_engine.csv,756,missing_key,engine_sn blanked (was ENG-1030)
+hums_engine.csv,782,missing_key,engine_sn blanked (was ENG-1031)
+hums_engine.csv,1917,missing_key,engine_sn blanked (was ENG-1077)
+hums_engine.csv,21,missing_key,engine_sn blanked (was ENG-1002)
+hums_engine.csv,1947,missing_key,engine_sn blanked (was ENG-1078)
+hums_engine.csv,1243,missing_key,engine_sn blanked (was ENG-1051)
+hums_engine.csv,164,missing_key,engine_sn blanked (was ENG-1008)
+hums_engine.csv,221,missing_key,engine_sn blanked (was ENG-1010)
+hums_engine.csv,1832,missing_key,engine_sn blanked (was ENG-1073)
+hums_engine.csv,1798,missing_key,engine_sn blanked (was ENG-1072)
+hums_engine.csv,992,missing_key,engine_sn blanked (was ENG-1041)
+hums_engine.csv,1314,missing_key,engine_sn blanked (was ENG-1054)
+hums_engine.csv,833,missing_key,engine_sn blanked (was ENG-1033)
+hums_engine.csv,240,missing_key,engine_sn blanked (was ENG-1011)
+hums_engine.csv,2308,missing_key,engine_sn blanked (was ENG-1093)
+hums_engine.csv,460,missing_key,engine_sn blanked (was ENG-1018)
+hums_engine.csv,1223,missing_key,engine_sn blanked (was ENG-1050)
+hums_engine.csv,2612,missing_key,engine_sn blanked (was ENG-1104)
+hums_engine.csv,1877,missing_key,engine_sn blanked (was ENG-1075)
+hums_engine.csv,1501,missing_key,engine_sn blanked (was ENG-1060)
+hums_engine.csv,1495,missing_key,engine_sn blanked (was ENG-1060)
+hums_engine.csv,2068,missing_key,engine_sn blanked (was ENG-1083)
+hums_engine.csv,337,missing_key,engine_sn blanked (was ENG-1014)
+hums_engine.csv,1859,missing_key,engine_sn blanked (was ENG-1074)
+hums_engine.csv,2420,missing_key,engine_sn blanked (was ENG-1097)
+hums_engine.csv,1299,missing_key,engine_sn blanked (was ENG-1053)
+hums_engine.csv,1595,missing_key,engine_sn blanked (was ENG-1063)
+hums_engine.csv,1425,missing_key,engine_sn blanked (was ENG-1057)
+hums_engine.csv,1888,missing_key,engine_sn blanked (was ENG-1076)
+hums_engine.csv,2414,missing_key,engine_sn blanked (was ENG-1097)
+hums_engine.csv,1950,missing_key,engine_sn blanked (was ENG-1078)
+hums_engine.csv,2240,missing_key,engine_sn blanked (was ENG-1091)
+hums_engine.csv,1887,missing_key,engine_sn blanked (was ENG-1076)
+hums_engine.csv,70,missing_key,engine_sn blanked (was ENG-1004)
+hums_engine.csv,2421,missing_key,engine_sn blanked (was ENG-1097)
+hums_engine.csv,2131,missing_key,engine_sn blanked (was ENG-1086)
+hums_engine.csv,56,missing_key,engine_sn blanked (was ENG-1004)
+hums_engine.csv,1825,missing_key,engine_sn blanked (was ENG-1073)
+hums_engine.csv,2124,missing_key,engine_sn blanked (was ENG-1086)
+hums_engine.csv,488,missing_key,engine_sn blanked (was ENG-1019)
+hums_engine.csv,1277,missing_key,engine_sn blanked (was ENG-1052)
+hums_engine.csv,2347,missing_key,engine_sn blanked (was ENG-1094)
+hums_engine.csv,1998,missing_key,engine_sn blanked (was ENG-1080)
+hums_engine.csv,189,missing_key,engine_sn blanked (was ENG-1009)
+hums_engine.csv,1210,missing_key,engine_sn blanked (was ENG-1050)
+hums_engine.csv,273,missing_key,engine_sn blanked (was ENG-1012)
+hums_engine.csv,146,missing_key,engine_sn blanked (was ENG-1007)
+hums_engine.csv,1578,missing_key,engine_sn blanked (was ENG-1062)
+hums_engine.csv,1161,missing_key,engine_sn blanked (was ENG-1049)
+hums_engine.csv,1635,mismatched_sn,"engine_sn ENG-1013 belongs to T07, not T33"
+hums_engine.csv,694,mismatched_sn,"engine_sn ENG-1085 belongs to T43, not T14"
+hums_engine.csv,776,mismatched_sn,"engine_sn ENG-1105 belongs to T53, not T16"
+hums_engine.csv,65,mismatched_sn,"engine_sn ENG-1041 belongs to T21, not T02"
+hums_engine.csv,2343,mismatched_sn,"engine_sn ENG-1084 belongs to T42, not T47"
+hums_engine.csv,2456,mismatched_sn,"engine_sn ENG-1085 belongs to T43, not T49"
+hums_engine.csv,2665,mismatched_sn,"engine_sn ENG-1002 belongs to T01, not T53"
+hums_engine.csv,497,mismatched_sn,"engine_sn ENG-1103 belongs to T52, not T10"
+hums_engine.csv,938,mismatched_sn,"engine_sn ENG-1047 belongs to T24, not T19"
+hums_engine.csv,1034,mismatched_sn,"engine_sn ENG-1075 belongs to T38, not T22"
+hums_engine.csv,535,mismatched_sn,"engine_sn ENG-1031 belongs to T16, not T10"
+hums_engine.csv,132,mismatched_sn,"engine_sn ENG-1023 belongs to T12, not T04"
+hums_engine.csv,136,mismatched_sn,"engine_sn ENG-1102 belongs to T51, not T04"
+hums_engine.csv,2406,mismatched_sn,"engine_sn ENG-1090 belongs to T45, not T48"
+hums_engine.csv,1695,mismatched_sn,"engine_sn ENG-1036 belongs to T18, not T34"
+hums_engine.csv,996,mismatched_sn,"engine_sn ENG-1036 belongs to T18, not T21"
+hums_engine.csv,1229,mismatched_sn,"engine_sn ENG-1045 belongs to T23, not T25"
+hums_engine.csv,1609,mismatched_sn,"engine_sn ENG-1055 belongs to T28, not T32"
+hums_engine.csv,579,mismatched_sn,"engine_sn ENG-1101 belongs to T51, not T12"
+hums_engine.csv,800,mismatched_sn,"engine_sn ENG-1005 belongs to T03, not T16"
+hums_engine.csv,1118,mismatched_sn,"engine_sn ENG-1057 belongs to T29, not T23"
+hums_engine.csv,1414,mismatched_sn,"engine_sn ENG-1027 belongs to T14, not T29"
+hums_engine.csv,1708,mismatched_sn,"engine_sn ENG-1040 belongs to T20, not T35"
+hums_engine.csv,2408,mismatched_sn,"engine_sn ENG-1107 belongs to T54, not T48"
+hums_engine.csv,10,mismatched_sn,"engine_sn ENG-1068 belongs to T34, not T01"
+hums_engine.csv,2702,mismatched_sn,"engine_sn ENG-1079 belongs to T40, not T53"
+brd_repairs.csv,156,missing_key,sn blanked (was ENG-1056)
+brd_repairs.csv,109,missing_key,sn blanked (was ENG-1030)
+brd_repairs.csv,142,missing_key,ro_id blanked (was RO-00143)
+brd_repairs.csv,181,missing_key,ro_id blanked (was RO-00182)
+brd_repairs.csv,189,missing_key,sn blanked (was LRU-ecs_valve-018)
+brd_repairs.csv,36,missing_key,ro_id blanked (was RO-00037)

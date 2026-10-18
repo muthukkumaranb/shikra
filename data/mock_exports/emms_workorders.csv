@@ -1,0 +1,206 @@
+# SYNTHETIC: not IAF data
+wo_id,tail_id,date,system_text,action,engine_sn
+,T10,2026-01-01,No.1 eng bearing temperature anomaly,planned removal,ENG-1019
+WO-00002,T10,2026-01-01,No.2 eng foreign object damage inspection,planned removal,ENG-1020
+WO-00003,T17,2026-01-01,"No.1 eng EGT high on climb, borescope",planned removal,ENG-1033
+WO-00004,T18,2026-01-01,No.1 eng thrust reverser advisory,planned removal,ENG-1035
+WO-00005,T25,2026-01-01,No.2 eng surge during acceleration,planned removal,ENG-1050
+WO-00006,T41,2026-01-01,No.1 eng abnormal noise on spool up,planned removal,ENG-1081
+WO-00007,T38,2026-01-04,No.2 eng oil pressure fluctuation noted,planned removal,ENG-1076
+WO-00008,T15,2026-01-05,No.2 eng chip detector warning,planned removal,ENG-1030
+WO-00009,T21,2026-01-09,No.1 eng thrust reverser advisory,planned removal,ENG-1041
+WO-00010,T14,2026-01-11,No.1 eng surge during acceleration,planned removal,ENG-1027
+WO-00011,T35,2026-01-11,No.1 eng augmentor liner cracks found,planned removal,ENG-1069
+WO-00012,T13,2026-01-19,No.1 eng hydraulic pump vibration check,planned removal,ENG-1025
+WO-00013,T52,2026-01-22,No.1 eng turbine blade creep inspection,planned removal,ENG-1103
+WO-00014,T05,2026-01-25,"No.2 eng power loss at altitude, check",planned removal,ENG-1010
+WO-00015,T33,2026-01-25,No.2 eng turbine blade creep inspection,planned removal,ENG-1066
+WO-00016,T47,2026-01-25,No.2 eng foreign object damage inspection,planned removal,ENG-1094
+WO-00017,T36,2026-01-30,No.1 eng bearing temperature anomaly,planned removal,ENG-1071
+WO-00018,T42,2026-02-01,No.2 eng thrust reverser advisory,planned removal,ENG-1084
+WO-00019,T43,2026-02-08,No.1 eng oil pressure fluctuation noted,planned removal,ENG-1085
+WO-00020,T38,2026-02-09,No.1 eng intermittent fire warning,planned removal,ENG-1075
+,T32,2026-02-10,No.2 eng hot start reported by pilot,planned removal,ENG-1064
+WO-00022,T26,2026-02-12,No.2 eng accessory drive seal weeping,planned removal,ENG-1052
+WO-00023,T30,2026-02-22,No.2 eng turbine blade creep inspection,planned removal,ENG-1060
+WO-00024,T29,2026-02-23,"No.1 eng power loss at altitude, check",planned removal,ENG-1057
+WO-00025,T02,2026-02-28,No.1 eng intermittent fire warning,planned removal,ENG-1003
+WO-00026,T39,2026-03-03,No.2 eng thrust reverser advisory,planned removal,ENG-1078
+WO-00027,T28,2026-03-07,No.2 eng low idle unstable,planned removal,ENG-1056
+WO-00028,,2026-03-18,No.1 eng starter duty cycle exceeded,planned removal,ENG-1043
+WO-00029,T25,2026-03-18,No.1 eng compressor stall on startup,planned removal,ENG-1049
+WO-00030,T40,2026-03-19,No.1 eng ITT exceedance on start,planned removal,ENG-1079
+WO-00031,T46,2026-03-21,No.1 eng thrust reverser advisory,planned removal,ENG-1091
+WO-00032,T01,2026-03-23,No.1 eng augmentor liner cracks found,planned removal,ENG-1001
+WO-00033,T08,2026-04-05,No.2 eng thrust reverser advisory,planned removal,ENG-1016
+WO-00034,T19,2026-04-14,No.1 eng bleed air leak indication,planned removal,ENG-1037
+WO-00035,T20,2026-04-14,No.1 eng bleed air leak indication,planned removal,ENG-1039
+WO-00036,T07,2026-04-15,No.2 eng surge during acceleration,planned removal,ENG-1014
+WO-00037,T34,2026-04-15,No.1 eng hot start reported by pilot,planned removal,ENG-1067
+WO-00038,T24,2026-04-23,No.1 eng intermittent fire warning,planned removal,ENG-1047
+WO-00039,T23,2026-04-30,No.2 eng hot start reported by pilot,planned removal,ENG-1046
+WO-00040,T54,2026-05-10,No.1 eng oil consumption above limit,planned removal,ENG-1107
+WO-00041,T15,2026-05-15,No.1 eng bearing temperature anomaly,planned removal,ENG-1029
+WO-00042,T12,2026-05-18,No.2 eng ITT exceedance on start,planned removal,ENG-1024
+WO-00043,T31,2026-05-19,No.1 eng oil pressure fluctuation noted,planned removal,ENG-1061
+WO-00044,T41,2026-05-21,No.2 eng exhaust nozzle malfunction,planned removal,ENG-1082
+WO-00045,T45,2026-05-21,No.2 eng intermittent fire warning,planned removal,ENG-1090
+WO-00046,T49,2026-05-23,No.2 eng thrust reverser advisory,planned removal,ENG-1098
+WO-00047,T17,2026-05-25,No.2 eng augmentor liner cracks found,planned removal,ENG-1034
+WO-00048,T27,2026-05-30,"No.1 eng EGT high on climb, borescope",planned removal,ENG-1053
+WO-00049,T21,2026-06-02,No.2 eng bleed air leak indication,planned removal,ENG-1042
+WO-00050,T39,2026-06-04,No.1 eng bleed air leak indication,planned removal,ENG-1077
+WO-00051,T11,2026-06-10,No.1 eng accessory drive seal weeping,planned removal,ENG-1021
+WO-00052,T35,2026-06-17,No.2 eng surge during acceleration,planned removal,ENG-1070
+WO-00053,T02,2026-06-19,No.2 eng hot start reported by pilot,planned removal,ENG-1004
+WO-00054,T51,2026-07-05,No.1 eng foreign object damage inspection,planned removal,ENG-1101
+WO-00055,T30,2026-07-09,No.1 eng abnormal noise on spool up,planned removal,ENG-1059
+WO-00056,T04,2026-07-15,No.2 eng fan blade tip rub marks,planned removal,ENG-1008
+WO-00057,T18,2026-07-18,No.2 eng fuel leak detected during preflight,planned removal,ENG-1036
+WO-00058,T47,2026-07-20,No.1 eng bleed air leak indication,planned removal,ENG-1093
+WO-00059,T22,2026-07-21,No.2 eng thrust reverser advisory,planned removal,ENG-1044
+WO-00060,T49,2026-07-21,No.1 eng intermittent fire warning,planned removal,ENG-1097
+WO-00061,T29,2026-07-30,No.2 eng fuel control unit malfunction,planned removal,ENG-1058
+WO-00062,T48,2026-08-01,No.2 eng oil consumption above limit,planned removal,ENG-1096
+WO-00063,T19,2026-08-16,No.2 eng fuel control unit malfunction,planned removal,ENG-1038
+WO-00064,T50,2026-08-16,No.2 eng flame-out during deceleration,planned removal,ENG-1100
+WO-00065,T03,2026-08-20,No.2 eng fuel control unit malfunction,planned removal,ENG-1006
+WO-00066,T06,2026-08-21,No.2 eng hydraulic pump vibration check,planned removal,ENG-1012
+WO-00067,T16,2026-08-21,No.1 eng ITT exceedance on start,planned removal,ENG-1031
+WO-00068,T51,2026-08-24,No.2 eng low idle unstable,planned removal,ENG-1102
+WO-00069,T32,2026-08-26,No.1 eng oil consumption above limit,planned removal,ENG-1063
+WO-00070,T41,2026-08-27,No.1 eng surge during acceleration,planned removal,ENG-1081
+WO-00071,T33,2026-08-29,No.1 eng bleed air leak indication,planned removal,ENG-1065
+,T42,2026-09-07,No.1 eng fuel control unit malfunction,planned removal,ENG-1083
+WO-00073,T14,2026-09-10,No.2 eng hydraulic pump vibration check,planned removal,ENG-1028
+WO-00074,T20,2026-09-12,No.2 eng gearbox magnetic plug check,planned removal,ENG-1006
+WO-00075,T52,2026-09-17,No.2 eng fan blade tip rub marks,planned removal,ENG-1104
+WO-00076,,2026-09-18,No.2 eng exhaust nozzle malfunction,planned removal,ENG-1068
+WO-00077,T37,2026-09-18,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1073
+WO-00078,T53,2026-09-23,"No.2 eng power loss at altitude, check",planned removal,ENG-1106
+WO-00079,T26,2026-10-06,"No.1 eng EGT high on climb, borescope",planned removal,ENG-1051
+WO-00080,T13,2026-10-09,No.2 eng fuel leak detected during preflight,planned removal,ENG-1026
+WO-00081,T45,2026-10-10,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1089
+WO-00082,T23,2026-10-13,No.1 eng igniter plug replacement due,planned removal,ENG-1045
+WO-00083,T10,2026-10-19,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1019
+WO-00084,T04,2026-10-23,No.1 eng fuel leak detected during preflight,planned removal,ENG-1007
+WO-00085,T36,2026-10-23,No.2 eng oil pressure fluctuation noted,planned removal,ENG-1072
+WO-00086,T31,2026-10-26,No.2 eng N1 overshoot on takeoff,planned removal,ENG-1062
+WO-00087,T05,2026-10-31,No.1 eng compressor stall on startup,planned removal,ENG-1009
+WO-00088,T40,2026-11-08,No.2 eng turbine blade creep inspection,planned removal,ENG-1080
+WO-00089,T44,2026-11-12,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1087
+WO-00090,T25,2026-11-17,No.2 eng oil consumption above limit,planned removal,ENG-1050
+WO-00091,T28,2026-12-04,No.1 eng gearbox magnetic plug check,planned removal,ENG-1055
+WO-00092,T09,2026-12-05,No.2 eng abnormal noise on spool up,planned removal,ENG-1018
+WO-00093,T47,2026-12-05,No.2 eng abnormal noise on spool up,planned removal,ENG-1094
+WO-00094,T24,2026-12-16,No.2 eng fan blade tip rub marks,planned removal,ENG-1048
+WO-00095,T53,2026-12-16,No.1 eng low idle unstable,planned removal,ENG-1105
+WO-00096,T46,2026-12-18,No.2 eng foreign object damage inspection,planned removal,ENG-1092
+WO-00097,T54,2027-01-10,No.1 eng hot start reported by pilot,planned removal,ENG-1107
+WO-00098,T52,2027-01-18,No.1 eng turbine blade creep inspection,planned removal,ENG-1103
+WO-00099,T50,2027-02-06,No.1 eng accessory drive seal weeping,planned removal,ENG-1099
+WO-00100,T11,2027-02-10,No.2 eng gearbox magnetic plug check,planned removal,ENG-1022
+WO-00101,T44,2027-02-10,No.2 eng bleed air leak indication,planned removal,ENG-1088
+WO-00102,T37,2027-02-24,No.2 eng low idle unstable,planned removal,ENG-1074
+WO-00103,T46,2027-03-04,"No.1 eng vibration trend rising, investigate",planned removal,ENG-1091
+WO-00104,T07,2027-03-06,No.2 eng chip detector warning,planned removal,ENG-1014
+WO-00105,T12,2027-03-09,No.1 eng surge during acceleration,planned removal,ENG-1023
+WO-00106,T38,2027-03-15,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1075
+WO-00107,T16,2027-03-17,No.2 eng starter duty cycle exceeded,planned removal,ENG-1032
+WO-00108,T21,2027-03-22,No.1 eng abnormal noise on spool up,planned removal,ENG-1041
+WO-00109,T33,2027-03-29,No.2 eng bearing temperature anomaly,planned removal,ENG-1066
+WO-00110,T15,2027-04-11,No.2 eng abnormal noise on spool up,planned removal,ENG-1030
+WO-00111,T43,2027-04-17,"No.1 eng vibration trend rising, investigate",planned removal,ENG-1085
+WO-00112,T10,2027-04-24,No.2 eng igniter plug replacement due,planned removal,ENG-1020
+WO-00113,T39,2027-04-30,No.1 eng hydraulic pump vibration check,planned removal,ENG-1077
+WO-00114,T01,2027-05-01,No.1 eng fan blade tip rub marks,planned removal,ENG-1001
+WO-00115,T45,2027-05-04,No.2 eng fuel control unit malfunction,planned removal,ENG-1090
+WO-00116,T48,2027-05-06,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1095
+WO-00117,T54,2027-05-11,No.2 eng hydraulic pump vibration check,planned removal,ENG-1108
+WO-00118,T17,2027-05-13,"No.2 eng EGT high on climb, borescope",planned removal,ENG-1034
+WO-00119,T06,2027-05-15,"No.1 eng vibration trend rising, investigate",planned removal,ENG-1011
+WO-00120,T43,2027-05-24,No.2 eng hydraulic pump vibration check,planned removal,ENG-1086
+WO-00121,T51,2027-05-24,No.1 eng flame-out during deceleration,planned removal,ENG-1101
+WO-00122,T05,2027-05-25,No.2 eng ITT exceedance on start,planned removal,ENG-1010
+WO-00123,T03,2027-06-16,No.1 eng starter duty cycle exceeded,planned removal,ENG-1005
+WO-00124,T22,2027-06-16,No.2 eng fuel leak detected during preflight,planned removal,ENG-1044
+WO-00125,T42,2027-06-16,No.1 eng turbine blade creep inspection,planned removal,ENG-1083
+WO-00126,T35,2027-06-17,No.2 eng abnormal noise on spool up,planned removal,ENG-1070
+WO-00127,T02,2027-06-29,No.1 eng fuel leak detected during preflight,planned removal,ENG-1003
+WO-00128,T49,2027-06-30,No.2 eng oil pressure fluctuation noted,planned removal,ENG-1098
+WO-00129,T27,2027-07-04,No.1 eng foreign object damage inspection,planned removal,ENG-1053
+WO-00130,T52,2027-07-05,"No.2 eng power loss at altitude, check",planned removal,ENG-1104
+WO-00131,T29,2027-07-09,No.1 eng bleed air leak indication,planned removal,ENG-1057
+WO-00132,T08,2027-07-11,No.2 eng accessory drive seal weeping,planned removal,ENG-1016
+WO-00133,T01,2027-07-13,No.2 eng surge during acceleration,planned removal,ENG-1002
+WO-00134,T14,2027-07-26,"No.1 eng vibration trend rising, investigate",planned removal,ENG-1027
+WO-00135,T48,2027-07-27,No.2 eng N1 overshoot on takeoff,planned removal,ENG-1096
+WO-00136,T26,2027-08-01,No.2 eng surge during acceleration,planned removal,ENG-1052
+WO-00137,T47,2027-08-01,No.1 eng turbine blade creep inspection,planned removal,ENG-1093
+WO-00138,T39,2027-08-07,No.2 eng turbine blade creep inspection,planned removal,ENG-1078
+WO-00139,T32,2027-08-09,No.2 eng starter duty cycle exceeded,planned removal,ENG-1064
+WO-00140,T13,2027-08-16,No.2 eng fuel leak detected during preflight,planned removal,ENG-1026
+WO-00141,T38,2027-08-18,No.2 eng chip detector warning,planned removal,ENG-1076
+WO-00142,T30,2027-08-27,No.1 eng fan blade tip rub marks,planned removal,ENG-1059
+WO-00143,T18,2027-08-31,No.2 eng low idle unstable,planned removal,ENG-1036
+WO-00144,T08,2027-09-02,No.1 eng exhaust nozzle malfunction,planned removal,ENG-1015
+WO-00145,T36,2027-09-08,No.1 eng foreign object damage inspection,planned removal,ENG-1071
+WO-00146,T34,2027-09-21,No.2 eng hydraulic pump vibration check,planned removal,ENG-1068
+WO-00147,T20,2027-09-22,No.1 eng ITT exceedance on start,planned removal,ENG-1039
+WO-00148,T12,2027-09-24,No.2 eng fuel control unit malfunction,planned removal,ENG-1024
+WO-00149,T03,2027-09-29,No.2 eng fuel control unit malfunction,planned removal,ENG-1006
+WO-00150,T16,2027-10-09,No.1 eng flame-out during deceleration,planned removal,ENG-1031
+WO-00151,T50,2027-10-23,No.1 eng fuel control unit malfunction,planned removal,ENG-1099
+WO-00152,T45,2027-10-29,No.1 eng low idle unstable,planned removal,ENG-1089
+WO-00153,T11,2027-10-30,No.2 eng intermittent fire warning,planned removal,ENG-1022
+WO-00154,T44,2027-10-31,No.2 eng hot start reported by pilot,planned removal,ENG-1088
+WO-00155,T53,2027-10-31,No.2 eng compressor stall on startup,planned removal,ENG-1106
+WO-00156,T19,2027-11-13,No.2 eng fuel control unit malfunction,planned removal,ENG-1038
+WO-00157,T28,2027-11-18,No.2 eng intermittent fire warning,planned removal,ENG-1056
+WO-00158,T06,2027-11-22,"No.2 eng EGT high on climb, borescope",planned removal,ENG-1012
+WO-00159,T35,2027-12-05,"No.1 eng vibration trend rising, investigate",planned removal,ENG-1069
+WO-00160,T25,2027-12-09,No.1 eng intermittent fire warning,planned removal,ENG-1049
+WO-00161,T02,2027-12-18,No.2 eng accessory drive seal weeping,planned removal,ENG-1004
+WO-00162,T14,2027-12-18,No.2 eng intermittent fire warning,planned removal,ENG-1028
+WO-00163,T37,2027-12-21,No.1 eng compressor stall on startup,planned removal,ENG-1073
+WO-00164,T09,2027-12-26,No.2 eng igniter plug replacement due,planned removal,ENG-1018
+WO-00165,T04,2026-02-01,"AC generator replacement, scheduled",LRU swap,
+WO-00166,T06,2026-01-05,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00167,T46,2026-12-07,"Engine controller replacement, scheduled",LRU swap,
+WO-00168,T27,2026-08-08,"ECS valve replacement, scheduled",LRU swap,
+WO-00169,T26,2026-07-28,"ECS valve replacement, scheduled",LRU swap,
+WO-00170,T49,2026-12-02,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00171,T10,2026-04-04,"Hydraulic pump replacement, scheduled",LRU swap,
+WO-00172,T51,2026-10-15,"Radar transmitter replacement, scheduled",LRU swap,
+WO-00173,T32,2026-01-29,"Engine controller replacement, scheduled",LRU swap,
+WO-00174,T36,2026-07-19,"Fuel pump replacement, scheduled",LRU swap,
+WO-00175,T43,2026-12-28,"Brake controller replacement, scheduled",LRU swap,
+WO-00176,T13,2026-08-07,"Fire detection unit replacement, scheduled",LRU swap,
+WO-00177,T40,2026-06-23,"APU starter replacement, scheduled",LRU swap,
+WO-00178,T08,2026-08-13,"Fire detection unit replacement, scheduled",LRU swap,
+WO-00179,T08,2026-02-22,"AC generator replacement, scheduled",LRU swap,
+WO-00180,T42,2026-01-25,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00181,T16,2026-08-04,"Engine controller replacement, scheduled",LRU swap,
+WO-00182,T47,2026-08-18,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00183,T52,2026-01-12,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00184,T36,2026-05-04,"Engine controller replacement, scheduled",LRU swap,
+WO-00185,T31,2026-10-26,"Engine controller replacement, scheduled",LRU swap,
+WO-00186,T07,2026-04-13,"AC generator replacement, scheduled",LRU swap,
+WO-00187,T19,2026-06-04,"Fuel pump replacement, scheduled",LRU swap,
+WO-00188,T05,2026-07-22,"Brake controller replacement, scheduled",LRU swap,
+WO-00189,T23,2026-12-09,"Radar transmitter replacement, scheduled",LRU swap,
+WO-00190,T28,2026-08-29,"Brake controller replacement, scheduled",LRU swap,
+WO-00191,T54,2026-09-28,"APU starter replacement, scheduled",LRU swap,
+WO-00192,T20,2026-04-27,"Fire detection unit replacement, scheduled",LRU swap,
+WO-00193,T47,2026-01-29,"Inertial navigation unit replacement, scheduled",LRU swap,
+WO-00194,T07,2026-08-31,"AC generator replacement, scheduled",LRU swap,
+WO-00195,T16,2026-04-04,"APU starter replacement, scheduled",LRU swap,
+WO-00196,T26,2026-07-23,"Inertial navigation unit replacement, scheduled",LRU swap,
+,T11,2026-12-04,"Brake controller replacement, scheduled",LRU swap,
+WO-00198,T38,2026-09-29,"ECS valve replacement, scheduled",LRU swap,
+WO-00199,T26,2026-01-25,"APU starter replacement, scheduled",LRU swap,
+WO-00200,T12,2026-08-26,"AC generator replacement, scheduled",LRU swap,
+WO-00201,T39,2026-12-10,"Fire detection unit replacement, scheduled",LRU swap,
+WO-00202,T46,2026-05-06,"Brake controller replacement, scheduled",LRU swap,
+WO-00203,T38,2026-08-09,"Engine controller replacement, scheduled",LRU swap,
+WO-00204,T33,2026-05-30,"ECS valve replacement, scheduled",LRU swap,
