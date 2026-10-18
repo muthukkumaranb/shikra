@@ -310,11 +310,11 @@ elif st.session_state.scenario_step == 5:
 
     slot1_tail = s2_nmcm_tails[0] if s2_nmcm_tails else (s2_nmcs_tails[0] if s2_nmcs_tails else "Vacant")
     slot1_status = "Active Maintenance (Engine Change)" if s2_nmcm_tails else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
-    slot1_comp = DAY + 1 if slot1_tail != "Vacant" else "—"
+    slot1_comp = str(DAY + 1) if slot1_tail != "Vacant" else "—"
 
     hangar_data = [
         {"Slot": "Slot 1", "Current Tail": slot1_tail, "Status": slot1_status, "Completion Day": slot1_comp},
-        {"Slot": "Slot 2", "Current Tail": f"{st.session_state.selected_tail} (Reserved)", "Status": "Scheduled Engine Change", "Completion Day": arrival_day + planned_days},
+        {"Slot": "Slot 2", "Current Tail": f"{st.session_state.selected_tail} (Reserved)", "Status": "Scheduled Engine Change", "Completion Day": str(arrival_day + planned_days)},
         {"Slot": "Slot 3", "Current Tail": "Vacant", "Status": "Standby / Emergency Buffer", "Completion Day": "—"},
     ]
     st.dataframe(pd.DataFrame(hangar_data), use_container_width=True, hide_index=True)
