@@ -33,7 +33,7 @@ PARAMS_PATH = ROOT / "artifacts" / "policy_params.json"
 REPLAY_PATH = ROOT / "artifacts" / "replay_rul.parquet"
 RESULTS_DIR = ROOT / "results"
 
-PIPELINE_MULTS = [0.5, 0.75, 1.0, 1.5, 1.9]
+PIPELINE_MULTS = [0.5, 0.75, 1.0, 1.5, 1.7, 1.9]
 QUALITIES = [0.0, 1.0, 1.5, 2.0]
 QUALITY_LABELS = {
     0.0: "0 (Oracle)",
