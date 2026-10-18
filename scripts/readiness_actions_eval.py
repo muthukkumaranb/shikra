@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing as mp
 import sys
 from pathlib import Path
 
@@ -27,10 +28,22 @@ SNAPSHOT_DAYS = list(range(395, 696, 30))
 ACTION_TO_EXCLUDE = "Add 1 temporary hangar maintenance slot"
 
 
+def _evaluate_snapshot(args: tuple) -> tuple[list[dict], pd.DataFrame | None]:
+    seed, day, snapshot, config, params, n_mc = args
+    actions = rank_actions(snapshot, config, params, sqn=2, lead_days=7, n=n_mc, seed=seed)
+    actions = actions[actions["action"] != ACTION_TO_EXCLUDE].copy()
+    actions["seed"] = seed
+    actions["snapshot_day"] = day
+    actions["sqn"] = 2
+    example = actions if seed == 1 and day == 485 else None
+    return actions.to_dict("records"), example
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seeds", type=int, default=30)
     parser.add_argument("--n-mc", type=int, default=200)
+    parser.add_argument("--jobs", type=int, default=None)
     args = parser.parse_args()
 
     with CONFIG_PATH.open(encoding="utf-8") as handle:
@@ -40,8 +53,7 @@ def main() -> None:
         params = json.load(handle)
     rul = apply(pd.read_parquet(REPLAY_PATH), 1)
 
-    rows = []
-    example = None
+    tasks = []
     for seed in range(1, args.seeds + 1):
         result = run(
             "shikra_v2",
@@ -53,24 +65,13 @@ def main() -> None:
             snapshot_days=SNAPSHOT_DAYS,
         )
         for day in SNAPSHOT_DAYS:
-            snapshot = result.snapshots[day]
-            for sqn in (2,):
-                actions = rank_actions(
-                    snapshot,
-                    config,
-                    params,
-                    sqn=sqn,
-                    lead_days=7,
-                    n=args.n_mc,
-                    seed=seed,
-                )
-                actions = actions[actions["action"] != ACTION_TO_EXCLUDE].copy()
-                actions["seed"] = seed
-                actions["snapshot_day"] = day
-                actions["sqn"] = sqn
-                rows.extend(actions.to_dict("records"))
-                if seed == 1 and day == 485 and sqn == 2:
-                    example = actions
+            tasks.append((seed, day, result.snapshots[day], config, params, args.n_mc))
+
+    n_workers = args.jobs or max(1, mp.cpu_count() - 1)
+    with mp.Pool(processes=n_workers) as pool:
+        evaluated = pool.map(_evaluate_snapshot, tasks)
+    rows = [row for records, _ in evaluated for row in records]
+    examples = [example for _, example in evaluated if example is not None]
 
     details = pd.DataFrame(rows)
     summary_rows = []
@@ -88,9 +89,9 @@ def main() -> None:
         })
     summary = pd.DataFrame(summary_rows)
     summary.to_csv(RESULTS_DIR / "readiness_actions_summary.csv", index=False)
-    if example is None:
+    if not examples:
         raise RuntimeError("The fixed readiness example snapshot was not evaluated")
-    example.to_csv(RESULTS_DIR / "readiness_actions_example.csv", index=False)
+    examples[0].to_csv(RESULTS_DIR / "readiness_actions_example.csv", index=False)
     print("Label: forecast-estimated gain (not validated in simulation)")
     print(summary.to_string(index=False))
 
