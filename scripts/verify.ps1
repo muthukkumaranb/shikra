@@ -12,7 +12,8 @@ Executes the four verification steps matching 'make verify':
 Exits non-zero immediately if any step fails.
 #>
 param(
-    [string]$Py = ".venv\Scripts\python.exe"
+    [string]$Py = ".venv\Scripts\python.exe",
+    [switch]$Full
 )
 
 $ErrorActionPreference = "Stop"
@@ -41,8 +42,8 @@ if (Get-Command make -ErrorAction SilentlyContinue) {
         exit $LASTEXITCODE
     }
 } else {
-    Write-Output "--- sim.runner ---"
-    & $Py -m shikra.sim.runner
+    Write-Output "--- sim.runner (n_jobs=2) ---"
+    & $Py -c "import shikra.sim.runner as r; r.run_all(n_jobs=2)"
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     Write-Output "--- summary.py ---"
@@ -57,12 +58,18 @@ if (Get-Command make -ErrorAction SilentlyContinue) {
     & $Py scripts/bias.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    Write-Output "--- supply_shock.py ---"
-    & $Py scripts/supply_shock.py
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    if ($Full) {
+        Write-Output "--- supply_shock.py (Full mode, ~65 min) ---"
+        & $Py scripts/supply_shock.py
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
 
     Write-Output "--- figures.py ---"
     & $Py scripts/figures.py
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    Write-Output "--- deck_figures.py ---"
+    & $Py scripts/deck_figures.py
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     Write-Output "--- readme_table.py ---"
