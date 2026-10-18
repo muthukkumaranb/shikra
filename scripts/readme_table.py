@@ -150,6 +150,18 @@ def generate_table() -> str:
                 f"+10 raises unscheduled removals from 0 to {n_uns:.1f}.\n"
             )
 
+        readiness_path = RESULTS_DIR / "readiness_calib.csv"
+        if readiness_path.exists():
+            readiness_df = pd.read_csv(readiness_path)
+            lead7 = readiness_df[readiness_df["lead_days"] == 7]
+            fc = lead7[lead7["method"] == "shikra_forecast"].iloc[0]
+            pers = lead7[lead7["method"] == "persistence"].iloc[0]
+            lines.append(
+                f"> **A10 Readiness Forecast:** At lead 7, forecast MAE is {fc['mae']:.3f} vs "
+                f"{pers['mae']:.3f} for persistence and Brier is {fc['brier']:.3f} vs "
+                f"{pers['brier']:.3f}; action gains are forecast-estimated and not validated in simulation.\n"
+            )
+
     return "\n".join(lines)
 
 
