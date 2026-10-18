@@ -518,6 +518,7 @@ def rank_actions(
             "action": cand["action"],
             "target": cand["target"],
             "delta_expected_mc": round(delta_mc, 3),
+            "se_delta_expected_mc": round(float(np.std(cand_mc - base_mc, ddof=1) / np.sqrt(n)), 4),
             f"delta_p_ge_{n_target}": round(delta_p, 4),
         })
 

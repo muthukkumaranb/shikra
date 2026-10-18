@@ -37,11 +37,20 @@ def main() -> None:
     action_name = top_action["action"]
     target_name = top_action["target"]
     delta_mc = float(top_action["delta_expected_mc"])
+    top_se = float(top_action["se_delta_expected_mc"])
+    second_se = float(actions_df.iloc[1]["se_delta_expected_mc"])
+    within_one_se = abs(delta_mc - float(actions_df.iloc[1]["delta_expected_mc"])) <= (
+        top_se**2 + second_se**2
+    ) ** 0.5
 
-    print(
-        f"Squadron S2, day {target_day}: P(≥12 MC) = {p_ge_12:.2f}. "
-        f"Best single action: {action_name} ({target_name}), which raises expected MC by +{delta_mc:.1f}."
-    )
+    prefix = f"Squadron S2, day {target_day}: P(≥12 MC) = {p_ge_12:.2f}. "
+    if abs(delta_mc) < 0.05 or within_one_se:
+        print(f"{prefix}No single action changes expected MC at D+{lead_day} for S{sqn} (all within ±0.05).")
+    else:
+        print(
+            f"{prefix}Best single action: {action_name} ({target_name}), "
+            f"which raises expected MC by +{delta_mc:.1f}."
+        )
 
 
 if __name__ == "__main__":
