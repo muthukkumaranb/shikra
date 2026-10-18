@@ -3,8 +3,8 @@
 > **Prediction, spares or depots: which buys aircraft readiness, and what should India make itself first?**
 > SHIKRA is offline, advisory decision support evaluated on NASA public data and a synthetic wing.
 
-SHIKRA (Smart Heuristic for Integrated Knowledge-based Readiness Assessment) is an entry for
-Smart India Hackathon 2026, problem statement **SIH26249** — "Air Power – Predictive Maintenance
+SHIKRA is named after the shikra, a small Indian hawk. It is an entry for
+Smart India Hackathon 2026, problem statement **SIH26249** — "Air Power — Predictive Maintenance
 & Fleet Availability" (Ministry of Defence / Defence Services Staff College).
 
 The system advises **when** to proactively remove engines for maintenance and **which spares** to
@@ -13,7 +13,15 @@ against a synthetic 54-aircraft wing.
 
 ---
 
-## Results
+## In 60 seconds
+
+- **What it is**: Offline, advisory decision support for maintenance scheduling and spares prepositioning; advisory only, never autonomous.
+- **The data**: Open NASA C-MAPSS turbofan run-to-failure benchmarks (FD001–FD004) paired with a synthetic 54-aircraft wing simulation evaluated under common random numbers (CRN).
+- **Which lever pays?**: Warning time alone cannot overcome saturated depot pipelines; spares inventory depth and pipeline throughput are the binding constraints on readiness.
+- **How much gain does prediction capture?**: Eliminates all unscheduled engine removals, but captures fleet serviceability gains only when maintenance turnaround is fast enough to exploit lead time (see Fleet Simulation table below).
+- **Which part to indigenise first?**: Under a 180-day foreign supply halt scenario, LRU vulnerability rankings identify the APU starter and ECS valve as highest-priority components for domestic manufacturing (see A12 Supply Shock table below).
+
+---
 
 <!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->
 
@@ -50,6 +58,37 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 ---
 
 ## Quickstart
+
+## Judge quickstart
+
+Full reproducibility validation in a single command:
+
+**Linux / macOS:**
+```bash
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+make verify PY=.venv/bin/python
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/muthukkumaranb/shikra.git
+cd shikra
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1 -Py .venv\Scripts\python.exe
+```
+
+#### Measured Benchmark Runtimes (Clean Fresh Clone)
+- **`git clone`**: ~34.5s
+- **`python -m venv .venv`**: ~3.2s (Python 3.11.16)
+- **`pip install -r requirements.txt`**: ~4m 26s (from wheel cache)
+- **`pytest -q -m "not data"`**: ~55.5s (68 passed, 1 skipped, 4 deselected)
+- **`make verify` / `verify.ps1`**: Executes test suite, full simulation reproduction, bitwise verification against 13 committed CSVs, and git working tree diff check in one command.
+
+---
 
 ### 1. Environment Setup
 
@@ -89,7 +128,7 @@ make reproduce-sim PY=.venv/Scripts/python
 | `bias` | Systematic RUL bias sweep (§3.2b, 150 runs) | ~32.1s | `results/bias.csv`, `results/fig_bias.png` |
 | `shock` | Supply-shock resilience & recovery (545 days, 30 seeds) | ~65.0 min | `results/supply_shock.csv`, `results/fig_supply_shock.png` |
 | `figures` | Policy comparison charts | ~1.3s | `results/fig_policies.png` |
-| `readme` | Auto-generate README / GATES summary tables | ~0.7s | `README.md`, `GATES.md` |
+| `readme` | Auto-generate README / GATES summary tables | ~0.7s | `README.md`, `results/GATES.md` |
 | **`reproduce-sim`** | **Full simulation reproduction** | **~66 min** | All committed CSVs & figures |
 
 > **CI Quick Mode (`reproduce-sim-quick`):** Because `shock` runs 60 full 545-day simulations and takes ~65 minutes (exceeding standard CI time budgets), CI runs in `--quick` mode:
@@ -97,7 +136,7 @@ make reproduce-sim PY=.venv/Scripts/python
 > make reproduce-sim-quick PY=python
 > python scripts/check_reproduce.py --quick
 > ```
-> This executes `sim` + `summary` + `bias` in ~54 seconds and validates `policies.csv`, `policy_summary.csv`, and `bias.csv`.
+> This executes `sim` + `summary` + `bias` in ~54 seconds and validates `results/policies.csv`, `results/policy_summary.csv`, and `results/bias.csv`.
 
 ### 3. Full Pipeline Reproduction (Requires C-MAPSS)
 
@@ -117,6 +156,16 @@ docker build -t shikra .
 # Run container completely air-gapped
 docker run --network none shikra
 ```
+
+---
+
+## What is not claimed
+
+- **Synthetic wing, not IAF data**: All fleet structures, flight schedules, failure rates, and spares budgets represent a synthetic 54-aircraft wing for research and demonstration; no classified or proprietary IAF operational data is used (see [DATA_CARD.md](DATA_CARD.md)).
+- **Advisory, not autonomous**: SHIKRA provides offline recommendations and risk bounds to assist maintenance engineers; it does not issue automated dispatch directives or replace maintenance authority (see [LIMITATIONS.md](LIMITATIONS.md)).
+- **Readiness forecast does not beat persistence**: Multi-step readiness forecasting models evaluated in development did not outperform a simple persistence baseline (see [LIMITATIONS.md](LIMITATIONS.md)).
+- **LSTM did not beat LightGBM**: The 2-layer temporal attention-LSTM comparison member achieved comparable RMSE but ~2x worse NASA penalty score on FD003 compared to the LightGBM quantile ensemble of record (see [FINDINGS_T14.md](results/FINDINGS_T14.md)).
+- **Hangar scheduling showed no gain on the simulated wing**: Opportunistic hangar co-scheduling heuristics yielded no statistically significant availability gain over standard threshold-based removals on the simulated wing structure (see [LIMITATIONS.md](LIMITATIONS.md)).
 
 ---
 
