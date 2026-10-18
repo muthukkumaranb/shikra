@@ -240,7 +240,6 @@ def generate_a10_findings() -> str:
     actions = pd.read_csv(RESULTS_DIR / "readiness_actions_summary.csv")
     raw = calib[calib["method"] == "shikra_forecast"].set_index("lead_days")
     conformal = calib[calib["method"] == "shikra_conformal"].set_index("lead_days")
-    persistence = calib[calib["method"] == "persistence"].set_index("lead_days")
     scope = str(actions["evaluation_scope"].iloc[0])
     n_mc = int(actions["n_mc"].iloc[0])
     return f"""# A10 Readiness Forecast Findings
