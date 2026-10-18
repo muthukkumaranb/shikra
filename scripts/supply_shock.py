@@ -302,7 +302,7 @@ def plot_supply_shock(df: pd.DataFrame, daily_gaps: dict[str, np.ndarray], out_p
     fig.text(
         0.5,
         0.01,
-        "synthetic parameters",
+        "synthetic parameters, at 1.0× pipeline speed",
         ha="center",
         fontsize=10,
         style="italic",

@@ -116,7 +116,7 @@ def generate_table() -> str:
             ranking_items = [f"{row['lru_id']} ({row['loss_pp_shock_window']:.1f} pp)" for _, row in top_lrus.head(2).iterrows()]
             ranking_str = ", ".join(ranking_items)
             lines.append(
-                f"> **A12 Supply Shock:** A 180-day halt of foreign supply grounds up to {peak_ac:.0f} extra aircraft of 54 "
+                f"> **A12 Supply Shock (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to {peak_ac:.0f} extra aircraft of 54 "
                 f"({loss_sw:.1f} pp over the halt); recovery takes {rec_days:.0f} days after supply resumes. "
                 f"Ranking: {ranking_str}. Parameters are synthetic; the method is the claim.\n"
             )
@@ -130,7 +130,7 @@ def generate_table() -> str:
             pess_sub = bias_df[bias_df["bias_cycles"] == -10]
             m_wasted = pess_sub["wasted_life_cycles_mean"].iloc[0] if not pess_sub.empty else 1993.0
             lines.append(
-                f"> **Systematic Bias Robustness (§3.2b):** −10 cycles wastes {m_wasted:.0f} cycles; "
+                f"> **Systematic Bias Robustness (§3.2b, at 1.0× pipeline speed):** −10 cycles wastes {m_wasted:.0f} cycles; "
                 f"+10 raises unscheduled removals from 0 to {n_uns:.1f}.\n"
             )
 

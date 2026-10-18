@@ -197,7 +197,7 @@ def plot_bias_results(summary_df: pd.DataFrame, out_path: Path) -> None:
     fig.text(
         0.5,
         0.01,
-        "synthetic wing, pipeline_mult=1.0, fixed R*",
+        "synthetic wing, at 1.0× pipeline speed, fixed R*",
         ha="center",
         fontsize=9.5,
         style="italic",
