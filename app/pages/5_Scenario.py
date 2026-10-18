@@ -207,7 +207,7 @@ elif st.session_state.scenario_step == 3:
 
     rul_chart = (band + median + r_rule).properties(height=320)
     st.altair_chart(rul_chart, use_container_width=True)
-    st.caption("Red dashed line: R* = 5 cycles. Note: Ground-truth RUL is never displayed — only calibrated quantiles.")
+    st.caption(f"Red dashed line: R* = {R_star} cycles. Note: Ground-truth RUL is never displayed — only calibrated quantiles.")
 
     col_nav1, col_nav2 = st.columns([1, 1])
     if col_nav1.button("⬅️ Previous"):

@@ -324,3 +324,20 @@ def test_aircraft_detail_svg_no_codeblocks():
     for line in svg_custom.splitlines():
         assert not line.startswith("    "), f"Line starts with 4 spaces: {line[:30]}"
 
+
+def test_scenario_step3_rstar_dynamic_caption():
+    """Verify that Scenario step 3 caption builds R* from policy_params.json dynamically."""
+    from app.lib.data import load_params
+
+    params = load_params()
+    r_star = int(params["R_star"])
+
+    at = AppTest.from_file("app/pages/5_Scenario.py")
+    at.session_state["scenario_step"] = 3
+    at.run(timeout=20)
+    assert len(at.exception) == 0
+
+    all_captions = " ".join([c.value for c in at.caption])
+    expected_caption = f"Red dashed line: R* = {r_star} cycles."
+    assert expected_caption in all_captions
+
