@@ -7,10 +7,10 @@ skipped in CI.
 
 from __future__ import annotations
 
+import torch  # isort: skip # noqa: F401
 import numpy as np
 import pandas as pd
 import pytest
-import torch  # noqa: F401
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -77,3 +77,4 @@ def synthetic_test_df() -> pd.DataFrame:
                 row[s] = rng.normal(0, 1)
             rows.append(row)
     return pd.DataFrame(rows)
+
