@@ -194,15 +194,12 @@ def test_lib_audit_module_integrity():
     assert hasattr(mod, "count")
 
 
-def test_pages_without_readiness_fallback():
+def test_pages_without_readiness_fallback(monkeypatch: pytest.MonkeyPatch):
     """Verify pages display fallback notes when readiness is missing and never show numbers."""
-    # Ensure readiness module is not on sys.path
-    import sys
+    import app.lib.readiness as rd_mod
 
-    # Remove any stray shikra-rd path from sys.path
-    sys.path = [p for p in sys.path if "shikra-rd" not in p]
-    if "shikra.strategy.readiness" in sys.modules:
-        del sys.modules["shikra.strategy.readiness"]
+    monkeypatch.setattr(rd_mod, "get_readiness_module", lambda: None)
+    monkeypatch.setattr(rd_mod, "is_readiness_available", lambda: False)
 
     # 1. Engineering Officer page fallback
     at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
@@ -230,26 +227,51 @@ def test_pages_without_readiness_fallback():
     assert "rul_true" not in all_sc_text
 
 
+def test_eo_page_with_readiness_available():
+    """Verify that with readiness available, EO page shows no 'after T1.7 merge' text and no 'rul_true'."""
+    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    assert len(at_eo.exception) == 0
+    all_eo_text = " ".join(
+        [c.value for c in at_eo.caption]
+        + [m.value for m in at_eo.markdown]
+    )
+    assert "after T1.7 merge" not in all_eo_text
+    assert "rul_true" not in all_eo_text
+
+    for df_elem in at_eo.dataframe:
+        assert "rul_true" not in df_elem.value.columns
+
+
 def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
     """Verify pages display real data and drop illustrative captions when readiness is present."""
     import sys
 
-    rd_worktree = Path(__file__).parent.parent.parent / "shikra-rd"
-    if not (rd_worktree / "shikra" / "strategy" / "readiness.py").exists():
-        pytest.skip("Temporary shikra-rd worktree not found")
+    # Check if readiness is already available locally post-merge
+    has_local_readiness = False
+    try:
+        import shikra.strategy.readiness as rd
 
-    import shikra
+        has_local_readiness = hasattr(rd, "snapshot_at") and hasattr(rd, "forecast")
+    except (ImportError, AttributeError):
+        pass
 
-    p = str((rd_worktree / "shikra").resolve())
-    monkeypatch.syspath_prepend(str(rd_worktree))
-    monkeypatch.setattr(shikra, "__path__", [p] + list(shikra.__path__))
+    if not has_local_readiness:
+        rd_worktree = Path(__file__).parent.parent.parent / "shikra-rd"
+        if not (rd_worktree / "shikra" / "strategy" / "readiness.py").exists():
+            pytest.skip("Temporary shikra-rd worktree not found")
 
-    for mod_name in list(sys.modules.keys()):
-        if any(
-            k in mod_name
-            for k in ("readiness", "spares", "strategy", "sim", "app.lib")
-        ):
-            del sys.modules[mod_name]
+        import shikra
+
+        p = str((rd_worktree / "shikra").resolve())
+        monkeypatch.syspath_prepend(str(rd_worktree))
+        monkeypatch.setattr(shikra, "__path__", [p] + list(shikra.__path__))
+
+        for mod_name in list(sys.modules.keys()):
+            if any(
+                k in mod_name
+                for k in ("readiness", "spares", "strategy", "sim", "app.lib")
+            ):
+                del sys.modules[mod_name]
 
     # 1. Engineering Officer page with readiness
     at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
