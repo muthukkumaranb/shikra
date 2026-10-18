@@ -25,8 +25,13 @@ from app.lib.data import (  # noqa: E402
     load_rul_cmapss_multi,
 )
 
-st.set_page_config(page_title="SHIKRA — Evidence", page_icon="🦅", layout="wide")
-st.title("📋 Evidence & Reproducibility")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Evidence",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Evidence & Reproducibility")
 st.caption("Verification gates, simulation results, model benchmarks, and audit trail.")
 
 # ── Reproducibility Box ──────────────────────────────────────────────────────

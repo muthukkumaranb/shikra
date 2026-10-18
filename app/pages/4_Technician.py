@@ -19,8 +19,13 @@ if str(ROOT) not in sys.path:
 from app.lib.data import load_config  # noqa: E402
 from app.lib.state import get_sim_result  # noqa: E402
 
-st.set_page_config(page_title="SHIKRA — Technician", page_icon="🦅", layout="wide")
-st.title("🛠️ Technician's View — Snag List")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Technician",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Technician's View — Snag List")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
 
 config = load_config()

@@ -19,8 +19,13 @@ if str(ROOT) not in sys.path:
 
 from app.lib.data import load_config, load_spares_alloc, load_supply_shock  # noqa: E402
 
-st.set_page_config(page_title="SHIKRA — Logistics", page_icon="🦅", layout="wide")
-st.title("📦 Logistics View")
+ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
+st.set_page_config(
+    page_title="SHIKRA — Logistics",
+    page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
+    layout="wide",
+)
+st.title("Logistics View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
 
 config = load_config()
