@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import streamlit as st
@@ -16,6 +17,7 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.lib.audit import verify as audit_verify  # noqa: E402
 from app.lib.data import (  # noqa: E402
     get_result_figures,
     load_gates_md,
@@ -129,6 +131,26 @@ with tab_multi:
         st.dataframe(rul_multi, use_container_width=True, hide_index=True)
     else:
         st.info("results/rul_cmapss_multi.csv not available.")
+
+st.divider()
+
+# ── Audit Trail Integrity ────────────────────────────────────────────────────
+st.markdown("### Audit Trail")
+st.caption("Sign-off log: SHA-256 hash chain plus HMAC-authenticated daily Merkle roots.")
+
+if st.button("Verify chain"):
+    st.caption("Chain re-verified just now.")
+chain = audit_verify()
+if chain["ok"]:
+    today = datetime.now(UTC).date().isoformat()
+    root_label = "today's root" if chain["latest_date"] == today else "latest root"
+    root = (chain["latest_root"] or "none")[:12]
+    st.markdown(
+        f":green[Audit chain: intact · {chain['n_rows']} records · {root_label} `{root}`]"
+    )
+else:
+    st.markdown(f":red[Audit chain: BROKEN at row id={chain['first_bad_id']}]")
+    st.caption(chain["reason"])
 
 st.divider()
 

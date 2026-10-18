@@ -64,6 +64,32 @@ Inductive conformal prediction calibrates prediction intervals on held-out calib
 | FD003 (test) | 80% | 79.0% | 57.0% | 30.14 cycles | 100 |
 | FD003 (test) | 90% | 89.0% | 75.0% | 40.51 cycles | 100 |
 
+## A10 Readiness Forecast and Actions
+
+The readiness forecast uses `shikra_v2` at `pipeline_mult=1.7` and operational snapshot state: known return days, conformal RUL quantiles, stock, queues, and hangar occupancy. It never uses `rul_true`; that field is stored only for evaluation.
+
+| Lead | Method | 80% Coverage | MAE | Brier | Snapshots |
+|------|--------|--------------|-----|-------|-----------|
+| 3 | shikra_forecast | 55.8% | 1.326 | 0.073 | 165 |
+| 3 | shikra_conformal | 86.3% | 1.326 | 0.073 | 165 |
+| 3 | persistence | 31.1% | 0.982 | 0.074 | 165 |
+| 3 | climatology | 81.2% | 2.240 | 0.119 | 165 |
+| 7 | shikra_forecast | 41.0% | 2.274 | 0.132 | 165 |
+| 7 | shikra_conformal | 86.5% | 2.274 | 0.132 | 165 |
+| 7 | persistence | 19.8% | 1.552 | 0.117 | 165 |
+| 7 | climatology | 82.4% | 2.136 | 0.115 | 165 |
+
+Calibration covers 330 snapshots (days 395-695, seeds 1-30) and compares against persistence and leave-one-seed-out climatology from days 365-729. At lead 7, the forecast is worse than persistence on MAE and Brier score; it is not a validated replacement for the baselines.
+
+Action rankings are forecast-estimated gains, not validated in simulation. They evaluate one-step interventions at lead 7 and omit future policy feedback, competing demand, and model uncertainty.
+
+| Action | Share best | Mean expected-MC gain | Share positive |
+|--------|------------|------------------------|----------------|
+| Transfer spare engine depot to squadron | 67.0% | 0.000 | 0.0% |
+| Expedite earliest pending engine repair by 50% | 0.0% | 0.000 | 0.0% |
+| Defer planned removal within safety margin (q10 > 0) | 4.5% | 0.018 | 4.5% |
+| Transfer scarcest LRU (APU starter) depot to squadron | 28.5% | 0.008 | 28.8% |
+
 ## Known Failure Modes and Robustness Findings
 
 1. **Systematic Prediction Bias Sensitivity (§3.2b):**
