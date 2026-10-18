@@ -7,7 +7,10 @@ skipped in CI.
 
 from __future__ import annotations
 
-import torch  # isort: skip # noqa: F401
+try:
+    import torch  # isort: skip # noqa: F401
+except ImportError:
+    pass
 import numpy as np
 import pandas as pd
 import pytest

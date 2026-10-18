@@ -1,15 +1,18 @@
-﻿"""Unit tests for the T1.4 Attention-LSTM RUL model."""
+"""Unit tests for the T1.4 Attention-LSTM RUL model."""
 
 from __future__ import annotations
 
-import numpy as np
-import pandas as pd
 import pytest
-import torch
-from sklearn.preprocessing import StandardScaler
 
-from shikra.rul.features import get_informative_sensors
-from shikra.rul.lstm import (
+pytest.importorskip("torch")
+
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import torch  # noqa: E402
+from sklearn.preprocessing import StandardScaler  # noqa: E402
+
+from shikra.rul.features import get_informative_sensors  # noqa: E402
+from shikra.rul.lstm import (  # noqa: E402
     AdditiveAttention,
     AttentionLSTM,
     create_causal_windows,
