@@ -204,6 +204,22 @@ See [LIMITATIONS.md](LIMITATIONS.md).
 
 ---
 
+## Further reading
+
+- [DRDO ETAI Trustworthy AI Mapping](docs/ETAI_MAPPING.md): Engineering self-assessment against DRDO's Evaluating Trustworthy AI principles.
+- [Integration Architecture & Pilot Specification](docs/INTEGRATION.md): How SHIKRA interfaces with e-MMS/IMMOLS exports and proposal for a minimal 90-day shadow pilot.
+- [AI Assistance Disclosure](AI_USAGE.md): Transparent disclosure of AI tools, verification protocols, failure types caught, and team design decisions.
+- [Limitations & Operational Scope](LIMITATIONS.md): Hard boundaries, synthetic assumptions, and safety constraints.
+- [Model Card](MODEL_CARD.md): LightGBM quantile ensemble architecture, training procedure, and conformal calibration.
+- [Data Card](DATA_CARD.md): NASA C-MAPSS degradation benchmark structure and synthetic wing operational parameters.
+- [Negative Findings & Technical Memos](results/):
+  - [FINDINGS_A10.md](results/FINDINGS_A10.md): Conformal readiness forecasting vs persistence baseline.
+  - [FINDINGS_T14.md](results/FINDINGS_T14.md): Temporal Attention-LSTM comparison vs LightGBM ensemble.
+  - [FINDINGS_T16.md](results/FINDINGS_T16.md): Two-echelon VARI-METRIC spares inventory optimization findings.
+  - [FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md): Exact constraint programming (CP-SAT) hangar schedule evaluation.
+
+---
+
 ## Citation
 
 If you use this work, please cite:
