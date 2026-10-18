@@ -1,4 +1,4 @@
-.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest
+.PHONY: setup data split rul replay params sim summary heatmap bias shock figures readme cards test lint reproduce reproduce-sim reproduce-sim-quick ingest app
 
 PY     ?= python
 PIP    ?= pip
@@ -88,4 +88,9 @@ reproduce-sim: sim summary heatmap bias shock figures readme
 # ── Quick simulation reproduction (CI mode) ──────────────────────────────────
 reproduce-sim-quick: sim summary bias
 	@echo "Quick simulation reproduction complete."
+
+# ── Dashboard application ───────────────────────────────────────────────────
+app:
+	$(PY) -m streamlit run app/Home.py
+
 

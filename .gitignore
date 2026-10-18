@@ -26,3 +26,6 @@ artifacts/*
 scripts/visualizer_server.py
 scripts/terminal_visualizer.py
 visualizer/
+
+# App data
+app_data/
