@@ -112,17 +112,41 @@ def generate_reports(
             )
             stale = int(cur.fetchone()[0])
 
-            join_cov = round(100.0 * loaded / total_rows, 2) if total_rows > 0 else 0.0
+            load_rate = round(100.0 * loaded / total_rows, 2) if total_rows > 0 else 0.0
             mk_pct = round(100.0 * missing_keys / total_rows, 2) if total_rows > 0 else 0.0
             msn_pct = round(100.0 * mismatched_sns / total_rows, 2) if total_rows > 0 else 0.0
             stale_pct = round(100.0 * stale / total_rows, 2) if total_rows > 0 else 0.0
+
+            if table_name == "work_order":
+                cur.execute(
+                    """SELECT COUNT(*) FROM work_order w
+                       WHERE w.tail_id IN (SELECT tail_id FROM tail)
+                         AND (w.engine_sn = '' OR EXISTS (
+                             SELECT 1 FROM engine e WHERE e.engine_sn = w.engine_sn AND e.tail_id = w.tail_id
+                         ))"""
+                )
+                resolved = int(cur.fetchone()[0])
+                key_res = round(100.0 * resolved / loaded, 2) if loaded > 0 else 100.0
+            elif table_name == "hums_reading":
+                cur.execute(
+                    """SELECT COUNT(*) FROM hums_reading h
+                       WHERE h.tail_id IN (SELECT tail_id FROM tail)
+                         AND EXISTS (
+                             SELECT 1 FROM engine e WHERE e.engine_sn = h.engine_sn AND e.tail_id = h.tail_id
+                         )"""
+                )
+                resolved = int(cur.fetchone()[0])
+                key_res = round(100.0 * resolved / loaded, 2) if loaded > 0 else 100.0
+            else:
+                key_res = 100.0
 
             report_rows.append({
                 "source": src_name,
                 "rows": total_rows,
                 "loaded": loaded,
                 "quarantined": quarantined,
-                "join_coverage_pct": join_cov,
+                "load_rate_pct": load_rate,
+                "key_resolution_pct": key_res,
                 "missing_key_pct": mk_pct,
                 "mismatched_sn_pct": msn_pct,
                 "stale_pct": stale_pct,
