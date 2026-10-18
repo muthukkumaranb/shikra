@@ -5,6 +5,12 @@ Tests requiring the real C-MAPSS dataset are marked @pytest.mark.data and
 skipped in CI.
 """
 
+from __future__ import annotations
+
+try:
+    import torch  # isort: skip # noqa: F401
+except ImportError:
+    pass
 import numpy as np
 import pandas as pd
 import pytest
@@ -74,3 +80,4 @@ def synthetic_test_df() -> pd.DataFrame:
                 row[s] = rng.normal(0, 1)
             rows.append(row)
     return pd.DataFrame(rows)
+
