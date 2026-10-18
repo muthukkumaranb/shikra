@@ -1,4 +1,4 @@
-﻿"""Pytest configuration and shared fixtures for SHIKRA tests.
+"""Pytest configuration and shared fixtures for SHIKRA tests.
 
 All fixtures here generate synthetic data so CI runs without raw NASA files.
 Tests requiring the real C-MAPSS dataset are marked @pytest.mark.data and

@@ -1,4 +1,4 @@
-﻿"""Train and evaluate T1.4 Attention-LSTM RUL comparison member.
+"""Train and evaluate T1.4 Attention-LSTM RUL comparison member.
 
 Follows Dida et al. (2025):
   - Window size 30
