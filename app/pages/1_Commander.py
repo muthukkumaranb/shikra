@@ -1,7 +1,7 @@
 """SHIKRA — Commander's View.
 
-Lever map (interactive Altair heatmap), supply-shock ranking,
-readiness forecast panel, and one-page brief.
+Lever map (gain-vs-reactive matrix), supply-shock ranking,
+per-squadron readiness forecast rail, and one-page brief.
 """
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -18,6 +17,7 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.lib import theme  # noqa: E402
 from app.lib.data import load_config, load_heatmap, load_params, load_supply_shock  # noqa: E402
 from app.lib.readiness import (  # noqa: E402
     get_forecast,
@@ -33,10 +33,9 @@ st.set_page_config(
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
-st.title("Commander's View")
-st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
+strip = theme.apply("commander")
 
-st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+SNAP_DAY = 485
 
 # ── Load data ────────────────────────────────────────────────────────────────
 heatmap_raw = load_heatmap()
@@ -46,185 +45,235 @@ shock_df = load_supply_shock()
 
 pipeline_mult = config.get("pipeline_mult", 1.7)
 
+readiness_mod = get_readiness_module()
+snap = get_snapshot("shikra_v2", seed=1, day=SNAP_DAY) if readiness_mod is not None else None
+fc_df = None
+if snap is not None:
+    fc_df = get_forecast(
+        snapshot=snap,
+        config=config,
+        params=params,
+        policy="shikra",
+        horizon_days=7,
+        n=150,
+        seed=42,
+    )
+
+# Per-squadron status from the snapshot (MC / NMCM / NMCS)
+sq_counts: list[dict[str, int]] | None = None
+if snap is not None and "tails" in snap:
+    sq_counts = [{"MC": 0, "NMCM": 0, "NMCS": 0} for _ in range(3)]
+    for t in snap["tails"]:
+        sq = int(t.get("sqn", 0))
+        st_val = t.get("status", "MC")
+        sq_counts[sq][st_val if st_val in ("MC", "NMCM") else "NMCS"] += 1
+snap_mc = sum(c["MC"] for c in sq_counts) if sq_counts else None
+theme.status_strip(strip, day=SNAP_DAY, mc=snap_mc)
+
+theme.header(
+    "Commander · lever map · supply shock",
+    "Which lever buys the wing the most readiness: better prediction or a faster pipeline?",
+    "Serviceability gain over reactive maintenance for each combination of prediction quality "
+    "and repair-and-supply time, then the parts whose foreign-supply halt hurts most. "
+    "Synthetic wing · advisory — all recommendations require officer sign-off.",
+    "results/heatmap.csv · results/supply_shock.csv · results/readiness_calib.csv · "
+    f"readiness snapshot day {SNAP_DAY} (shikra_v2, seed 1)",
+)
+
 # Format heatmap units in pp
 heatmap_df = heatmap_raw.copy()
 heatmap_df["gain_pp"] = heatmap_df["gain_vs_reactive_mean"] * 100
 heatmap_df["gain_ci_lo_pp"] = heatmap_df["gain_ci_lo"] * 100
 heatmap_df["gain_ci_hi_pp"] = heatmap_df["gain_ci_hi"] * 100
-heatmap_df["gain_label"] = heatmap_df["gain_pp"].apply(lambda v: f"{v:+.1f} pp")
 heatmap_df["serviceability_pct"] = heatmap_df["serviceability_mean"] * 100
 heatmap_df["serviceability_ci_lo_pct"] = heatmap_df["serviceability_ci_lo"] * 100
 heatmap_df["serviceability_ci_hi_pct"] = heatmap_df["serviceability_ci_hi"] * 100
-heatmap_df["serviceability_label"] = heatmap_df["serviceability_pct"].apply(lambda v: f"{v:.1f}%")
 
-# ── Lever Map ────────────────────────────────────────────────────────────────
-st.markdown("### Lever Map")
-
-# Toggle between gain vs reactive and absolute serviceability
-show_absolute = st.toggle("Show absolute serviceability", value=False)
-
-if show_absolute:
-    color_col = "serviceability_pct"
-    color_title = "Serviceability (%)"
-    text_col = "serviceability_label"
-    tooltip_cols = [
-        alt.Tooltip("pipeline_mult:Q", title="Pipeline speed"),
-        alt.Tooltip("quality_label:N", title="Prediction quality"),
-        alt.Tooltip("serviceability_label:N", title="Serviceability"),
-        alt.Tooltip("serviceability_ci_lo_pct:Q", title="CI low (%)", format=".1f"),
-        alt.Tooltip("serviceability_ci_hi_pct:Q", title="CI high (%)", format=".1f"),
-    ]
-else:
-    color_col = "gain_pp"
-    color_title = "Gain vs reactive (pp)"
-    text_col = "gain_label"
-    tooltip_cols = [
-        alt.Tooltip("pipeline_mult:Q", title="Pipeline speed"),
-        alt.Tooltip("quality_label:N", title="Prediction quality"),
-        alt.Tooltip("gain_label:N", title="Gain vs reactive"),
-        alt.Tooltip("gain_ci_lo_pp:Q", title="CI low (pp)", format="+.1f"),
-        alt.Tooltip("gain_ci_hi_pp:Q", title="CI high (pp)", format="+.1f"),
-    ]
-
-# Base heatmap with explicit x-axis title
-base = alt.Chart(heatmap_df).encode(
-    x=alt.X(
-        "pipeline_mult:O",
-        title="repair & supply time (× today's baseline; lower = faster)",
-        sort="ascending",
-    ),
-    y=alt.Y("quality_label:N", title="Prediction Quality", sort="ascending"),
-)
-
-heatmap_chart = base.mark_rect(stroke="white", strokeWidth=1).encode(
-    color=alt.Color(
-        f"{color_col}:Q",
-        title=color_title,
-        scale=alt.Scale(scheme="blues" if show_absolute else "viridis"),
-    ),
-    tooltip=tooltip_cols,
-)
-
-# Text overlay showing values
-text = base.mark_text(baseline="middle", fontSize=12, fontWeight="bold").encode(
-    text=alt.Text(f"{text_col}:N"),
-    color=alt.condition(
-        alt.datum[color_col] > (70 if show_absolute else 1.0),
-        alt.value("white"),
-        alt.value("black"),
-    ),
-)
-
-# Callout at (1.7, 1.0) — today's calibrated operating point
-callout_data = pd.DataFrame([{
-    "pipeline_mult": 1.7,
-    "quality_label": "SHIKRA (calibrated)",
-    "note": "▲ Today's operating point",
-}])
-callout = (
-    alt.Chart(callout_data)
-    .mark_text(dy=28, fontSize=11, fontWeight="bold", color="#f8fafc")
-    .encode(
-        x=alt.X("pipeline_mult:O"),
-        y=alt.Y("quality_label:N"),
-        text=alt.Text("note:N"),
-    )
-)
-
-st.altair_chart(
-    (heatmap_chart + text + callout).properties(width=750, height=300),
-    use_container_width=True,
-)
-
-# Caption with dynamic values
-row_17 = heatmap_df[
+row_cur_df = heatmap_df[
     (heatmap_df["pipeline_mult"] == pipeline_mult) & (heatmap_df["quality"] == 1.0)
 ]
-if not row_17.empty:
-    r = row_17.iloc[0]
-    st.caption(
-        f"At {pipeline_mult}× pipeline speed, SHIKRA serviceability is "
-        f"{r['serviceability_mean']*100:.1f}% vs reactive "
-        f"{r['reactive_serviceability_mean']*100:.1f}% (gain "
-        f"{r['gain_vs_reactive_mean']*100:+.1f} pp, 95% CI "
-        f"[{r['gain_ci_lo']*100:+.1f}, {r['gain_ci_hi']*100:+.1f}] pp). "
-        f"Synthetic wing."
+best = heatmap_df.loc[heatmap_df["gain_pp"].idxmax()]
+
+# ── KPI row ─────────────────────────────────────────────────────────────────
+tiles = []
+if not row_cur_df.empty:
+    rc = row_cur_df.iloc[0]
+    tiles.append(
+        theme.kpi(
+            "SHIKRA serviceability now",
+            f"{rc['serviceability_pct']:.1f}%",
+            sub=f"95% CI [{rc['serviceability_ci_lo_pct']:.1f}, {rc['serviceability_ci_hi_pct']:.1f}]% · "
+            f"reactive {rc['reactive_serviceability_mean'] * 100:.1f}%",
+            badge=theme.chip(f"{pipeline_mult}× pipeline", "blue"),
+            extra=theme.bar(rc["serviceability_pct"]),
+        )
     )
-else:
-    st.caption("Synthetic wing · advisory.")
-
-st.divider()
-
-# ── Supply-Shock Ranking ────────────────────────────────────────────────────
-st.markdown("### Supply-Shock Ranking — Strategic Chokepoints")
-st.caption(
-    "180-day foreign-supply halt on each component. Ordered by readiness loss. "
-    "Synthetic parameters; the method is the claim."
+    tiles.append(
+        theme.kpi(
+            "Gain vs reactive at current point",
+            f"{rc['gain_pp']:+.1f}",
+            unit="pp",
+            tone="blue" if rc["gain_pp"] >= 0 else "red",
+            sub=f"95% CI [{rc['gain_ci_lo_pp']:+.1f}, {rc['gain_ci_hi_pp']:+.1f}] pp · n=30 seeds",
+        )
+    )
+tiles.append(
+    theme.kpi(
+        "Largest gain in the matrix",
+        f"{best['gain_pp']:+.1f}",
+        unit="pp",
+        tone="green",
+        sub=f"{best['quality_label']} at {best['pipeline_mult']}× · "
+        f"95% CI [{best['gain_ci_lo_pp']:+.1f}, {best['gain_ci_hi_pp']:+.1f}]",
+    )
 )
+if snap_mc is not None:
+    tiles.append(
+        theme.kpi(
+            "Mission-capable now",
+            f"{snap_mc}",
+            unit="/ 54",
+            sub=" · ".join(f"S{i + 1} {c['MC']}/18" for i, c in enumerate(sq_counts or [])),
+            badge=theme.chip(f"day {SNAP_DAY}", "blue"),
+        )
+    )
+theme.kpi_row(tiles)
 
-# Format shock table: clean columns, bold foreign-sourced rows
-shock_display = shock_df.copy()
-shock_display["Loss (pp)"] = shock_display["loss_pp_shock_window"].apply(
-    lambda v: f"{v:.1f} pp"
-)
-shock_display["Peak Extra Grounded"] = shock_display["peak_extra_grounded"].apply(
-    lambda v: f"+{v:.0f}"
-)
-shock_display["Recovery (days)"] = shock_display["recovery_days"].apply(
-    lambda v: f"{v:.0f} d"
-)
-shock_display["Foreign Sourced"] = shock_display["source"].apply(
-    lambda s: "Yes" if s == "foreign" else "No"
-)
+col_main, col_rail = st.columns([2.15, 1], gap="medium")
 
-col_order = [
-    "rank",
-    "lru_id",
-    "source",
-    "Loss (pp)",
-    "Peak Extra Grounded",
-    "Recovery (days)",
-]
-shock_display = shock_display[
-    [c for c in col_order if c in shock_display.columns]
-].rename(
-    columns={
-        "rank": "Rank",
-        "lru_id": "Component",
-        "source": "Source",
-    }
-)
+# ═════════════════════════════════ MAIN ══════════════════════════════════════
+with col_main:
+    # ── Lever Map ────────────────────────────────────────────────────────────
+    st.markdown("### Lever Map")
+    show_absolute = st.toggle("Show absolute serviceability", value=False)
 
-st.dataframe(
-    shock_display,
-    use_container_width=True,
-    hide_index=True,
-)
+    mults = sorted(heatmap_df["pipeline_mult"].unique())
+    qualities = sorted(heatmap_df["quality"].unique())
+    vcol = "serviceability_pct" if show_absolute else "gain_pp"
+    vmax = float(heatmap_df["gain_pp"].abs().max())
+    s_lo, s_hi = float(heatmap_df[vcol].min()), float(heatmap_df[vcol].max())
 
-# Metric callouts for top foreign item
-foreign_lrus = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values("rank")
-if not foreign_lrus.empty:
-    top = foreign_lrus.iloc[0]
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Top Chokepoint", top["lru_id"])
-    c2.metric("Readiness Loss", f"{top['loss_pp_shock_window']:.1f} pp")
-    c3.metric("Peak Extra Grounded", f"+{top['peak_extra_grounded']:.0f} aircraft")
-    c4.metric("Recovery Time", f"{top['recovery_days']:.0f} days")
+    head = '<tr><th class="sk-rowh">Prediction quality ↓ · repair &amp; supply time →</th>'
+    for m in mults:
+        cur = " sk-cur" if m == pipeline_mult else ""
+        sub = "today" if m == pipeline_mult else ("faster" if m < 1.0 else ("baseline" if m == 1.0 else "slower"))
+        head += f'<th class="{cur.strip()}">{m:g}×<br><span style="font-weight:500;color:var(--outline);font-size:9px;text-transform:uppercase;">{sub}</span></th>'
+    head += "</tr>"
+    body = ""
+    for q in qualities:
+        qrows = heatmap_df[heatmap_df["quality"] == q]
+        body += f'<tr><th class="sk-rowh">{theme.esc(qrows.iloc[0]["quality_label"])}</th>'
+        for m in mults:
+            cell = qrows[qrows["pipeline_mult"] == m]
+            if cell.empty:
+                body += "<td>—</td>"
+                continue
+            r = cell.iloc[0]
+            if show_absolute:
+                a = (r[vcol] - s_lo) / ((s_hi - s_lo) or 1.0)
+                bg, fg = f"rgba(56,189,248,{0.12 + 0.68 * a:.2f})", ("#060e20" if a > 0.6 else "#dae2fd")
+                val = f"{r['serviceability_pct']:.1f}%"
+                ci = f"[{r['serviceability_ci_lo_pct']:.1f}, {r['serviceability_ci_hi_pct']:.1f}]"
+            else:
+                bg, fg = theme.diverging(float(r["gain_pp"]), vmax)
+                val = f"{r['gain_pp']:+.1f} pp"
+                ci = f"[{r['gain_ci_lo_pp']:+.1f}, {r['gain_ci_hi_pp']:+.1f}]"
+            cur = ' class="sk-cur"' if (m == pipeline_mult and q == 1.0) else ""
+            body += (
+                f'<td{cur} style="background:{bg};color:{fg};"><div class="sk-cv">{val}</div>'
+                f'<div class="sk-ci">95% CI {ci}</div></td>'
+            )
+        body += "</tr>"
 
-st.divider()
+    legend = (
+        '<div class="sk-diverge" style="margin-top:.6rem;justify-content:space-between;flex-wrap:wrap;">'
+        '<span>Diverging scale: <i style="background:rgba(239,68,68,.8)"></i> loss vs reactive · '
+        '<i style="background:rgba(56,189,248,.12)"></i> ≈ 0 · <i style="background:rgba(56,189,248,.8)"></i> gain</span>'
+        f"<span>Units: percentage points of serviceability · outlined cell = current operating point ({pipeline_mult}×, SHIKRA)</span></div>"
+        if not show_absolute
+        else '<div class="sk-diverge" style="margin-top:.6rem;">Absolute serviceability (%) with 95% CI · darker = higher</div>'
+    )
+    theme.html(
+        '<div class="sk-panel">'
+        + theme.panel_title(
+            "Readiness matrix — prediction quality × pipeline speed",
+            "repair &amp; supply time (× today's baseline; lower = faster) · 30 seeds per cell",
+        )
+        + f'<table class="sk-matrix">{head}{body}</table>{legend}</div>'
+    )
 
-# ── Readiness Forecast Panel (Part 1.4) ──────────────────────────────────────
-st.markdown("### Readiness Forecast Panel")
-st.caption(
-    "Live P(≥N MC) readiness forecast per squadron across D+1…D+7. "
-    "Advisory decision support · synthetic wing."
-)
+    # Caption with dynamic values
+    if not row_cur_df.empty:
+        r = row_cur_df.iloc[0]
+        st.caption(
+            f"At {pipeline_mult}× pipeline speed, SHIKRA serviceability is "
+            f"{r['serviceability_mean']*100:.1f}% vs reactive "
+            f"{r['reactive_serviceability_mean']*100:.1f}% (gain "
+            f"{r['gain_vs_reactive_mean']*100:+.1f} pp, 95% CI "
+            f"[{r['gain_ci_lo']*100:+.1f}, {r['gain_ci_hi']*100:+.1f}] pp). "
+            f"Synthetic wing."
+        )
+    else:
+        st.caption("Synthetic wing · advisory.")
 
+    # ── Supply-Shock Ranking ─────────────────────────────────────────────────
+    st.markdown("### Supply-Shock Ranking — Strategic Chokepoints")
+    st.caption(
+        "180-day foreign-supply halt on each component. Ordered by readiness loss. "
+        "Synthetic parameters; the method is the claim."
+    )
+
+    ranked = shock_df.sort_values("rank")
+    max_loss = float(ranked["loss_pp_shock_window"].max()) or 1.0
+    items = []
+    for _, row in ranked.iterrows():
+        is_all = row["lru_id"] == "all_foreign"
+        loss = float(row["loss_pp_shock_window"])
+        pct = loss / max_loss * 100
+        color = "#ef4444" if pct >= 60 else ("#f59e0b" if pct >= 20 else "#38bdf8")
+        name = "All foreign parts at once" if is_all else row["lru_id"]
+        src_chip = theme.chip(str(row["source"]).upper(), "red" if row["source"] == "foreign" else "green")
+        items.append(
+            '<div class="sk-rank">'
+            f'<div class="sk-rt"><div><span class="sk-rn">#{int(row["rank"])}</span>'
+            f'<span class="sk-rname">{theme.esc(name)}</span> {src_chip}'
+            + (' <span class="sk-chip">combined case</span>' if is_all else "")
+            + f'</div><div class="sk-rv"><b style="color:{color};">−{loss:.1f} pp</b>'
+            f'<div>95% CI [{row["ci_lo"]:.1f}, {row["ci_hi"]:.1f}]</div></div></div>'
+            f'<div class="sk-hbar"><div style="width:{pct:.1f}%;background:{color};"></div></div>'
+            f'<div class="sk-rmeta"><span>Peak extra grounded: +{row["peak_extra_grounded"]:.0f}</span>'
+            f'<span>Recovery: {row["recovery_days"]:.0f} d</span>'
+            f'<span>Stock: base {int(row["stock_base_total"])} · depot {int(row["stock_depot"])}</span></div></div>'
+        )
+    theme.html(
+        '<div class="sk-panel">'
+        + theme.panel_title(
+            "Foreign-sourced parts — readiness lost",
+            "loss in serviceability (pp) over the 180-day halt window · 95% CI · 30 seeds",
+        )
+        + "".join(items)
+        + "</div>"
+    )
+
+    # Format shock table: clean columns
+    shock_display = shock_df.copy()
+    shock_display["Loss (pp)"] = shock_display["loss_pp_shock_window"].apply(lambda v: f"{v:.1f} pp")
+    shock_display["Peak Extra Grounded"] = shock_display["peak_extra_grounded"].apply(lambda v: f"+{v:.0f}")
+    shock_display["Recovery (days)"] = shock_display["recovery_days"].apply(lambda v: f"{v:.0f} d")
+    col_order = ["rank", "lru_id", "source", "Loss (pp)", "Peak Extra Grounded", "Recovery (days)"]
+    shock_display = shock_display[[c for c in col_order if c in shock_display.columns]].rename(
+        columns={"rank": "Rank", "lru_id": "Component", "source": "Source"}
+    )
+    with st.expander("Supply-shock table"):
+        st.dataframe(shock_display, use_container_width=True, hide_index=True)
+
+# ═════════════════════════════════ RAIL ══════════════════════════════════════
 # Honest calibration caption helpers
 calib_path = ROOT / "results" / "readiness_calib.csv"
 conf_cov_val = 0.8626
 mae_fc_val = 1.3263
 mae_pe_val = 0.9818
+raw_cov_val = None
 if calib_path.exists():
     try:
         _cal = pd.read_csv(calib_path)
@@ -235,6 +284,7 @@ if calib_path.exists():
             conf_cov_val = float(_row_cf.iloc[0]["coverage_80"])
         if not _row_fc.empty:
             mae_fc_val = float(_row_fc.iloc[0]["mae"])
+            raw_cov_val = float(_row_fc.iloc[0]["coverage_80"])
         if not _row_pe.empty:
             mae_pe_val = float(_row_pe.iloc[0]["mae"])
     except Exception:
@@ -246,216 +296,140 @@ calib_caption_text = (
     f"Synthetic wing."
 )
 
-readiness_mod = get_readiness_module()
-if readiness_mod is not None:
-    snap = get_snapshot("shikra_v2", seed=1, day=485)
-    if snap is not None:
-        fc_df = get_forecast(
-            snapshot=snap,
-            config=config,
-            params=params,
-            policy="shikra",
-            horizon_days=7,
-            n=150,
-            seed=42,
+
+def _fc_row(lead: int, sqn: int):
+    if fc_df is None or fc_df.empty:
+        return None
+    sub = fc_df[(fc_df["lead_days"] == lead) & (fc_df["sqn"] == sqn)]
+    return None if sub.empty else sub.iloc[0]
+
+
+with col_rail:
+    st.markdown("### Readiness Forecast")
+    if readiness_mod is None:
+        theme.html(
+            '<div class="sk-rcard"><p class="sk-note">Readiness forecast: awaiting readiness module.</p></div>'
         )
-        if fc_df is not None and not fc_df.empty:
-            col_ctrl, col_chart = st.columns([1, 2])
-            with col_ctrl:
-                n_slider = st.slider(
-                    "Target MC Aircraft (N)",
-                    min_value=6,
-                    max_value=18,
-                    value=12,
-                    step=1,
-                    help="Target number of mission-capable aircraft per squadron",
-                )
-                st.caption(f"Displaying probability of achieving ≥ {n_slider} MC aircraft per squadron.")
-
-            with col_chart:
-                col_key = f"p_ge_{n_slider}"
-                sqn_labels = {1: "S1", 2: "S2", 3: "S3"}
-                pivot_rows = []
-                for d in range(1, 8):
-                    row = {"Day": f"D+{d}"}
-                    for sqn in [1, 2, 3]:
-                        sub = fc_df[(fc_df["lead_days"] == d) & (fc_df["sqn"] == sqn)]
-                        if not sub.empty:
-                            prob_val = float(sub.iloc[0].get(col_key, 0.0)) * 100.0
-                            row[sqn_labels[sqn]] = prob_val
-                            row[f"{sqn_labels[sqn]}_exp"] = float(sub.iloc[0]["expected_mc"])
-                        else:
-                            row[sqn_labels[sqn]] = None
-                            row[f"{sqn_labels[sqn]}_exp"] = None
-                    pivot_rows.append(row)
-                pivot_df = pd.DataFrame(pivot_rows)
-
-                # Display as Altair heatmap with valid color scheme
-                tidy = pivot_df[["Day", "S1", "S2", "S3"]].melt(
-                    id_vars="Day", var_name="Squadron", value_name="P(≥N MC) %"
-                )
-                heat = (
-                    alt.Chart(tidy)
-                    .mark_rect()
-                    .encode(
-                        x=alt.X("Squadron:N", title="Squadron"),
-                        y=alt.Y("Day:O", title="Horizon", sort=[f"D+{i}" for i in range(1, 8)]),
-                        color=alt.Color(
-                            "P(≥N MC) %:Q",
-                            scale=alt.Scale(scheme="redyellowgreen", domain=[0, 100]),
-                            title=f"P(≥{n_slider} MC) %",
-                        ),
-                        tooltip=[
-                            alt.Tooltip("Day:O", title="Horizon"),
-                            alt.Tooltip("Squadron:N", title="Squadron"),
-                            alt.Tooltip("P(≥N MC) %:Q", title=f"P(≥{n_slider} MC) %", format=".1f"),
-                        ],
-                    )
-                )
-                text_heat = (
-                    alt.Chart(tidy)
-                    .mark_text(fontWeight="bold", fontSize=13)
-                    .encode(
-                        x=alt.X("Squadron:N"),
-                        y=alt.Y("Day:O", sort=[f"D+{i}" for i in range(1, 8)]),
-                        text=alt.Text("P(≥N MC) %:Q", format=".0f"),
-                        color=alt.condition(
-                            alt.datum["P(≥N MC) %"] > 50,
-                            alt.value("#0f172a"),
-                            alt.value("#f8fafc"),
-                        ),
-                    )
-                )
-                st.altair_chart(
-                    (heat + text_heat).properties(
-                        width=340, height=280,
-                        title=f"P(≥{n_slider} MC) per Squadron — synthetic wing"
-                    ),
-                    use_container_width=False,
-                )
-
-                # Show expected MC table
-                exp_tidy = pivot_df[["Day", "S1_exp", "S2_exp", "S3_exp"]].copy()
-                exp_tidy.columns = ["Day", "S1 Expected MC", "S2 Expected MC", "S3 Expected MC"]
-                st.dataframe(exp_tidy, use_container_width=True, hide_index=True)
-
-                # Honest calibration caption (Part 1.4)
-                st.caption(calib_caption_text)
-        else:
-            st.info("Readiness forecast data not available.")
+    elif fc_df is None or fc_df.empty:
+        st.info("Readiness forecast data not available.")
     else:
-        st.info("Snapshot not available for day 485.")
-else:
-    st.markdown(
-        '<div style="background: #374151; border-radius: 8px; padding: 1rem; '
-        'color: #9ca3af; text-align: center;">'
-        "Readiness forecast: awaiting readiness module."
-        "</div>",
-        unsafe_allow_html=True,
+        theme.html(
+            '<div class="sk-note" style="margin-bottom:.6rem;">Expected mission-capable aircraft per squadron '
+            f"from day {SNAP_DAY}, with the forecast's 80% band (q10–q90 of 150 Monte Carlo runs).</div>"
+        )
+        for sq in (1, 2, 3):
+            c = sq_counts[sq - 1] if sq_counts else None
+            r3, r7 = _fc_row(3, sq), _fc_row(7, sq)
+            now_mc = c["MC"] if c else None
+            tone = "green" if (now_mc or 0) >= 14 else ("amber" if (now_mc or 0) >= 11 else "red")
+            band_html = ""
+            if r3 is not None:
+                lo, hi, ex = float(r3["mc_q10"]), float(r3["mc_q90"]), float(r3["expected_mc"])
+                band_html = (
+                    f'<div class="sk-band"><div class="sk-bi" style="left:{lo / 18 * 100:.1f}%;width:{max(hi - lo, 0.2) / 18 * 100:.1f}%;"></div>'
+                    f'<div class="sk-bm" style="left:calc({ex / 18 * 100:.1f}% - 2px);"></div>'
+                    + (f'<div class="sk-bn" style="left:{now_mc / 18 * 100:.1f}%;" title="now"></div>' if now_mc is not None else "")
+                    + "</div>"
+                    f'<div class="sk-bandax"><span>0</span><span>D+3 band [{lo:.1f}, {hi:.1f}] · white tick = now</span><span>18</span></div>'
+                )
+
+            def _cell(label: str, r) -> str:
+                if r is None:
+                    return f'<div><div class="sk-fl">{label}</div><div class="sk-fv">—</div></div>'
+                return (
+                    f'<div><div class="sk-fl">{label}</div>'
+                    f'<div class="sk-fv">{float(r["expected_mc"]):.1f} <span style="font-size:12px;color:var(--outline);">MC</span></div>'
+                    f'<div class="sk-fb">80% band [{float(r["mc_q10"]):.1f} – {float(r["mc_q90"]):.1f}]</div></div>'
+                )
+
+            now_chip = (
+                theme.chip(f"{now_mc}/18 MC now", tone, led=True) if now_mc is not None else ""
+            )
+            split = (
+                f'{c["MC"]} MC · {c["NMCM"]} NMCM · {c["NMCS"]} NMCS on day {SNAP_DAY}' if c else ""
+            )
+            theme.html(
+                f'<div class="sk-rcard"><div class="sk-rh"><div><div class="sk-rname">Squadron {sq}</div>'
+                f'<div class="sk-rsub">{split}</div></div>{now_chip}</div>'
+                f'<div class="sk-fc2">{_cell("Expected D+3", r3)}{_cell("Expected D+7", r7)}</div>'
+                f"{band_html}</div>"
+            )
+
+        raw_note = (
+            f" The raw band shown covers {raw_cov_val:.4f} of held-out outcomes at D+3; the conformal "
+            "widening is applied in scripts/readiness_calib.py and is not stored, so the wider band is not drawn."
+            if raw_cov_val is not None
+            else ""
+        )
+        st.caption(calib_caption_text + raw_note)
+
+        with st.expander("D+1 … D+7 expected MC table"):
+            rows = []
+            for d in range(1, 8):
+                row = {"Day": f"D+{d}"}
+                for sq in (1, 2, 3):
+                    r = _fc_row(d, sq)
+                    row[f"S{sq} expected MC"] = None if r is None else round(float(r["expected_mc"]), 2)
+                    row[f"S{sq} 80% band"] = (
+                        None if r is None else f"[{float(r['mc_q10']):.1f}, {float(r['mc_q90']):.1f}]"
+                    )
+                rows.append(row)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    # Advisory recommendation card + brief trigger
+    top_foreign = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values("rank")
+    rec_line = ""
+    if not top_foreign.empty and not row_cur_df.empty:
+        tf = top_foreign.iloc[0]
+        row_05 = heatmap_df[(heatmap_df["pipeline_mult"] == 0.5) & (heatmap_df["quality"] == 1.0)]
+        reac_cur = row_cur_df.iloc[0]["reactive_serviceability_mean"] * 100
+        reac_05 = row_05.iloc[0]["reactive_serviceability_mean"] * 100 if not row_05.empty else None
+        lever = (
+            f"Halving the pipeline time (0.5×) lifts even reactive serviceability from {reac_cur:.1f}% to "
+            f"{reac_05:.1f}%. " if reac_05 is not None else ""
+        )
+        rec_line = (
+            f"{lever}The largest single-part exposure is <b>{theme.esc(tf['lru_id'])}</b> "
+            f"(−{tf['loss_pp_shock_window']:.1f} pp over a 180-day halt): first candidate for indigenisation."
+        )
+    theme.html(
+        '<div class="sk-advisory"><div class="sk-ah">Advisory recommendation</div>'
+        f"<p>{rec_line}</p>"
+        '<p style="color:var(--outline)!important;font-size:11px!important;font-family:var(--font-mono);">'
+        "Source: results/heatmap.csv · results/supply_shock.csv · requires officer sign-off</p></div>"
     )
+    open_brief = st.button("Open one-page brief", key="open_brief_btn", use_container_width=True)
 
-st.divider()
-
-# ── Commander's One-Page Brief (Part 2) ──────────────────────────────────────
-st.markdown("### Commander's Brief")
-
-if st.button("Open one-page brief", key="open_brief_btn"):
+# ── Commander's One-Page Brief ───────────────────────────────────────────────
+if open_brief:
     from app.lib.audit import get_recent as _get_rec
     from app.lib.audit import verify as audit_verify
 
     # a. Wing status now: MC / NMCM / NMCS counts per squadron (from snapshot)
-    snap_now = get_snapshot("shikra_v2", seed=1, day=485) if readiness_mod else None
-    s1_mc, s1_nmcm, s1_nmcs = 0, 0, 0
-    s2_mc, s2_nmcm, s2_nmcs = 0, 0, 0
-    s3_mc, s3_nmcm, s3_nmcs = 0, 0, 0
-    if snap_now is not None and "tails" in snap_now:
-        for t in snap_now["tails"]:
-            sq = t.get("sqn", 0)
-            st_val = t.get("status", "MC")
-            if sq == 0:
-                if st_val == "MC":
-                    s1_mc += 1
-                elif st_val == "NMCM":
-                    s1_nmcm += 1
-                else:
-                    s1_nmcs += 1
-            elif sq == 1:
-                if st_val == "MC":
-                    s2_mc += 1
-                elif st_val == "NMCM":
-                    s2_nmcm += 1
-                else:
-                    s2_nmcs += 1
-            else:
-                if st_val == "MC":
-                    s3_mc += 1
-                elif st_val == "NMCM":
-                    s3_nmcm += 1
-                else:
-                    s3_nmcs += 1
-    else:
+    counts_b = [dict(c) for c in sq_counts] if sq_counts else None
+    if counts_b is None:
         from app.lib.state import get_wing_state_on_day
-        ws = get_wing_state_on_day(485, policy="shikra_v2", seed=1)
+
+        ws = get_wing_state_on_day(SNAP_DAY, policy="shikra_v2", seed=1)
+        counts_b = [{"MC": 0, "NMCM": 0, "NMCS": 0} for _ in range(3)]
         for tinfo in ws["tail_statuses"]:
-            sq_str = tinfo["squadron"]
+            sq_i = int(tinfo["squadron"][1:]) - 1
             st_val = tinfo["status"]
-            if sq_str == "S1":
-                if st_val == "MC":
-                    s1_mc += 1
-                elif st_val == "NMCM":
-                    s1_nmcm += 1
-                else:
-                    s1_nmcs += 1
-            elif sq_str == "S2":
-                if st_val == "MC":
-                    s2_mc += 1
-                elif st_val == "NMCM":
-                    s2_nmcm += 1
-                else:
-                    s2_nmcs += 1
-            else:
-                if st_val == "MC":
-                    s3_mc += 1
-                elif st_val == "NMCM":
-                    s3_nmcm += 1
-                else:
-                    s3_nmcs += 1
+            counts_b[sq_i][st_val if st_val in ("MC", "NMCM") else "NMCS"] += 1
+    total_mc = sum(c["MC"] for c in counts_b)
 
-    total_mc = s1_mc + s2_mc + s3_mc
+    # b. Readiness forecast: expected MC with 80% band per squadron at D+3 and D+7
+    def _fc_cell(lead: int, sq: int) -> str:
+        r = _fc_row(lead, sq)
+        if r is None:
+            return "—"
+        return f"{float(r['expected_mc']):.1f} MC [{float(r['mc_q10']):.1f}–{float(r['mc_q90']):.1f}]"
 
-    # b. Readiness forecast: P(≥12 MC) per squadron at D+3 and D+7
-    fc_brief = None
-    if snap_now is not None:
-        fc_brief = get_forecast(
-            snapshot=snap_now,
-            config=config,
-            params=params,
-            policy="shikra",
-            horizon_days=7,
-            n=150,
-            seed=42,
-        )
-
-    p12_d3 = {}
-    p12_d7 = {}
-    exp_d3 = {}
-    exp_d7 = {}
-    if fc_brief is not None and not fc_brief.empty:
-        for sq in [1, 2, 3]:
-            r3 = fc_brief[(fc_brief["lead_days"] == 3) & (fc_brief["sqn"] == sq)]
-            if not r3.empty:
-                p12_d3[f"S{sq}"] = f"{float(r3.iloc[0].get('p_ge_12', 0.0)) * 100:.1f}%"
-                exp_d3[f"S{sq}"] = f"{float(r3.iloc[0]['expected_mc']):.1f}"
-            r7 = fc_brief[(fc_brief["lead_days"] == 7) & (fc_brief["sqn"] == sq)]
-            if not r7.empty:
-                p12_d7[f"S{sq}"] = f"{float(r7.iloc[0].get('p_ge_12', 0.0)) * 100:.1f}%"
-                exp_d7[f"S{sq}"] = f"{float(r7.iloc[0]['expected_mc']):.1f}"
-
-    # c. Top levers: reactive serviceability at today's pipeline vs 0.5× (and difference); SHIKRA gain at 0.5×
-    row_cur = heatmap_raw[(heatmap_raw["pipeline_mult"] == pipeline_mult) & (heatmap_raw["quality"] == 1.0)]
+    # c. Top levers
     row_05 = heatmap_raw[(heatmap_raw["pipeline_mult"] == 0.5) & (heatmap_raw["quality"] == 1.0)]
-    if not row_cur.empty and not row_05.empty:
-        reac_cur = float(row_cur.iloc[0]["reactive_serviceability_mean"]) * 100
+    row_cb = heatmap_raw[(heatmap_raw["pipeline_mult"] == pipeline_mult) & (heatmap_raw["quality"] == 1.0)]
+    if not row_cb.empty and not row_05.empty:
+        reac_cur = float(row_cb.iloc[0]["reactive_serviceability_mean"]) * 100
         reac_05 = float(row_05.iloc[0]["reactive_serviceability_mean"]) * 100
         diff_reac = reac_05 - reac_cur
         shikra_gain_05 = float(row_05.iloc[0]["gain_vs_reactive_mean"]) * 100
@@ -471,128 +445,67 @@ if st.button("Open one-page brief", key="open_brief_btn"):
     top3_indig = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values(
         "loss_pp_shock_window", ascending=False
     ).head(3)
-    indig_items = []
-    for _, row in top3_indig.iterrows():
-        indig_items.append(
-            f"<b>{row['lru_id']}</b>: loss {row['loss_pp_shock_window']:.1f} pp "
-            f"(peak +{row['peak_extra_grounded']:.0f} grounded, recovery {row['recovery_days']:.0f} days)"
-        )
+    indig_items = "".join(
+        f"<li><b>{theme.esc(row['lru_id'])}</b>: loss {row['loss_pp_shock_window']:.1f} pp "
+        f"(peak +{row['peak_extra_grounded']:.0f} grounded, recovery {row['recovery_days']:.0f} days)</li>"
+        for _, row in top3_indig.iterrows()
+    )
 
-    # e. Pending sign-offs: count of open EO recommendations + audit-chain status line
+    # e. Pending sign-offs + audit-chain status line
     recent_logs = _get_rec(100)
     pending_recs = sum(1 for r in recent_logs if r.get("decision") == "approved")
     chain = audit_verify()
     if chain["ok"]:
         root_abbr = (chain.get("latest_root") or "none")[:12]
-        audit_line = f"Audit chain: intact · {chain['n_rows']} records · root `{root_abbr}`"
+        audit_line = f"Audit chain: intact · {chain['n_rows']} records · root <code>{root_abbr}</code>"
     else:
         audit_line = f"Audit chain: BROKEN at row id={chain['first_bad_id']}"
 
+    status_rows = "".join(
+        f'<tr><td>Squadron {i + 1} (S{i + 1})</td><td class="sk-mono sk-t-green">{c["MC"]}</td>'
+        f'<td class="sk-mono sk-t-amber">{c["NMCM"]}</td><td class="sk-mono sk-t-red">{c["NMCS"]}</td>'
+        '<td class="sk-mono">18</td></tr>'
+        for i, c in enumerate(counts_b)
+    )
+    status_rows += (
+        f'<tr><td><b>Total wing</b></td><td class="sk-mono sk-t-green"><b>{total_mc} / 54 MC ({total_mc / 54.0 * 100:.1f}%)</b></td>'
+        f'<td class="sk-mono sk-t-amber">{sum(c["NMCM"] for c in counts_b)}</td>'
+        f'<td class="sk-mono sk-t-red">{sum(c["NMCS"] for c in counts_b)}</td><td class="sk-mono">54</td></tr>'
+    )
+    fc_rows = "".join(
+        f'<tr><td>D+{lead}</td>' + "".join(f'<td class="sk-mono">{_fc_cell(lead, s)}</td>' for s in (1, 2, 3)) + "</tr>"
+        for lead in (3, 7)
+    )
+    h3 = 'style="font-size:12px!important;border:none!important;padding:0!important;margin:1.1rem 0 .4rem 0!important;color:var(--outline)!important;letter-spacing:.08em;"'
     brief_html = f"""
 <style>
 @media print {{
   [data-testid="stSidebar"], button, .stButton, header {{ display: none !important; }}
   body, .stApp {{ background: #ffffff !important; color: #000000 !important; }}
-  #shikra_brief {{ border: none !important; background: #ffffff !important; color: #000000 !important; padding: 0 !important; }}
-  #shikra_brief h2 {{ color: #0f172a !important; }}
-  #shikra_brief h3 {{ color: #334155 !important; }}
-  #shikra_brief table {{ border-color: #cbd5e1 !important; }}
-  #shikra_brief th, #shikra_brief td {{ color: #000000 !important; border-bottom: 1px solid #cbd5e1 !important; }}
+  #shikra_brief {{ background: #ffffff !important; color: #000000 !important; padding: 0 !important; }}
+  #shikra_brief * {{ color: #000000 !important; }}
 }}
 </style>
-<div id="shikra_brief" style="background:#0f172a;color:#e2e8f0;border:1px solid #334155;
-     border-radius:10px;padding:2rem;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;max-width:920px;margin-top:1rem;">
-  <h2 style="color:#38bdf8;margin-top:0;font-size:1.6rem;letter-spacing:1px;border-bottom:2px solid #38bdf8;padding-bottom:0.5rem;">
-    SHIKRA · Commander's brief · Day 485 · synthetic wing
-  </h2>
-
-  <h3 style="color:#94a3b8;font-size:1rem;margin-top:1.2rem;text-transform:uppercase;letter-spacing:0.5px;">1. Wing Status Now (Day 485)</h3>
-  <table style="border-collapse:collapse;width:100%;margin-bottom:1rem;font-size:0.9rem;">
-    <tr style="border-bottom:1px solid #334155;text-align:left;">
-      <th style="padding:6px 10px;color:#94a3b8;">Squadron</th>
-      <th style="padding:6px 10px;color:#86efac;">Mission Capable (MC)</th>
-      <th style="padding:6px 10px;color:#fde047;">Maintenance (NMCM)</th>
-      <th style="padding:6px 10px;color:#fca5a5;">Supply Waiting (NMCS)</th>
-      <th style="padding:6px 10px;color:#38bdf8;">Total Aircraft</th>
-    </tr>
-    <tr style="border-bottom:1px solid #1e293b;">
-      <td style="padding:6px 10px;font-weight:600;">Squadron 1 (S1)</td>
-      <td style="padding:6px 10px;color:#86efac;font-weight:700;">{s1_mc}</td>
-      <td style="padding:6px 10px;color:#fde047;">{s1_nmcm}</td>
-      <td style="padding:6px 10px;color:#fca5a5;">{s1_nmcs}</td>
-      <td style="padding:6px 10px;">18</td>
-    </tr>
-    <tr style="border-bottom:1px solid #1e293b;">
-      <td style="padding:6px 10px;font-weight:600;">Squadron 2 (S2)</td>
-      <td style="padding:6px 10px;color:#86efac;font-weight:700;">{s2_mc}</td>
-      <td style="padding:6px 10px;color:#fde047;">{s2_nmcm}</td>
-      <td style="padding:6px 10px;color:#fca5a5;">{s2_nmcs}</td>
-      <td style="padding:6px 10px;">18</td>
-    </tr>
-    <tr style="border-bottom:1px solid #1e293b;">
-      <td style="padding:6px 10px;font-weight:600;">Squadron 3 (S3)</td>
-      <td style="padding:6px 10px;color:#86efac;font-weight:700;">{s3_mc}</td>
-      <td style="padding:6px 10px;color:#fde047;">{s3_nmcm}</td>
-      <td style="padding:6px 10px;color:#fca5a5;">{s3_nmcs}</td>
-      <td style="padding:6px 10px;">18</td>
-    </tr>
-    <tr style="border-top:2px solid #334155;font-weight:700;">
-      <td style="padding:6px 10px;">Total Wing</td>
-      <td style="padding:6px 10px;color:#4ade80;">{total_mc} / 54 MC ({(total_mc/54.0)*100:.1f}%)</td>
-      <td style="padding:6px 10px;color:#fde047;">{s1_nmcm + s2_nmcm + s3_nmcm}</td>
-      <td style="padding:6px 10px;color:#fca5a5;">{s1_nmcs + s2_nmcs + s3_nmcs}</td>
-      <td style="padding:6px 10px;">54</td>
-    </tr>
-  </table>
-
-  <h3 style="color:#94a3b8;font-size:1rem;margin-top:1.2rem;text-transform:uppercase;letter-spacing:0.5px;">2. Readiness Forecast (P(≥12 MC))</h3>
-  <table style="border-collapse:collapse;width:100%;margin-bottom:0.5rem;font-size:0.9rem;">
-    <tr style="border-bottom:1px solid #334155;text-align:left;">
-      <th style="padding:6px 10px;color:#94a3b8;">Horizon</th>
-      <th style="padding:6px 10px;color:#94a3b8;">S1 P(≥12 MC) [Expected]</th>
-      <th style="padding:6px 10px;color:#94a3b8;">S2 P(≥12 MC) [Expected]</th>
-      <th style="padding:6px 10px;color:#94a3b8;">S3 P(≥12 MC) [Expected]</th>
-    </tr>
-    <tr style="border-bottom:1px solid #1e293b;">
-      <td style="padding:6px 10px;font-weight:600;">D+3</td>
-      <td style="padding:6px 10px;">{p12_d3.get('S1', '—')} ({exp_d3.get('S1', '—')} MC)</td>
-      <td style="padding:6px 10px;">{p12_d3.get('S2', '—')} ({exp_d3.get('S2', '—')} MC)</td>
-      <td style="padding:6px 10px;">{p12_d3.get('S3', '—')} ({exp_d3.get('S3', '—')} MC)</td>
-    </tr>
-    <tr style="border-bottom:1px solid #1e293b;">
-      <td style="padding:6px 10px;font-weight:600;">D+7</td>
-      <td style="padding:6px 10px;">{p12_d7.get('S1', '—')} ({exp_d7.get('S1', '—')} MC)</td>
-      <td style="padding:6px 10px;">{p12_d7.get('S2', '—')} ({exp_d7.get('S2', '—')} MC)</td>
-      <td style="padding:6px 10px;">{p12_d7.get('S3', '—')} ({exp_d7.get('S3', '—')} MC)</td>
-    </tr>
-  </table>
-  <p style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;font-style:italic;">
-    {calib_caption_text}
-  </p>
-
-  <h3 style="color:#94a3b8;font-size:1rem;margin-top:1.2rem;text-transform:uppercase;letter-spacing:0.5px;">3. Top Levers (heatmap.csv)</h3>
-  <p style="font-size:0.88rem;line-height:1.5;margin-bottom:1rem;">
-    {lever_str}
-  </p>
-
-  <h3 style="color:#94a3b8;font-size:1rem;margin-top:1.2rem;text-transform:uppercase;letter-spacing:0.5px;">4. Top 3 Parts to Indigenise (supply_shock.csv)</h3>
-  <ol style="margin:0 0 1rem;padding-left:1.5rem;font-size:0.88rem;line-height:1.6;">
-    {"".join(f"<li>{item}</li>" for item in indig_items)}
-  </ol>
-
-  <h3 style="color:#94a3b8;font-size:1rem;margin-top:1.2rem;text-transform:uppercase;letter-spacing:0.5px;">5. Pending Sign-offs & Audit Integrity</h3>
-  <p style="margin:0 0 0.5rem;font-size:0.88rem;">
-    EO approved recommendations: <b>{pending_recs}</b> · <span style="color:#86efac;">{audit_line}</span>
-  </p>
-
-  <hr style="border-color:#334155;margin:1.5rem 0 1rem 0;"/>
-  <p style="font-size:0.78rem;color:#64748b;margin:0;text-align:center;">
-    Advisory decision support · offline · synthetic wing + NASA C-MAPSS
-  </p>
+<div id="shikra_brief" class="sk-panel" style="max-width:960px;border-top:2px solid var(--primary-container);padding:1.5rem 2rem;">
+<div class="sk-eyebrow">Advisory recommendation · one-page brief</div>
+<h2 style="color:var(--primary);margin:.5rem 0 0 0;font-size:22px;">SHIKRA · Commander's brief · Day 485 · synthetic wing</h2>
+<h3 {h3}>1. Wing status now (day {SNAP_DAY})</h3>
+<table class="sk-table"><tr><th>Squadron</th><th>Mission capable (MC)</th><th>Maintenance (NMCM)</th><th>Supply waiting (NMCS)</th><th>Total aircraft</th></tr>{status_rows}</table>
+<h3 {h3}>2. Readiness forecast (expected MC, 80% band)</h3>
+<table class="sk-table"><tr><th>Horizon</th><th>S1</th><th>S2</th><th>S3</th></tr>{fc_rows}</table>
+<p class="sk-note" style="font-style:italic;margin-top:.4rem;">{calib_caption_text}</p>
+<h3 {h3}>3. Top levers (heatmap.csv)</h3>
+<p class="sk-note" style="font-size:13px;">{lever_str}</p>
+<h3 {h3}>4. Top 3 parts to indigenise (supply_shock.csv)</h3>
+<ol class="sk-note" style="font-size:13px;">{indig_items}</ol>
+<h3 {h3}>5. Pending sign-offs &amp; audit integrity</h3>
+<p class="sk-note" style="font-size:13px;">EO approved recommendations: <b>{pending_recs}</b> · <span class="sk-t-green">{audit_line}</span></p>
+<p class="sk-mono sk-t-muted" style="font-size:11px;text-align:center;margin-top:1.2rem;">Advisory decision support · offline · synthetic wing + NASA C-MAPSS</p>
 </div>
 """
-    st.markdown(brief_html, unsafe_allow_html=True)
+    st.markdown(theme.oneline(brief_html), unsafe_allow_html=True)
 
 # ── Performance ──────────────────────────────────────────────────────────────
 elapsed = time.perf_counter() - start_time
 st.caption(f"Page load: {elapsed:.2f} s. Synthetic wing · SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+theme.footer()

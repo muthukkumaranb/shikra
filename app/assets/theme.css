@@ -64,7 +64,7 @@
 
 /* ── Streamlit chrome ─────────────────────────────────────────────────────── */
 html, body, .stApp, [data-testid="stAppViewContainer"] { background: var(--surface) !important; color: var(--on-surface); font-family: var(--font-sans); }
-.stApp p, .stApp li, .stApp label, .stApp span, .stApp div { font-family: var(--font-sans); }
+.stApp, .stApp [data-testid="stMarkdownContainer"], .stApp [data-testid="stCaptionContainer"], .stApp [data-testid="stSidebarNav"], .stApp button, .stApp input { font-family: var(--font-sans); }
 .stApp code, .stApp pre, .stApp kbd { font-family: var(--font-mono) !important; }
 [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], [data-testid="stStatusWidget"], #MainMenu, footer { display: none !important; height: 0 !important; }
 [data-testid="stMainBlockContainer"], .block-container { padding-top: 0.75rem !important; padding-left: var(--margin-desktop) !important; padding-right: var(--margin-desktop) !important; padding-bottom: 1rem !important; max-width: 100% !important; }
