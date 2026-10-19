@@ -131,6 +131,11 @@ All committed benchmark results are bitwise-reproducible from a single command:
 - **Linux / macOS (`make verify`)**: Runs the full verification pipeline including the 545-day supply-shock simulation (`reproduce-sim`), followed by bitwise validation against all committed CSVs and git diff verification (~73 min).
 - **Windows (`scripts/verify.ps1`)**: Windows PowerShell validation. By default, executes the full test suite (`pytest -q -m "not data"`), all simulations EXCEPT the ~65-min supply-shock run, followed by bitwise comparison of committed CSVs (`scripts/check_reproduce.py`) and working tree check (~8 min). Add `-Full` to also regenerate the supply-shock run (~73 min).
 
+### Tests
+
+- 138 automated tests (`pytest --collect-only -q`); 130 run without the raw NASA data and run on every push in CI (badge above); the rest need `make data`.
+- Last local run: 130 passed, 8 deselected, 14 warnings in 28.87s, commit 1e55644.
+
 ### Approximate Benchmark Times (Python 3.11.16)
 
 | Step | Command | Approximate Runtime |
