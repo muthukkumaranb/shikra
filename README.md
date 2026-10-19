@@ -149,6 +149,14 @@ Python 3.11.x is strictly required because pre-built wheels for pinned scientifi
 
 > **Windows Note:** If OR-Tools crashes with an access violation, install the Microsoft Visual C++ Redistributable (x64) and restart the shell.
 
+### Docker (optional)
+
+```bash
+docker compose build
+docker compose up app                 # app on http://localhost:8501
+docker compose run --rm shikra        # full air-gapped reproduction (~73 min, no network)
+```
+
 ---
 
 ## Installation and usage
