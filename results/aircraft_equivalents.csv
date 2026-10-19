@@ -1,0 +1,8 @@
+item,pp_or_value,aircraft_equivalent,source_csv,note
+pipeline lever: reactive serviceability 0.5x vs 1.7x pipeline (pp),30.899,16.69,results/heatmap.csv;config/wing.yaml,synthetic wing; average over the measured year
+SHIKRA gain vs reactive at 0.5x pipeline (pp),0.938,0.51,results/heatmap.csv;config/wing.yaml,synthetic wing; average over the measured year
+supply-shock loss: apu_start (foreign) (pp),21.193,11.44,results/supply_shock.csv;config/wing.yaml,synthetic wing; average over the supply-halt window
+supply-shock loss: ecs_valve (foreign) (pp),7.892,4.26,results/supply_shock.csv;config/wing.yaml,synthetic wing; average over the supply-halt window
+supply-shock loss: radar_tx (foreign) (pp),3.356,1.81,results/supply_shock.csv;config/wing.yaml,synthetic wing; average over the supply-halt window
+unscheduled engine removals per year: reactive,72.667,,results/policy_summary.csv;config/wing.yaml,"synthetic wing; average over the measured year; count of removals, not aircraft"
+unscheduled engine removals per year: SHIKRA,0.0,,results/policy_summary.csv;config/wing.yaml,"synthetic wing; average over the measured year; count of removals, not aircraft"

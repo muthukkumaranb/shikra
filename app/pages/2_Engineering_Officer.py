@@ -435,6 +435,9 @@ if recent:
 else:
     st.info("No audit entries yet.")
 
+st.divider()
+from app.lib.explain_panel import render_for_tail  # noqa: E402, I001
+render_for_tail(snap, tail_idx, R_star)
 # ── Performance ──────────────────────────────────────────────────────────────
 elapsed = time.perf_counter() - start_time
 st.caption(f"Page load: {elapsed:.2f} s. SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
