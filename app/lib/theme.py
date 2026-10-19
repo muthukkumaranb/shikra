@@ -24,6 +24,8 @@ ASSETS = ROOT / "app" / "assets"
 CSS_PATH = ASSETS / "theme.css"
 
 TAGLINE = "Predict the snag, place the spare, fly the sortie."
+EXPANSION = "Smart Health-Integrated Knowledge for Readiness Advisory"
+BIRD = "Named after the shikra (Accipiter badius), a small, sharp-eyed Indian hawk that spots its target early."
 FORMATION = "Synthetic wing · 54 aircraft · 3 squadrons"
 FOOTER = "SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS"
 N_AIRCRAFT = 54
@@ -95,8 +97,8 @@ def _sidebar() -> None:
         <div class="sk-side-brand">
           <div class="sk-mark">
             <div class="sk-logo">{jet_svg("#8ed5ff", 22)}</div>
-            <div><div class="sk-name">SHIKRA</div>
-            <div class="sk-sub">Fleet readiness advisory</div></div>
+            <div><div class="sk-name" title="{esc(BIRD)}">SHIKRA</div>
+            <div class="sk-sub">{esc(EXPANSION)}</div></div>
           </div>
           <div class="sk-tag">{esc(TAGLINE)}</div>
         </div>
@@ -109,6 +111,7 @@ def _sidebar() -> None:
         <div class="sk-side-foot">
           <div class="sk-h">{_LOCK}<span>Air-gapped</span></div>
           <p>Air-gapped · advisory · synthetic wing + NASA C-MAPSS</p>
+          <p class="sk-bird">{esc(BIRD)}</p>
         </div>
         """,
         target=st.sidebar,

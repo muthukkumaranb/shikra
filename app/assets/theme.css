@@ -117,6 +117,7 @@ div[role="dialog"] { background: var(--surface-container-high) !important; borde
 @media (max-height: 760px) { .sk-side-foot { position: static; width: auto; margin: 0.5rem 1rem; } }
 .sk-side-foot .sk-h { display: flex; align-items: center; gap: 0.35rem; color: var(--primary); font-size: 10px; line-height: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .sk-side-foot p { margin: 0.3rem 0 0 0 !important; font-size: 12px !important; line-height: 16px; color: var(--on-surface-variant) !important; }
+.sk-side-foot p.sk-bird { font-size: 10px !important; line-height: 13px; font-style: italic; color: var(--outline) !important; }
 
 /* ── Top status strip ─────────────────────────────────────────────────────── */
 .sk-strip { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-md); background: var(--surface-container-low); border-radius: var(--rounded-xl); padding: 0.6rem var(--space-md); box-shadow: 0 1px 8px rgba(0,0,0,0.4); margin-bottom: var(--space-md); }
