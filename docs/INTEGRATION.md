@@ -61,7 +61,7 @@ The following structure is proposed as the minimal viable evaluation framework t
 - **Duration**: 90 calendar days conducted strictly in **shadow mode** (purely advisory; maintenance and flying programmes proceed on established operational guidelines without taking action based on SHIKRA advice).
 - **Baseline Re-fitting**: Before running comparisons, baseline repair turnaround times, depot transit delays, vendor lead times, and initial stock quantities must be re-fitted from the squadron's historical export data rather than synthetic parameters.
 - **Success Criteria**:
-  1. **Calibration Coverage on Real Telemetry**: Empirical coverage of conformal prediction intervals matches or exceeds nominal confidence bounds (evaluated using metrics corresponding to `coverage_80` and `coverage_90` on real component removals).
+  1. **Calibration Coverage on Real Telemetry**: Empirical vs nominal coverage (as in `results/coverage.csv`) matches or exceeds nominal confidence bounds on real component removals.
   2. **Data-Quality Quarantine Rate**: Quarantine mechanism correctly identifies malformed, conflicting, or out-of-order maintenance records with near-zero false alarms on valid entries.
   3. **Officer Sign-off Agreement Rate**: Proportion of advisory recommendations endorsed or accepted by the Engineering Officer during post-hoc review versus rejected or overridden.
 
@@ -71,5 +71,5 @@ The following structure is proposed as the minimal viable evaluation framework t
 
 - **Air-Gapped Operation**: SHIKRA runs entirely on a single standalone air-gapped workstation or secure local server.
 - **No Internet or External Telemetry**: Zero inbound or outbound networking; web-based telemetry and usage analytics are disabled (`gatherUsageStats = false` in `.streamlit/config.toml`).
-- **Local Storage**: All ingested exports, intermediate states, and decisions reside in a local SQLite file store (`app/data/shikra.db`).
-- **Local Cryptographic Key**: The HMAC secret key used for signing tamper-evident audit records is stored locally in host environment storage; the resulting audit trail is tamper-evident, not tamper-proof against privileged host administrator modification.
+- **Local Storage**: All ingested exports, intermediate states, and decisions reside in local SQLite stores: the unified ingestion database is `data/unified.db`, and the tamper-evident audit log is `app_data/audit.db`.
+- **Local Cryptographic Key**: The HMAC secret key used for signing tamper-evident audit records is stored in the file `app_data/audit.key` (created mode 0600); the resulting audit trail is tamper-evident, not tamper-proof against privileged host administrator modification.
