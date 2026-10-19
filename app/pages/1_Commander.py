@@ -18,12 +18,20 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.lib import theme  # noqa: E402
-from app.lib.data import load_config, load_heatmap, load_params, load_supply_shock  # noqa: E402
+from app.lib.brief import brief_document  # noqa: E402
+from app.lib.data import (  # noqa: E402
+    load_config,
+    load_heatmap,
+    load_params,
+    load_policy_summary,
+    load_supply_shock,
+)
 from app.lib.readiness import (  # noqa: E402
     get_forecast,
     get_readiness_module,
     get_snapshot,
 )
+from app.lib.utilisation import display_table, utilisation_table  # noqa: E402
 
 start_time = time.perf_counter()
 
@@ -42,6 +50,7 @@ heatmap_raw = load_heatmap()
 config = load_config()
 params = load_params()
 shock_df = load_supply_shock()
+util_df = utilisation_table(load_policy_summary())
 
 pipeline_mult = config.get("pipeline_mult", 1.7)
 
@@ -137,7 +146,30 @@ if snap_mc is not None:
             badge=theme.chip(f"day {SNAP_DAY}", "blue"),
         )
     )
+util_shikra = util_df[util_df["policy"] == "shikra_v2"]
+util_reactive = util_df[util_df["policy"] == "reactive"]
+if not util_shikra.empty and not util_reactive.empty:
+    us, ur = util_shikra.iloc[0], util_reactive.iloc[0]
+    tiles.append(
+        theme.kpi(
+            "Flying task met",
+            f"{us['task_mean'] * 100:.1f}%",
+            sub=f"95% CI [{us['task_ci_lo'] * 100:.1f}, {us['task_ci_hi'] * 100:.1f}]% · "
+            f"reactive {ur['task_mean'] * 100:.1f}%",
+            badge=theme.chip("SHIKRA", "blue"),
+            extra=theme.bar(us["task_mean"] * 100),
+        )
+    )
 theme.kpi_row(tiles)
+
+UTIL_CAPTION = (
+    "Utilisation = sorties flown ÷ sorties demanded (0.8 per mission-capable tail per day, "
+    "config/wing.yaml). Synthetic wing, 30 seeds, today's pipeline."
+)
+if not util_df.empty:
+    st.markdown("### Utilisation — flying task met")
+    st.dataframe(display_table(util_df), use_container_width=True, hide_index=True)
+    st.caption(UTIL_CAPTION)
 
 col_main, col_rail = st.columns([2.15, 1], gap="medium")
 
@@ -304,6 +336,127 @@ def _fc_row(lead: int, sqn: int):
     return None if sub.empty else sub.iloc[0]
 
 
+# ── Commander's One-Page Brief ───────────────────────────────────────────────
+def _build_brief() -> tuple[str, str]:
+    """Return (print stylesheet, brief body HTML); built once, shown and downloaded."""
+    from app.lib.audit import get_recent as _get_rec
+    from app.lib.audit import verify as audit_verify
+
+    # a. Wing status now: MC / NMCM / NMCS counts per squadron (from snapshot)
+    counts_b = [dict(c) for c in sq_counts] if sq_counts else None
+    if counts_b is None:
+        from app.lib.state import get_wing_state_on_day
+
+        ws = get_wing_state_on_day(SNAP_DAY, policy="shikra_v2", seed=1)
+        counts_b = [{"MC": 0, "NMCM": 0, "NMCS": 0} for _ in range(3)]
+        for tinfo in ws["tail_statuses"]:
+            sq_i = int(tinfo["squadron"][1:]) - 1
+            st_val = tinfo["status"]
+            counts_b[sq_i][st_val if st_val in ("MC", "NMCM") else "NMCS"] += 1
+    total_mc = sum(c["MC"] for c in counts_b)
+
+    # b. Readiness forecast: expected MC with 80% band per squadron at D+3 and D+7
+    def _fc_cell(lead: int, sq: int) -> str:
+        r = _fc_row(lead, sq)
+        if r is None:
+            return "—"
+        return f"{float(r['expected_mc']):.1f} MC [{float(r['mc_q10']):.1f}–{float(r['mc_q90']):.1f}]"
+
+    # c. Top levers
+    row_05 = heatmap_raw[(heatmap_raw["pipeline_mult"] == 0.5) & (heatmap_raw["quality"] == 1.0)]
+    row_cb = heatmap_raw[(heatmap_raw["pipeline_mult"] == pipeline_mult) & (heatmap_raw["quality"] == 1.0)]
+    if not row_cb.empty and not row_05.empty:
+        reac_cur = float(row_cb.iloc[0]["reactive_serviceability_mean"]) * 100
+        reac_05 = float(row_05.iloc[0]["reactive_serviceability_mean"]) * 100
+        diff_reac = reac_05 - reac_cur
+        shikra_gain_05 = float(row_05.iloc[0]["gain_vs_reactive_mean"]) * 100
+        lever_str = (
+            f"Reactive serviceability at today's pipeline ({pipeline_mult}×): <b>{reac_cur:.1f}%</b> vs "
+            f"0.5× pipeline: <b>{reac_05:.1f}%</b> ({diff_reac:+.1f} pp diff computed in code). "
+            f"SHIKRA's gain at 0.5× pipeline: <b>{shikra_gain_05:+.1f} pp</b>."
+        )
+    else:
+        lever_str = "Pipeline lever data available in results/heatmap.csv."
+
+    # d. Top 3 parts to indigenise (sorted by loss over the halt)
+    top3_indig = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values(
+        "loss_pp_shock_window", ascending=False
+    ).head(3)
+    indig_items = "".join(
+        f"<li><b>{theme.esc(row['lru_id'])}</b>: loss {row['loss_pp_shock_window']:.1f} pp "
+        f"(peak +{row['peak_extra_grounded']:.0f} grounded, recovery {row['recovery_days']:.0f} days)</li>"
+        for _, row in top3_indig.iterrows()
+    )
+
+    # e. Pending sign-offs + audit-chain status line
+    recent_logs = _get_rec(100)
+    pending_recs = sum(1 for r in recent_logs if r.get("decision") == "approved")
+    chain = audit_verify()
+    if chain["ok"]:
+        root_abbr = (chain.get("latest_root") or "none")[:12]
+        audit_line = f"Audit chain: intact · {chain['n_rows']} records · root <code>{root_abbr}</code>"
+    else:
+        audit_line = f"Audit chain: BROKEN at row id={chain['first_bad_id']}"
+
+    status_rows = "".join(
+        f'<tr><td>Squadron {i + 1} (S{i + 1})</td><td class="sk-mono sk-t-green">{c["MC"]}</td>'
+        f'<td class="sk-mono sk-t-amber">{c["NMCM"]}</td><td class="sk-mono sk-t-red">{c["NMCS"]}</td>'
+        '<td class="sk-mono">18</td></tr>'
+        for i, c in enumerate(counts_b)
+    )
+    status_rows += (
+        f'<tr><td><b>Total wing</b></td><td class="sk-mono sk-t-green"><b>{total_mc} / 54 MC ({total_mc / 54.0 * 100:.1f}%)</b></td>'
+        f'<td class="sk-mono sk-t-amber">{sum(c["NMCM"] for c in counts_b)}</td>'
+        f'<td class="sk-mono sk-t-red">{sum(c["NMCS"] for c in counts_b)}</td><td class="sk-mono">54</td></tr>'
+    )
+    fc_rows = "".join(
+        f'<tr><td>D+{lead}</td>' + "".join(f'<td class="sk-mono">{_fc_cell(lead, s)}</td>' for s in (1, 2, 3)) + "</tr>"
+        for lead in (3, 7)
+    )
+    h3 = 'style="font-size:12px!important;border:none!important;padding:0!important;margin:1.1rem 0 .4rem 0!important;color:var(--outline)!important;letter-spacing:.08em;"'
+    brief_style = """
+<style>
+@media print {
+  [data-testid="stSidebar"], button, .stButton, header { display: none !important; }
+  body, .stApp { background: #ffffff !important; color: #000000 !important; }
+  #shikra_brief { background: #ffffff !important; color: #000000 !important; padding: 0 !important; }
+  #shikra_brief * { color: #000000 !important; }
+}
+</style>
+"""
+    brief_html = f"""
+<div id="shikra_brief" class="sk-panel" style="max-width:960px;border-top:2px solid var(--primary-container);padding:1.5rem 2rem;">
+<div class="sk-eyebrow">Advisory recommendation · one-page brief</div>
+<h2 style="color:var(--primary);margin:.5rem 0 0 0;font-size:22px;">SHIKRA · Commander's brief · Day 485 · synthetic wing</h2>
+<h3 {h3}>1. Wing status now (day {SNAP_DAY})</h3>
+<table class="sk-table"><tr><th>Squadron</th><th>Mission capable (MC)</th><th>Maintenance (NMCM)</th><th>Supply waiting (NMCS)</th><th>Total aircraft</th></tr>{status_rows}</table>
+<h3 {h3}>2. Readiness forecast (expected MC, 80% band)</h3>
+<table class="sk-table"><tr><th>Horizon</th><th>S1</th><th>S2</th><th>S3</th></tr>{fc_rows}</table>
+<p class="sk-note" style="font-style:italic;margin-top:.4rem;">{calib_caption_text}</p>
+<h3 {h3}>3. Top levers (heatmap.csv)</h3>
+<p class="sk-note" style="font-size:13px;">{lever_str}</p>
+<h3 {h3}>4. Top 3 parts to indigenise (supply_shock.csv)</h3>
+<ol class="sk-note" style="font-size:13px;">{indig_items}</ol>
+<h3 {h3}>5. Pending sign-offs &amp; audit integrity</h3>
+<p class="sk-note" style="font-size:13px;">EO approved recommendations: <b>{pending_recs}</b> · <span class="sk-t-green">{audit_line}</span></p>
+<p class="sk-mono sk-t-muted" style="font-size:11px;text-align:center;margin-top:1.2rem;">Advisory decision support · offline · synthetic wing + NASA C-MAPSS</p>
+</div>
+"""
+    return brief_style, brief_html
+
+
+brief_style, brief_html = _build_brief()
+util_line = ""
+if not util_shikra.empty and not util_reactive.empty:
+    util_line = (
+        f"flying task met — SHIKRA {us['task_mean'] * 100:.1f}% "
+        f"(95% CI [{us['task_ci_lo'] * 100:.1f}, {us['task_ci_hi'] * 100:.1f}]%) vs reactive "
+        f"{ur['task_mean'] * 100:.1f}%; sorties flown / yr SHIKRA {us['sorties_mean']:,.0f} vs reactive "
+        f"{ur['sorties_mean']:,.0f}. {UTIL_CAPTION}"
+    )
+brief_doc = brief_document(brief_html, SNAP_DAY, util_line)
+st.session_state["commander_brief_doc"] = brief_doc
+
 with col_rail:
     st.markdown("### Readiness Forecast")
     if readiness_mod is None:
@@ -398,112 +551,22 @@ with col_rail:
         '<p style="color:var(--outline)!important;font-size:11px!important;font-family:var(--font-mono);">'
         "Source: results/heatmap.csv · results/supply_shock.csv · requires officer sign-off</p></div>"
     )
-    open_brief = st.button("Open one-page brief", key="open_brief_btn", use_container_width=True)
-
-# ── Commander's One-Page Brief ───────────────────────────────────────────────
-if open_brief:
-    from app.lib.audit import get_recent as _get_rec
-    from app.lib.audit import verify as audit_verify
-
-    # a. Wing status now: MC / NMCM / NMCS counts per squadron (from snapshot)
-    counts_b = [dict(c) for c in sq_counts] if sq_counts else None
-    if counts_b is None:
-        from app.lib.state import get_wing_state_on_day
-
-        ws = get_wing_state_on_day(SNAP_DAY, policy="shikra_v2", seed=1)
-        counts_b = [{"MC": 0, "NMCM": 0, "NMCS": 0} for _ in range(3)]
-        for tinfo in ws["tail_statuses"]:
-            sq_i = int(tinfo["squadron"][1:]) - 1
-            st_val = tinfo["status"]
-            counts_b[sq_i][st_val if st_val in ("MC", "NMCM") else "NMCS"] += 1
-    total_mc = sum(c["MC"] for c in counts_b)
-
-    # b. Readiness forecast: expected MC with 80% band per squadron at D+3 and D+7
-    def _fc_cell(lead: int, sq: int) -> str:
-        r = _fc_row(lead, sq)
-        if r is None:
-            return "—"
-        return f"{float(r['expected_mc']):.1f} MC [{float(r['mc_q10']):.1f}–{float(r['mc_q90']):.1f}]"
-
-    # c. Top levers
-    row_05 = heatmap_raw[(heatmap_raw["pipeline_mult"] == 0.5) & (heatmap_raw["quality"] == 1.0)]
-    row_cb = heatmap_raw[(heatmap_raw["pipeline_mult"] == pipeline_mult) & (heatmap_raw["quality"] == 1.0)]
-    if not row_cb.empty and not row_05.empty:
-        reac_cur = float(row_cb.iloc[0]["reactive_serviceability_mean"]) * 100
-        reac_05 = float(row_05.iloc[0]["reactive_serviceability_mean"]) * 100
-        diff_reac = reac_05 - reac_cur
-        shikra_gain_05 = float(row_05.iloc[0]["gain_vs_reactive_mean"]) * 100
-        lever_str = (
-            f"Reactive serviceability at today's pipeline ({pipeline_mult}×): <b>{reac_cur:.1f}%</b> vs "
-            f"0.5× pipeline: <b>{reac_05:.1f}%</b> ({diff_reac:+.1f} pp diff computed in code). "
-            f"SHIKRA's gain at 0.5× pipeline: <b>{shikra_gain_05:+.1f} pp</b>."
+    b_open, b_dl = st.columns(2)
+    with b_open:
+        open_brief = st.button("Open one-page brief", key="open_brief_btn", use_container_width=True)
+    with b_dl:
+        st.download_button(
+            "Download daily brief (HTML)",
+            data=brief_doc,
+            file_name=f"shikra_commander_brief_day{SNAP_DAY}.html",
+            mime="text/html",
+            key="download_brief_btn",
+            use_container_width=True,
         )
-    else:
-        lever_str = "Pipeline lever data available in results/heatmap.csv."
 
-    # d. Top 3 parts to indigenise (sorted by loss over the halt)
-    top3_indig = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values(
-        "loss_pp_shock_window", ascending=False
-    ).head(3)
-    indig_items = "".join(
-        f"<li><b>{theme.esc(row['lru_id'])}</b>: loss {row['loss_pp_shock_window']:.1f} pp "
-        f"(peak +{row['peak_extra_grounded']:.0f} grounded, recovery {row['recovery_days']:.0f} days)</li>"
-        for _, row in top3_indig.iterrows()
-    )
+if open_brief:
+    st.markdown(theme.oneline(brief_style + brief_html), unsafe_allow_html=True)
 
-    # e. Pending sign-offs + audit-chain status line
-    recent_logs = _get_rec(100)
-    pending_recs = sum(1 for r in recent_logs if r.get("decision") == "approved")
-    chain = audit_verify()
-    if chain["ok"]:
-        root_abbr = (chain.get("latest_root") or "none")[:12]
-        audit_line = f"Audit chain: intact · {chain['n_rows']} records · root <code>{root_abbr}</code>"
-    else:
-        audit_line = f"Audit chain: BROKEN at row id={chain['first_bad_id']}"
-
-    status_rows = "".join(
-        f'<tr><td>Squadron {i + 1} (S{i + 1})</td><td class="sk-mono sk-t-green">{c["MC"]}</td>'
-        f'<td class="sk-mono sk-t-amber">{c["NMCM"]}</td><td class="sk-mono sk-t-red">{c["NMCS"]}</td>'
-        '<td class="sk-mono">18</td></tr>'
-        for i, c in enumerate(counts_b)
-    )
-    status_rows += (
-        f'<tr><td><b>Total wing</b></td><td class="sk-mono sk-t-green"><b>{total_mc} / 54 MC ({total_mc / 54.0 * 100:.1f}%)</b></td>'
-        f'<td class="sk-mono sk-t-amber">{sum(c["NMCM"] for c in counts_b)}</td>'
-        f'<td class="sk-mono sk-t-red">{sum(c["NMCS"] for c in counts_b)}</td><td class="sk-mono">54</td></tr>'
-    )
-    fc_rows = "".join(
-        f'<tr><td>D+{lead}</td>' + "".join(f'<td class="sk-mono">{_fc_cell(lead, s)}</td>' for s in (1, 2, 3)) + "</tr>"
-        for lead in (3, 7)
-    )
-    h3 = 'style="font-size:12px!important;border:none!important;padding:0!important;margin:1.1rem 0 .4rem 0!important;color:var(--outline)!important;letter-spacing:.08em;"'
-    brief_html = f"""
-<style>
-@media print {{
-  [data-testid="stSidebar"], button, .stButton, header {{ display: none !important; }}
-  body, .stApp {{ background: #ffffff !important; color: #000000 !important; }}
-  #shikra_brief {{ background: #ffffff !important; color: #000000 !important; padding: 0 !important; }}
-  #shikra_brief * {{ color: #000000 !important; }}
-}}
-</style>
-<div id="shikra_brief" class="sk-panel" style="max-width:960px;border-top:2px solid var(--primary-container);padding:1.5rem 2rem;">
-<div class="sk-eyebrow">Advisory recommendation · one-page brief</div>
-<h2 style="color:var(--primary);margin:.5rem 0 0 0;font-size:22px;">SHIKRA · Commander's brief · Day 485 · synthetic wing</h2>
-<h3 {h3}>1. Wing status now (day {SNAP_DAY})</h3>
-<table class="sk-table"><tr><th>Squadron</th><th>Mission capable (MC)</th><th>Maintenance (NMCM)</th><th>Supply waiting (NMCS)</th><th>Total aircraft</th></tr>{status_rows}</table>
-<h3 {h3}>2. Readiness forecast (expected MC, 80% band)</h3>
-<table class="sk-table"><tr><th>Horizon</th><th>S1</th><th>S2</th><th>S3</th></tr>{fc_rows}</table>
-<p class="sk-note" style="font-style:italic;margin-top:.4rem;">{calib_caption_text}</p>
-<h3 {h3}>3. Top levers (heatmap.csv)</h3>
-<p class="sk-note" style="font-size:13px;">{lever_str}</p>
-<h3 {h3}>4. Top 3 parts to indigenise (supply_shock.csv)</h3>
-<ol class="sk-note" style="font-size:13px;">{indig_items}</ol>
-<h3 {h3}>5. Pending sign-offs &amp; audit integrity</h3>
-<p class="sk-note" style="font-size:13px;">EO approved recommendations: <b>{pending_recs}</b> · <span class="sk-t-green">{audit_line}</span></p>
-<p class="sk-mono sk-t-muted" style="font-size:11px;text-align:center;margin-top:1.2rem;">Advisory decision support · offline · synthetic wing + NASA C-MAPSS</p>
-</div>
-"""
-    st.markdown(theme.oneline(brief_html), unsafe_allow_html=True)
 
 # ── Performance ──────────────────────────────────────────────────────────────
 elapsed = time.perf_counter() - start_time
