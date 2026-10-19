@@ -1,4 +1,4 @@
-"""SHIKRA — Logistics View.
+"""SHIKRA: Logistics View.
 
 Stock view (engines and 10 LRUs), supply-shock exposure per LRU,
 and VARI-METRIC allocation panel.
@@ -26,7 +26,7 @@ from app.lib.data import (  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Logistics",
+    page_title="SHIKRA: Logistics",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -45,7 +45,7 @@ theme.header(
     "Where are the spares, and would placing them differently buy readiness for the same money?",
     "Base and depot stock for engines and the 10 tracked parts, each part's exposure to a 180-day "
     "foreign-supply halt, and the VARI-METRIC re-allocation at the same budget. "
-    "Synthetic wing · advisory — all recommendations require officer sign-off.",
+    "Synthetic wing · advisory: all recommendations require officer sign-off.",
     "config/wing.yaml · results/supply_shock.csv · results/spares_alloc.csv · results/spares_compare.csv",
 )
 

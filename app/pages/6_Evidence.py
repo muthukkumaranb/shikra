@@ -1,4 +1,4 @@
-"""SHIKRA — Evidence & Verification.
+"""SHIKRA: Evidence & Verification.
 
 Renders GATES.md, policy summary table with CIs, RUL C-MAPSS evaluations,
 key figures, and a reproducibility box.
@@ -33,7 +33,7 @@ from app.lib.data import (  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Evidence",
+    page_title="SHIKRA: Evidence",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -80,7 +80,7 @@ for _fname in FINDINGS_FILES:
         if not _any_findings:
             st.markdown("### Findings")
             _any_findings = True
-        with st.expander(f"📋 {_fname}", expanded=False):
+        with st.expander(f"{_fname}", expanded=False):
             st.markdown(_fpath.read_text(encoding="utf-8"))
 
 st.divider()

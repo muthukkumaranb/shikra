@@ -1,4 +1,4 @@
-"""SHIKRA — Commander's View.
+"""SHIKRA: Commander's View.
 
 Lever map (gain-vs-reactive matrix), supply-shock ranking,
 per-squadron readiness forecast rail, and one-page brief.
@@ -37,7 +37,7 @@ start_time = time.perf_counter()
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Commander",
+    page_title="SHIKRA: Commander",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -84,7 +84,7 @@ theme.header(
     "Which lever buys the wing the most readiness: better prediction or a faster pipeline?",
     "Serviceability gain over reactive maintenance for each combination of prediction quality "
     "and repair-and-supply time, then the parts whose foreign-supply halt hurts most. "
-    "Synthetic wing · advisory — all recommendations require officer sign-off.",
+    "Synthetic wing · advisory: all recommendations require officer sign-off.",
     "results/heatmap.csv · results/supply_shock.csv · results/readiness_calib.csv · "
     f"readiness snapshot day {SNAP_DAY} (shikra_v2, seed 1)",
 )
@@ -167,7 +167,7 @@ UTIL_CAPTION = (
     "config/wing.yaml). Synthetic wing, 30 seeds, today's pipeline."
 )
 if not util_df.empty:
-    st.markdown("### Utilisation — flying task met")
+    st.markdown("### Utilisation: flying task met")
     st.dataframe(display_table(util_df), use_container_width=True, hide_index=True)
     st.caption(UTIL_CAPTION)
 
@@ -198,7 +198,7 @@ with col_main:
         for m in mults:
             cell = qrows[qrows["pipeline_mult"] == m]
             if cell.empty:
-                body += "<td>—</td>"
+                body += "<td>n/a</td>"
                 continue
             r = cell.iloc[0]
             if show_absolute:
@@ -228,7 +228,7 @@ with col_main:
     theme.html(
         '<div class="sk-panel">'
         + theme.panel_title(
-            "Readiness matrix — prediction quality × pipeline speed",
+            "Readiness matrix: prediction quality × pipeline speed",
             "repair &amp; supply time (× today's baseline; lower = faster) · 30 seeds per cell",
         )
         + f'<table class="sk-matrix">{head}{body}</table>{legend}</div>'
@@ -249,7 +249,7 @@ with col_main:
         st.caption("Synthetic wing · advisory.")
 
     # ── Supply-Shock Ranking ─────────────────────────────────────────────────
-    st.markdown("### Supply-Shock Ranking — Strategic Chokepoints")
+    st.markdown("### Supply-Shock Ranking: Strategic Chokepoints")
     st.caption(
         "180-day foreign-supply halt on each component. Ordered by readiness loss. "
         "Synthetic parameters; the method is the claim."
@@ -280,7 +280,7 @@ with col_main:
     theme.html(
         '<div class="sk-panel">'
         + theme.panel_title(
-            "Foreign-sourced parts — readiness lost",
+            "Foreign-sourced parts: readiness lost",
             "loss in serviceability (pp) over the 180-day halt window · 95% CI · 30 seeds",
         )
         + "".join(items)
@@ -359,7 +359,7 @@ def _build_brief() -> tuple[str, str]:
     def _fc_cell(lead: int, sq: int) -> str:
         r = _fc_row(lead, sq)
         if r is None:
-            return "—"
+            return "n/a"
         return f"{float(r['expected_mc']):.1f} MC [{float(r['mc_q10']):.1f}–{float(r['mc_q90']):.1f}]"
 
     # c. Top levers
@@ -449,7 +449,7 @@ brief_style, brief_html = _build_brief()
 util_line = ""
 if not util_shikra.empty and not util_reactive.empty:
     util_line = (
-        f"flying task met — SHIKRA {us['task_mean'] * 100:.1f}% "
+        f"flying task met: SHIKRA {us['task_mean'] * 100:.1f}% "
         f"(95% CI [{us['task_ci_lo'] * 100:.1f}, {us['task_ci_hi'] * 100:.1f}]%) vs reactive "
         f"{ur['task_mean'] * 100:.1f}%; sorties flown / yr SHIKRA {us['sorties_mean']:,.0f} vs reactive "
         f"{ur['sorties_mean']:,.0f}. {UTIL_CAPTION}"
@@ -488,7 +488,7 @@ with col_rail:
 
             def _cell(label: str, r) -> str:
                 if r is None:
-                    return f'<div><div class="sk-fl">{label}</div><div class="sk-fv">—</div></div>'
+                    return f'<div><div class="sk-fl">{label}</div><div class="sk-fv">n/a</div></div>'
                 return (
                     f'<div><div class="sk-fl">{label}</div>'
                     f'<div class="sk-fv">{float(r["expected_mc"]):.1f} <span style="font-size:12px;color:var(--outline);">MC</span></div>'

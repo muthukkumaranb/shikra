@@ -1,4 +1,4 @@
-# LIMITATIONS — SHIKRA
+# LIMITATIONS: SHIKRA
 
 This document provides a candid, comprehensive disclosure of the assumptions, scope boundaries, and known failure modes of the SHIKRA system.
 
@@ -23,7 +23,7 @@ This document provides a candid, comprehensive disclosure of the assumptions, sc
   Prognostic health management (PHM) in SHIKRA is applied exclusively to turbofan engines. All other Line-Replaceable Units (radar transmitters, inertial navigation units, ECS valves, digital engine control units, APU starter motors) follow Weibull failure distributions and are handled purely reactively across all policies (reactive, preventive, SHIKRA, and oracle). Consequently, overall aircraft serviceability is always constrained by non-engine component failures.
 
 - **Engine spares aren't optimised yet:**
-  The current engine spare provisioning policy relies on static base and depot buffer quantities defined in `config/wing.yaml`. Multi-echelon inventory optimization techniques (such as VARI-METRIC or marginal allocation algorithms) are not yet implemented for spare engines. As demonstrated in A11, the spare pipeline capacity—rather than RUL prediction accuracy—is the binding constraint on fleet serviceability.
+  The current engine spare provisioning policy relies on static base and depot buffer quantities defined in `config/wing.yaml`. Multi-echelon inventory optimization techniques (such as VARI-METRIC or marginal allocation algorithms) are not yet implemented for spare engines. As demonstrated in A11, the spare pipeline capacity, rather than RUL prediction accuracy, is the binding constraint on fleet serviceability.
 
 ---
 

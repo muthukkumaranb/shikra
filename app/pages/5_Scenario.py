@@ -1,4 +1,4 @@
-"""SHIKRA — Failure Injection Walkthrough Scenario.
+"""SHIKRA: Failure Injection Walkthrough Scenario.
 
 Interactive stepper demonstrating deterministic degradation injection,
 RUL band crossing, removal probability surge, pre-positioning transfer,
@@ -37,7 +37,7 @@ start_time = time.perf_counter()
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Scenario Walkthrough",
+    page_title="SHIKRA: Scenario Walkthrough",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -136,7 +136,7 @@ if st.session_state.scenario_step == 1:
     )
     st.session_state.selected_eng = st.radio("Engine Position", [0, 1], horizontal=True)
 
-    if st.button("🚀 Inject Degradation", type="primary"):
+    if st.button("Inject Degradation", type="primary"):
         st.session_state.injected = True
         st.session_state.scenario_step = 2
         st.rerun()
@@ -165,16 +165,16 @@ elif st.session_state.scenario_step == 2:
     )
 
     col_nav1, col_nav2 = st.columns([1, 1])
-    if col_nav1.button("⬅️ Previous"):
+    if col_nav1.button("Previous"):
         st.session_state.scenario_step = 1
         st.rerun()
-    if col_nav2.button("➡️ Next: View RUL Band Crossing", type="primary"):
+    if col_nav2.button("Next: View RUL Band Crossing", type="primary"):
         st.session_state.scenario_step = 3
         st.rerun()
 
 # ── Step 3: RUL Band & Threshold Crossing ────────────────────────────────────
 elif st.session_state.scenario_step == 3:
-    st.markdown(f"### Step 3: RUL Quantile Bands — {st.session_state.selected_tail} Engine {st.session_state.selected_eng}")
+    st.markdown(f"### Step 3: RUL Quantile Bands: {st.session_state.selected_tail} Engine {st.session_state.selected_eng}")
     st.caption(f"Predictive q10 crosses R*={R_star} threshold as operational sorties accumulate. Synthetic wing.")
 
     # Slice trajectory for the next 40 cycles
@@ -188,7 +188,7 @@ elif st.session_state.scenario_step == 3:
     cross_day = int(cross_df.iloc[0]["sim_day"]) if not cross_df.empty else "N/A"
 
     if cross_day != "N/A":
-        st.warning(f"⚠️ **R* Threshold Alert:** q10 crosses R* ({R_star} cycles) at Day **{cross_day}** (Cycle {cross_cycle}). Removal due!")
+        st.warning(f"Warning: **R* Threshold Alert:** q10 crosses R* ({R_star} cycles) at Day **{cross_day}** (Cycle {cross_cycle}). Removal due!")
 
     # Altair chart: q10 to q90 band + median line + R* rule
     band = (
@@ -222,10 +222,10 @@ elif st.session_state.scenario_step == 3:
     st.caption(f"Red dashed line: R* = {R_star} cycles. Only calibrated predictive quantiles are displayed.")
 
     col_nav1, col_nav2 = st.columns([1, 1])
-    if col_nav1.button("⬅️ Previous"):
+    if col_nav1.button("Previous"):
         st.session_state.scenario_step = 2
         st.rerun()
-    if col_nav2.button("➡️ Next: Removal Probability Surge", type="primary"):
+    if col_nav2.button("Next: Removal Probability Surge", type="primary"):
         st.session_state.scenario_step = 4
         st.rerun()
 
@@ -270,10 +270,10 @@ elif st.session_state.scenario_step == 4:
     )
 
     col_nav1, col_nav2 = st.columns([1, 1])
-    if col_nav1.button("⬅️ Previous"):
+    if col_nav1.button("Previous"):
         st.session_state.scenario_step = 3
         st.rerun()
-    if col_nav2.button("➡️ Next: Pre-Positioning & Hangar Plan", type="primary"):
+    if col_nav2.button("Next: Pre-Positioning & Hangar Plan", type="primary"):
         st.session_state.scenario_step = 5
         st.rerun()
 
@@ -330,8 +330,8 @@ elif st.session_state.scenario_step == 5:
         # Slot 1
         if len(s2_maint) > 0:
             m1 = s2_maint[0]
-            ret_d = m1.get("return_day", "—")
-            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "—"
+            ret_d = m1.get("return_day", "n/a")
+            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "n/a"
             hangar_rows.append({
                 "Slot": "Slot 1",
                 "Current Tail": f"T{m1['tail']+1:02d}",
@@ -343,7 +343,7 @@ elif st.session_state.scenario_step == 5:
                 "Slot": "Slot 1",
                 "Current Tail": "Vacant",
                 "Status": "Standby",
-                "Completion Day": "—",
+                "Completion Day": "n/a",
             })
 
         # Slot 2 (Reserved for injected engine change on T19)
@@ -357,8 +357,8 @@ elif st.session_state.scenario_step == 5:
         # Slot 3
         if len(s2_maint) > 1:
             m2 = s2_maint[1]
-            ret_d = m2.get("return_day", "—")
-            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "—"
+            ret_d = m2.get("return_day", "n/a")
+            comp_d = str(ret_d) if (isinstance(ret_d, int) and ret_d > 0) else "n/a"
             hangar_rows.append({
                 "Slot": "Slot 3",
                 "Current Tail": f"T{m2['tail']+1:02d}",
@@ -370,7 +370,7 @@ elif st.session_state.scenario_step == 5:
                 "Slot": "Slot 3",
                 "Current Tail": "Vacant",
                 "Status": "Standby / Emergency Buffer",
-                "Completion Day": "—",
+                "Completion Day": "n/a",
             })
         st.dataframe(
             pd.DataFrame(hangar_rows), use_container_width=True, hide_index=True
@@ -401,7 +401,7 @@ elif st.session_state.scenario_step == 5:
             if s2_nmcm_tails
             else ("Awaiting Spare / Inspection" if s2_nmcs_tails else "Standby")
         )
-        slot1_comp = "—"
+        slot1_comp = "n/a"
 
         hangar_data = [
             {
@@ -420,7 +420,7 @@ elif st.session_state.scenario_step == 5:
                 "Slot": "Slot 3",
                 "Current Tail": "Vacant",
                 "Status": "Standby / Emergency Buffer",
-                "Completion Day": "—",
+                "Completion Day": "n/a",
             },
         ]
         st.dataframe(
@@ -506,10 +506,10 @@ elif st.session_state.scenario_step == 5:
 
 
     col_nav1, col_nav2 = st.columns([1, 1])
-    if col_nav1.button("⬅️ Previous"):
+    if col_nav1.button("Previous"):
         st.session_state.scenario_step = 4
         st.rerun()
-    if col_nav2.button("➡️ Next: Engineering Officer Sign-Off", type="primary"):
+    if col_nav2.button("Next: Engineering Officer Sign-Off", type="primary"):
         st.session_state.scenario_step = 6
         st.rerun()
 
@@ -531,7 +531,7 @@ elif st.session_state.scenario_step == 6:
     )
 
     btn_col1, btn_col2 = st.columns(2)
-    if btn_col1.button("✅ Sign Off & Approve Action", type="primary", use_container_width=True):
+    if btn_col1.button("Sign Off & Approve Action", type="primary", use_container_width=True):
         audit_append(
             role="Engineering Officer",
             action="preposition_and_hangar_approval",
@@ -542,7 +542,7 @@ elif st.session_state.scenario_step == 6:
         )
         st.success(f"Action approved and recorded to append-only audit log: {rec_id}")
 
-    if btn_col2.button("⏸️ Defer Action", use_container_width=True):
+    if btn_col2.button("Defer Action", use_container_width=True):
         audit_append(
             role="Engineering Officer",
             action="preposition_and_hangar_approval",
@@ -559,7 +559,7 @@ elif st.session_state.scenario_step == 6:
         st.dataframe(pd.DataFrame(recent_entries), use_container_width=True, hide_index=True)
 
     st.divider()
-    if st.button("🔄 Restart Scenario"):
+    if st.button("Restart Scenario"):
         st.session_state.scenario_step = 1
         st.session_state.injected = False
         st.rerun()
