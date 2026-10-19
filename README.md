@@ -2,7 +2,9 @@
 
 **Predict the snag, place the spare, fly the sortie.**
 
-*SHIKRA: Smart Health-Integrated Knowledge for Readiness Advisory. Named after the shikra (Accipiter badius), a small, sharp-eyed Indian hawk that spots its target early.*
+*SHIKRA: Smart Health-Integrated Knowledge for Readiness Advisory.* 
+
+*Named after the shikra (Accipiter badius), a small, sharp-eyed Indian hawk that spots its target early.*
 
 Offline, advisory fleet-availability decision support, evaluated on public NASA C-MAPSS data and a synthetic 54-aircraft wing.
 
