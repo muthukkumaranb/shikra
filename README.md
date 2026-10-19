@@ -18,13 +18,15 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 [![CI](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml)
 [![Full Reproduction](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml)
 
-**Contents:** [Problem statement](#problem-statement) · [Overview](#overview) · [Architecture](#architecture) · [Results](#results) · [What did not work](#what-did-not-work) · [Reproduce](#reproduce) · [Installation and usage](#installation-and-usage) · [Repository structure](#repository-structure) · [Documentation](#documentation) · [Scope](#scope) · [Acknowledgements and citation](#acknowledgements-and-citation) · [License](#license)
+**Contents:** [Problem statement](#problem-statement) · [Overview](#overview) · [Architecture](#architecture) · [Screenshots](#screenshots) · [Results](#results) · [What did not work](#what-did-not-work) · [Reproduce](#reproduce) · [Installation and usage](#installation-and-usage) · [Repository structure](#repository-structure) · [Documentation](#documentation) · [Scope](#scope) · [Acknowledgements and citation](#acknowledgements-and-citation) · [License](#license)
 
 ---
 
 ## Problem statement
 
 - **ID**: `SIH26249`
+- **Team name**: NOT TODAY, HACKERS
+- **Team ID**: 178998
 - **Organization**: Ministry of Defence, Defence Services Staff College (DSSC)
 - **Theme**: Transportation & Logistics
 - **Category**: Software
@@ -49,6 +51,18 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 ![SHIKRA workflow](docs/assets/shikra_workflow.png)
 
 Graphviz source: [docs/assets/shikra_workflow.dot](docs/assets/shikra_workflow.dot)
+
+---
+
+## Screenshots
+
+| Home | Commander |
+|---|---|
+| ![Home](docs/assets/screenshots/home.png)<br>Fleet overview: which of the 54 aircraft can fly today, and what holds the rest back | ![Commander](docs/assets/screenshots/commander.png)<br>Lever map: prediction quality × repair-and-supply speed |
+| **Engineering Officer** | **Technician** |
+| ![Engineering Officer](docs/assets/screenshots/engineering_officer.png)<br>Engine health, removal advice with q10 bands, Approve / Defer | ![Technician](docs/assets/screenshots/technician.png)<br>Flight-line snags as work cards, grouped by squadron |
+
+*Offline Streamlit app, dark theme, local fonts, no network calls. Synthetic wing; not IAF data.*
 
 ---
 
@@ -117,6 +131,11 @@ All committed benchmark results are bitwise-reproducible from a single command:
 - **Linux / macOS (`make verify`)**: Runs the full verification pipeline including the 545-day supply-shock simulation (`reproduce-sim`), followed by bitwise validation against all committed CSVs and git diff verification (~73 min).
 - **Windows (`scripts/verify.ps1`)**: Windows PowerShell validation. By default, executes the full test suite (`pytest -q -m "not data"`), all simulations EXCEPT the ~65-min supply-shock run, followed by bitwise comparison of committed CSVs (`scripts/check_reproduce.py`) and working tree check (~8 min). Add `-Full` to also regenerate the supply-shock run (~73 min).
 
+### Tests
+
+- 144 automated tests (`pytest --collect-only -q`); 136 run without the raw NASA data and run on every push in CI (badge above); the rest need `make data`.
+- Last local run: 136 passed, 8 deselected, 14 warnings in 260.42s (0:04:20), commit 95da719.
+
 ### Approximate Benchmark Times (Python 3.11.16)
 
 | Step | Command | Approximate Runtime |
@@ -129,6 +148,14 @@ All committed benchmark results are bitwise-reproducible from a single command:
 Python 3.11.x is strictly required because pre-built wheels for pinned scientific packages (`numpy==1.26.4`, `scipy==1.13.1`, `lightgbm==4.3.0`) are unavailable on PyPI for Python 3.13+.
 
 > **Windows Note:** If OR-Tools crashes with an access violation, install the Microsoft Visual C++ Redistributable (x64) and restart the shell.
+
+### Docker (optional)
+
+```bash
+docker compose build
+docker compose up app                 # app on http://localhost:8501
+docker compose run --rm shikra        # full air-gapped reproduction (~73 min, no network)
+```
 
 ---
 
@@ -225,7 +252,10 @@ The interactive dashboard provides role-tailored pages:
 ## Scope
 
 - **Advisory, never autonomous**: SHIKRA provides decision support and risk bounds for technical officers; it never issues autonomous dispatch directives or replaces maintenance authority.
-- **Air-gapped operation**: Designed for standalone deployment with zero external internet connectivity or telemetry.
+- **Air-gapped, network-ready**: air-gapped from the internet; designed to run as a central
+  instance on a closed defence network such as AFNET, with each base running a fully offline
+  node that keeps working when links fail. This prototype is that base node. (AFNET and
+  e-MMS integration have not been tested.)
 - **Synthetic wing, not IAF data**: All fleet structures, flight tempos, and maintenance capacities represent a synthetic 54-aircraft wing; no classified or operational Indian Air Force data is used.
 - **NASA turbofan data, not fighter-engine telemetry**: Degradation dynamics derive from public NASA C-MAPSS commercial turbofan simulations rather than operational combat aircraft engines.
 - **Consumes exports, never replaces source systems**: Operates strictly downstream of e-MMS and IMMOLS via read-only batch exports; source systems remain the sole enterprise systems of record.
