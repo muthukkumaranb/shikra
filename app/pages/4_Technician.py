@@ -1,4 +1,4 @@
-"""SHIKRA — Technician's View.
+"""SHIKRA: Technician's View.
 
 Snag list for the selected day: tails that are non-MC with reason,
 squadron, and expected return day, as work cards grouped by squadron.
@@ -22,7 +22,7 @@ from app.lib.state import get_sim_result  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Technician",
+    page_title="SHIKRA: Technician",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -48,7 +48,7 @@ theme.header(
     "Which aircraft are down today, why, and when should each be back?",
     "Every non-mission-capable tail on the selected day as a work card, grouped by squadron "
     "(fewest aircraft available first), with the reason and expected return. "
-    "Synthetic wing · advisory — all recommendations require officer sign-off.",
+    "Synthetic wing · advisory: all recommendations require officer sign-off.",
     "simulation (config/wing.yaml + artifacts/replay_rul.parquet, shikra_v2, seed 1): tail status and engine events",
 )
 
@@ -200,13 +200,12 @@ with col_main:
             )
             for _, row in sub.iterrows():
                 tone = "red" if row["Status"] == "NMCS" else "amber"
-                icon = "⏳" if row["Status"] == "NMCS" else "⚙"
                 c_card, c_btn = st.columns([5, 1])
                 with c_card:
                     theme.html(
                         f'<div class="sk-card" style="box-shadow:inset 3px 0 0 0 {theme.STATUS_COLOR[row["Status"]]};">'
                         f'<div class="sk-tail"><b>{row["Tail"]}</b><span>{row["Squadron"]} · {row["Status"]}</span></div>'
-                        f'<div class="sk-cb">{theme.chip(icon + " " + theme.STATUS_TEXT[row["Status"]], tone)}'
+                        f'<div class="sk-cb">{theme.chip(theme.STATUS_TEXT[row["Status"]], tone)}'
                         f'<div class="sk-ch">{theme.esc(row["Reason"])}</div>'
                         f'<div class="sk-cm">Expected return: Day {row["Expected Return Day"]} '
                         f'(in {row["Expected Return Day"] - selected_day} days)</div></div></div>'

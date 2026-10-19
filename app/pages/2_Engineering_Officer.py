@@ -1,4 +1,4 @@
-"""SHIKRA — Engineering Officer's View.
+"""SHIKRA: Engineering Officer's View.
 
 Engine health table, RUL band chart, sign-off queue, audit log and the
 "Why is this engine flagged?" panel.
@@ -31,7 +31,7 @@ from app.lib.visuals import render_aircraft_detail_svg  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Engineering Officer",
+    page_title="SHIKRA: Engineering Officer",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -59,7 +59,7 @@ theme.header(
     "Engineering Officer · engine health",
     "Which engines need a removal decision now, and which can safely keep flying?",
     "Pessimistic (q10), median (q50) and optimistic (q90) remaining-life estimates for every engine "
-    "against the removal threshold R*. Synthetic wing · advisory — all recommendations require "
+    "against the removal threshold R*. Synthetic wing · advisory: all recommendations require "
     "officer sign-off.",
     "readiness snapshot (shikra_v2, seed 1) · artifacts/replay_rul.parquet · "
     "artifacts/policy_params.json · results/explain_contrib.csv · app_data audit log",
@@ -244,8 +244,8 @@ with col_main:
                     "Squadron": sqn_label,
                     "Engine Position": eng_pos,
                     "Status": status,
-                    "Last Event Day": str(last_event_day) if not pos_events.empty else "—",
-                    "Last Event Type": last_event_type if not pos_events.empty else "—",
+                    "Last Event Day": str(last_event_day) if not pos_events.empty else "n/a",
+                    "Last Event Type": last_event_type if not pos_events.empty else "n/a",
                     "Note": removal_note,
                 })
         health_df = pd.DataFrame(health_rows)
@@ -319,7 +319,7 @@ with col_main:
                 )
             missing = [lid for lid, v in (comp_states or {}).items() if v == "MISSING"]
             meta += (
-                f'<p class="sk-note sk-t-red" style="margin-top:.6rem;">Grounded LRU shortage — missing parts: {theme.esc(", ".join(missing))}</p>'
+                f'<p class="sk-note sk-t-red" style="margin-top:.6rem;">Grounded LRU shortage: missing parts: {theme.esc(", ".join(missing))}</p>'
                 if missing
                 else '<p class="sk-note sk-t-green" style="margin-top:.6rem;">All 10 tracked LRU components serviceable.</p>'
             )
@@ -381,11 +381,11 @@ with col_rail:
             theme.html(
                 f'<div class="sk-wo{" sk-red" if unsched else ""}">'
                 f'<div class="sk-wk">{rec_id} · {theme.esc(row["type"])} removal</div>'
-                f'<div class="sk-wh">T{tail_num:02d} · engine {eng_pos} — {theme.esc(row["type"])} engine removal</div>'
+                f'<div class="sk-wh">T{tail_num:02d} · engine {eng_pos}: {theme.esc(row["type"])} engine removal</div>'
                 f'<div class="sk-wm">day {int(row["day"])} · cycle {int(row.get("cycle", 0))} · squadron S{(tail_num - 1) // 18 + 1}</div></div>'
             )
             b1, b2 = st.columns(2)
-            if b1.button("✅ Approve", key=f"approve_{rec_id}", use_container_width=True):
+            if b1.button("Approve", key=f"approve_{rec_id}", use_container_width=True):
                 audit_append(
                     role="Engineering Officer",
                     action=f"{row['type']}_removal",
@@ -395,7 +395,7 @@ with col_rail:
                 )
                 st.toast(f"Approved {rec_id}")
                 st.rerun()
-            if b2.button("⏸️ Defer", key=f"defer_{rec_id}", use_container_width=True):
+            if b2.button("Defer", key=f"defer_{rec_id}", use_container_width=True):
                 audit_append(
                     role="Engineering Officer",
                     action=f"{row['type']}_removal",

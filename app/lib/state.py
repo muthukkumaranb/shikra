@@ -23,7 +23,7 @@ REPLAY_PATH = ROOT / "artifacts" / "replay_rul.parquet"
 def get_sim_result(policy: str = "shikra_v2", seed: int = 1):
     """Run the simulation once (cached) and return the SimResult.
 
-    Uses in-memory computation only — never writes to disk.
+    Uses in-memory computation only, never writes to disk.
     """
     from shikra.rul.variants import apply
     from shikra.sim.engine import run

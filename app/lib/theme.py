@@ -240,7 +240,7 @@ def flight_line(tail_statuses: list[dict], sqn_mc: list[int]) -> str:
     parts = [
         '<div class="sk-panel">',
         panel_title(
-            f"Flight line — {N_AIRCRAFT} aircraft",
+            f"Flight line: {N_AIRCRAFT} aircraft",
             "Status per tail from the simulation on the selected day · synthetic wing",
             legend,
         ),

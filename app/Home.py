@@ -1,4 +1,4 @@
-"""SHIKRA — Home page.
+"""SHIKRA: Home page.
 
 Fleet overview: flight line for the selected day, the three findings
 (generated from data), squadron summaries and the reproduce command.
@@ -23,7 +23,7 @@ from app.lib.state import get_sim_result, get_wing_state_on_day  # noqa: E402
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 
 st.set_page_config(
-    page_title="SHIKRA — Advisory Decision Support",
+    page_title="SHIKRA: Advisory Decision Support",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -128,9 +128,9 @@ if not row_17.empty:
     f1_num, f1_lbl = f"{gain_pp:+.1f} pp", "gain vs reactive"
 else:
     finding1 = "The pipeline is the lever: (data unavailable for 1.7× pipeline speed)."
-    f1_num, f1_lbl = "—", "no data"
+    f1_num, f1_lbl = "n/a", "no data"
 
-f2_num, f2_lbl = "—", "no data"
+f2_num, f2_lbl = "n/a", "no data"
 if not row_05_shikra.empty and not row_05_oracle.empty:
     shikra_gain = row_05_shikra.iloc[0]["gain_vs_reactive_mean"] * 100
     oracle_gain = row_05_oracle.iloc[0]["gain_vs_reactive_mean"] * 100
@@ -159,7 +159,7 @@ if not top_lrus.empty:
     f3_num, f3_lbl = f"+{top1['peak_extra_grounded']:.0f} A/C", "peak extra grounded"
 else:
     finding3 = "Top indigenisation item: (data unavailable)."
-    f3_num, f3_lbl = "—", "no data"
+    f3_num, f3_lbl = "n/a", "no data"
 
 
 def _finding(kicker: str, tone: str, text: str, src: str, num: str, lbl: str) -> str:
@@ -220,13 +220,13 @@ using calibrated quantile models trained on NASA C-MAPSS data, then
 simulates a synthetic 54-aircraft wing to evaluate maintenance policies.
 
 **Pages in this dashboard:**
-- **Commander** — lever map, supply-shock ranking, readiness forecast
-- **Engineering Officer** — engine health table, RUL bands, sign-off queue
-- **Logistics** — stock view, supply-shock exposure, spares allocation
-- **Technician** — snag list for the selected day
-- **Scenario** — inject-failure walkthrough (for demonstration)
-- **Evidence** — gates, policy table, model card, reproducibility
-- **Health Replay** — post-flight health download replayed, with the removal alert
+- **Commander**: lever map, supply-shock ranking, readiness forecast
+- **Engineering Officer**: engine health table, RUL bands, sign-off queue
+- **Logistics**: stock view, supply-shock exposure, spares allocation
+- **Technician**: snag list for the selected day
+- **Scenario**: inject-failure walkthrough (for demonstration)
+- **Evidence**: gates, policy table, model card, reproducibility
+- **Health Replay**: post-flight health download replayed, with the removal alert
 
 Every number shown is read from data files or computed live.
 All recommendations require explicit officer sign-off.

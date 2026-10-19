@@ -1,4 +1,4 @@
-"""SHIKRA — Health Replay.
+"""SHIKRA: Health Replay.
 
 Replays a post-flight health download for one held-out C-MAPSS engine,
 cycle by cycle: the calibrated q10/q50/q90 remaining-life band, the R*
@@ -24,7 +24,7 @@ from app.lib.data import load_params, load_replay_rul  # noqa: E402
 
 ICON_PATH = ROOT / "app" / "assets" / "shikra.png"
 st.set_page_config(
-    page_title="SHIKRA — Health Replay",
+    page_title="SHIKRA: Health Replay",
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
@@ -113,9 +113,9 @@ def _pause() -> None:
 
 
 with c_play:
-    st.button("▶ Play", key="hr_play_btn", on_click=_play, use_container_width=True, type="primary")
+    st.button("Play", key="hr_play_btn", on_click=_play, use_container_width=True, type="primary")
 with c_pause:
-    st.button("⏸ Pause", key="hr_pause_btn", on_click=_pause, use_container_width=True)
+    st.button("Pause", key="hr_pause_btn", on_click=_pause, use_container_width=True)
 
 # Advance one tick before the slider is drawn (widget state may only change here).
 if st.session_state["hr_playing"]:
@@ -174,7 +174,7 @@ if alert_on:
     theme.html(
         '<div class="sk-advisory" style="border-top:2px solid #ef4444;box-shadow:inset 0 0 0 1px #ef4444;">'
         '<div class="sk-ah" style="color:#ef4444;">REMOVAL ADVISED: pessimistic remaining life &lt;= R* '
-        "— officer sign-off required</div>"
+        "- officer sign-off required</div>"
         f"<p>Alert raised at cycle <b>{alert_at}</b> on {theme.esc(_label(engine))}: "
         f"q10 fell to {float(traj.loc[traj['cycle'] == alert_at, 'q10'].iloc[0]):.1f} cycles, "
         f"at or below R* = {R_star} cycles.</p>"
