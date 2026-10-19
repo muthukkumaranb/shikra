@@ -35,6 +35,23 @@ def test_addon_sources_do_not_mention_hidden_column():
         assert "rul_true" not in path.read_text(encoding="utf-8"), path.name
 
 
+def test_commander_brief_document_is_self_contained():
+    from app.lib.brief import BOTTOM_LINE, TOP_LINE, brief_document
+
+    doc = brief_document('<div id="shikra_brief">body</div>', 485, "flying task met")
+    at = AppTest.from_file(str(ROOT / "app/pages/1_Commander.py"), default_timeout=60).run(timeout=60)
+    assert len(at.exception) == 0, [e.value for e in at.exception]
+    page_doc = at.session_state["commander_brief_doc"]
+    for html in (doc, page_doc):
+        assert html.startswith("<!doctype html>")
+        assert "advisory" in html
+        assert TOP_LINE in html and BOTTOM_LINE in html
+        for bad in ("http://", "https://", "rul_true"):
+            assert bad not in html
+    assert "SHIKRA · Commander's brief · Day 485" in page_doc
+    assert "Flying task met" in page_doc or "flying task met" in page_doc
+
+
 def test_utilisation_matches_policy_summary_csv():
     summary = pd.read_csv(ROOT / "results" / "policy_summary.csv")
     util = utilisation_table(summary)
