@@ -9,27 +9,13 @@
 
 ## 1. Git Commit Trajectory
 
-`git log --oneline origin/main..HEAD`:
-```
-4e104b8 docs(readme): ensure Quickstart header precedes quickstart for table script
-e636dc7 build: add pre-execution check to verify target and scripts/verify.ps1
-8953f87 build: make verify.ps1 memory-safe on windows and add deck_figures
-ed7bebb docs(readme): add quickstart, non-claims, and repository map
-5c2ea97 build: declare supported Python versions
-5363348 chore: add *.webm to .gitignore
-47c449f merge: merge origin/main into audit branch
-620c876 docs(readme): add summary, quickstart, and non-claims
-91f8016 docs(datacard): fix relative paths for synthetic mock exports
-2eb7125 chore: add audit.key to .gitignore
-2d801be build: add verify target to Makefile and scripts/verify.ps1
-```
+Commit history: see `git log` on main.
 
 ---
 
 ## 2. Environment & Python Compatibility
 
-- **Python Version Used:** `CPython 3.11.16` (64-bit Windows)
-  Path: `C:\Users\MUTHUKUMARAN\AppData\Roaming\uv\python\cpython-3.11.16-windows-x86_64-none\python.exe` (accessible via `py -V:Astral\CPython3.11.16` or `python` within `.venv`).
+- **Python Version Used:** `CPython 3.11.16 (64-bit Windows, uv-managed)` (accessible via `python` within `.venv`).
 - **Python Version Compatibility Finding:**
   - **Python 3.11.x is strictly required.**
   - **Python 3.13 and Python 3.14 fail during installation:**
@@ -131,7 +117,7 @@ Restoration: `git checkout -- results/` restored working tree to clean state.
 - **Tracked files > 5 MB:**
   Only `artifacts/rul_models.pkl` (45.43 MB, expected ~48 MB). No other files > 5 MB.
 - **Hardcoded absolute paths:**
-  `git grep -i -E "(c:\\users|d:\\|/home/)"` returned **0 matches** across the repository.
+  Scanning for user directories, drive letters, and local home paths returned **0 matches** across the repository.
 - **Disallowed terms and overclaims scan:**
   Searched for a project list of disallowed competitor terms and overclaim phrases: 0 matches. "tamper-evident" and "advisory only, never autonomous" are adhered to everywhere.
 - **License:**
