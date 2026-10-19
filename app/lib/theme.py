@@ -272,6 +272,6 @@ def diverging(value: float, vmax: float) -> tuple[str, str]:
         rgb = (56, 189, 248)
     else:
         rgb = (239, 68, 68)
-    alpha = 0.12 + 0.68 * a
-    text = "#060e20" if alpha > 0.55 else "#dae2fd"
-    return f"rgba({rgb[0]},{rgb[1]},{rgb[2]},{alpha:.2f})", text
+    opacity = 0.12 + 0.68 * a
+    text = "#060e20" if opacity > 0.55 else "#dae2fd"
+    return f"rgba({rgb[0]},{rgb[1]},{rgb[2]},{opacity:.2f})", text
