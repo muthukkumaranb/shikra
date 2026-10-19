@@ -133,8 +133,8 @@ All committed benchmark results are bitwise-reproducible from a single command:
 
 ### Tests
 
-- 138 automated tests (`pytest --collect-only -q`); 130 run without the raw NASA data and run on every push in CI (badge above); the rest need `make data`.
-- Last local run: 130 passed, 8 deselected, 14 warnings in 28.87s, commit 1e55644.
+- 144 automated tests (`pytest --collect-only -q`); 136 run without the raw NASA data and run on every push in CI (badge above); the rest need `make data`.
+- Last local run: 136 passed, 8 deselected, 14 warnings in 260.42s (0:04:20), commit 95da719.
 
 ### Approximate Benchmark Times (Python 3.11.16)
 
