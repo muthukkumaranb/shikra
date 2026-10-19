@@ -226,6 +226,7 @@ simulates a synthetic 54-aircraft wing to evaluate maintenance policies.
 - **Technician** — snag list for the selected day
 - **Scenario** — inject-failure walkthrough (for demonstration)
 - **Evidence** — gates, policy table, model card, reproducibility
+- **Health Replay** — post-flight health download replayed, with the removal alert
 
 Every number shown is read from data files or computed live.
 All recommendations require explicit officer sign-off.
