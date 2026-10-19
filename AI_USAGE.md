@@ -1,6 +1,6 @@
 # AI Assistance Disclosure
 
-This document provides a full and transparent disclosure of the artificial intelligence tools used during the development of SHIKRA, the scope of their contributions, the independent verification mechanisms applied to their outputs, and the strict rules observed.
+This document discloses the AI tools used during the development of SHIKRA, the scope of their contributions, the independent verification mechanisms applied to their outputs, and the strict rules observed.
 
 ---
 
@@ -16,15 +16,7 @@ The engineering workflow incorporated multiple AI systems for design critique, r
 
 ### Co-Authorship Evidence from Git History
 
-Measured commit count via `git log --grep="Co-authored-by" --oneline | Measure-Object -Line`:
-
-```text
-Lines Words Characters Property
------ ----- ---------- --------
-   28
-```
-
-Example commits from `git log --grep="Co-authored-by" --oneline -5`:
+28 commits carry a `Co-authored-by: Copilot` trailer (`git log --grep="Co-authored-by" --oneline`). Example commits:
 
 ```text
 b8dd36e build: declare supported Python versions
@@ -58,17 +50,7 @@ fb906ca results(a10): refresh CQR findings and actions
 
 ---
 
-## 3. What the team designed and decided  [LEAD TO COMPLETE]
-
-- Problem framing:
-- Simulation design and policies:
-- Evaluation protocol:
-- What we cut and why:
-- Final review and sign-off:
-
----
-
-## 4. Strict Engineering Rules Followed
+## 3. Strict Engineering Rules Followed
 
 1. **Zero Competitor or Proprietary Code**: No third-party proprietary software, competitor intellectual property, or confidential internal frameworks were used, ingested, or referenced.
 2. **Public and Synthetic Data Only**: Strictly limited to publicly available NASA C-MAPSS turbofan degradation datasets and synthetically generated squadron maintenance logs; zero access to or use of real operational aircraft maintenance records.
