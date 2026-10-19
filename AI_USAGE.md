@@ -16,37 +16,22 @@ The engineering workflow incorporated multiple AI systems for design critique, r
 
 ### Co-Authorship Evidence from Git History
 
-Extracted via `git log --format="%an %ae %s %b" | Select-String -Pattern "Co-authored-by|Copilot|Claude"`:
+Measured commit count via `git log --grep="Co-authored-by" --oneline | Measure-Object -Line`:
 
 ```text
-muthukkumaranb mailtomuthukkumaranb@gmail.com build: declare supported Python versions Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com build: declare supported Python versions Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com test(app): resolve pages from repository root Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com fix(readiness): preserve full snapshot horizon Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com results(a10): refresh CQR findings and actions Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com fix(a10): keep one action example writer Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com fix(a10): avoid overstating tied actions Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com docs(a10): label conformal widening in aircraft Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com results(a10): record CQR heldout calibration Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com fix(a10): use CQR conformal widening Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com style: fix engine union lint Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com docs(a10): refresh heldout readiness summary Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com results(a10): add heldout conformal calibration Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com style: clean findings generator lint Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com docs(a10): generate findings from calibration CSVs Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com perf(a10): parallelize action evaluation Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): add conformal heldout calibration Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com docs(a10): record conformal calibration plan Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com style: remove unused demo setting Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): source demo output from examples Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com style: clean readiness lint Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com results(a10): add v2 readiness calibration and actions Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com docs(a10): publish readiness calibration Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com perf(a10): bound action evaluation to example squadron Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): calibrate v2 readiness forecast Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): cache readiness snapshots Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(sim): additive snapshot hook for readiness Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
-muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): port readiness forecast onto v2 simulation Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+Lines Words Characters Property
+----- ----- ---------- --------
+   28
+```
+
+Example commits from `git log --grep="Co-authored-by" --oneline -5`:
+
+```text
+b8dd36e build: declare supported Python versions
+5c2ea97 build: declare supported Python versions
+d0520c7 test(app): resolve pages from repository root
+9c71dcc fix(readiness): preserve full snapshot horizon
+fb906ca results(a10): refresh CQR findings and actions
 ```
 
 ---
@@ -56,32 +41,30 @@ muthukkumaranb mailtomuthukkumaranb@gmail.com feat(a10): port readiness forecast
 - **Code, Test, and Documentation Drafting**: AI agents drafted code modules, unit/integration test suites, and technical documentation strictly following human-authored architectural specifications and issue descriptions.
 - **Independent Re-Verification Protocol**: No AI-generated output was merged based on agent assertion alone. Every contribution was independently re-verified:
   - Clean environment execution of the entire test suite (`pytest -q -m "not data"`).
-  - Clean environment re-execution of data pipelines and simulation runs.
-  - Continuous Integration (GitHub Actions) validation checking formatting, type safety, linting, and tests on independent runners before any merge to `main`.
-- **General Failure Types Caught and Corrected**:
-  - *False Cleanliness Claims*: Agents reported linting or formatting as passing, but strict CI checks failed due to minor import ordering or typing mismatches.
-  - *UI Rendering Gaps*: Agents claimed Streamlit UI components rendered cleanly, but runtime evaluation in real browsers revealed missing state initialization or broken relative navigation.
-  - *Solver and Benchmark Misattributions*: Benchmarking scripts initially mislabelled baseline comparison algorithms (e.g. labelling a heuristic baseline as an exact solver or vice versa) until caught during human code audit and corrected.
-  - *Silent Overwriting of Derived Artefacts*: Agents attempted to hand-edit auto-generated tables or cards rather than updating the upstream generation scripts.
+  - Clean environment re-execution of data pipelines and simulation runs (`make reproduce-sim-quick` / `scripts/check_reproduce.py`).
+  - Continuous Integration (GitHub Actions) validation running on independent runners before any merge to `main`. As defined in `.github/workflows/ci.yml` and `.github/workflows/reproduce-full.yml`, CI executes:
+    - Lint check: `ruff check .`
+    - Test execution: `pytest -q -m "not data"`
+    - Quick simulation reproduction: `make reproduce-sim-quick PY=python`
+    - Bitwise result verification: `python scripts/check_reproduce.py --quick`
+    - Full reproduction on push to `main`: `make reproduce-sim PY=python` and `python scripts/check_reproduce.py`
+- **Observed Failure Types Caught and Corrected**:
+  - Agents reported "ruff clean" while CI failed on lint (UP038), three times.
+  - A CP-SAT benchmark ran a heuristic while labelled as the CP-SAT solver; caught in review, replaced with the real OR-Tools solver.
+  - A README claimed a dependency version (torch==2.2.2) that was not in requirements.txt.
+  - A README overstated what the quick verify script covers (it skips the supply-shock run).
+  - Streamlit SVG output rendered as a code block / blank in headless Chromium; caught by rendering every page in a real browser before merge.
+  - A failing test was pushed because a PowerShell block ran git push after pytest failed; fixed next commit; the merge procedure now checks pytest before pushing.
 
 ---
 
 ## 3. What the team designed and decided  [LEAD TO COMPLETE]
 
 - Problem framing:
-  - Definition of the fleet maintenance decision problem as an opportunity-driven replacement and inventory coordination problem.
-  - Rejection of black-box uncalibrated point predictions in favor of distribution-free conformal prediction intervals.
 - Simulation design and policies:
-  - Architecture of the discrete-event simulation model, fleet operational cycles, and common random numbers (CRN) protocol.
-  - Selection and formal definition of the baseline heuristic, proactive opportunism, and oracle ceiling policies.
 - Evaluation protocol:
-  - Design of stress tests: supply-chain disruption (180-day foreign vendor halt), sensor degradation heatmap, and systematic RUL bias sweeps.
-  - Definition of held-out calibration protocol for multi-step readiness projections.
-- What to cut:
-  - Deliberate scoping exclusions: rejecting uncalibrated deep reinforcement learning, omitting closed-loop write-back to enterprise systems of record, and removing unverified operational assumptions.
-- Final review:
-  - Line-by-line review of all mathematical formulations, calibration bounds, and safety-critical claims.
-  - Final human sign-off on all repository releases, model cards, and documentation.
+- What we cut and why:
+- Final review and sign-off:
 
 ---
 
