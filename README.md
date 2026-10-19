@@ -132,9 +132,8 @@ All committed benchmark results are bitwise-reproducible from a single command:
 - **Windows (`scripts/verify.ps1`)**: Windows PowerShell validation. By default, executes the full test suite (`pytest -q -m "not data"`), all simulations EXCEPT the ~65-min supply-shock run, followed by bitwise comparison of committed CSVs (`scripts/check_reproduce.py`) and working tree check (~8 min). Add `-Full` to also regenerate the supply-shock run (~73 min).
 
 ### Tests
-
-- 144 automated tests (`pytest --collect-only -q`); 136 run without the raw NASA data and run on every push in CI (badge above); the rest need `make data`.
-- Last local run: 136 passed, 8 deselected, 14 warnings in 260.42s (0:04:20), commit 95da719.
+- 140 automated tests (`pytest --collect-only -q`, plus 4 more when the optional LSTM extras in `requirements-lstm.txt` are installed). Without the raw NASA data, a plain `requirements.txt` install runs 133 and skips the LSTM file; CI runs them on every push (badge above). The rest need `make data`.
+- Fresh clone, `requirements.txt` only: 133 passed, 1 skipped, 7 deselected. With LSTM extras: 136 passed, 8 deselected (commit 95da719).
 
 ### Approximate Benchmark Times (Python 3.11.16)
 
