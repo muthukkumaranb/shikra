@@ -41,6 +41,7 @@ theme.header(
     "simulation (config/wing.yaml + artifacts/replay_rul.parquet, shikra_v2, seed 1) · "
     "results/heatmap.csv · results/supply_shock.csv",
 )
+st.caption(f"SHIKRA: {theme.EXPANSION}. {theme.BIRD}")
 
 flight_day = st.slider(
     "Simulation Day (Measured Window: 365–729)",
