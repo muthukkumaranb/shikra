@@ -1,6 +1,7 @@
 # DRDO Evaluating Trustworthy AI (ETAI) Mapping
 
-DRDO's Evaluating Trustworthy AI (ETAI) framework (launched Oct 2024), as publicly reported, emphasises AI that is reliable, robust, transparent and resilient.
+DRDO's "Evaluating Trustworthy Artificial Intelligence (ETAI) Framework and Guidelines for the Armed Forces", launched on 17 October 2024 by Chief of Defence Staff (CDS) Gen Anil Chauhan and DRDO Chairman Dr Samir V. Kamat, establishes five core principles for defence AI: Reliability & Robustness, Safety & Security, Transparency, Fairness, and Privacy.
+
 SHIKRA maps its existing, tested artefacts to these principles. This is NOT a compliance claim.
 
 ---
@@ -9,20 +10,21 @@ SHIKRA maps its existing, tested artefacts to these principles. This is NOT a co
 
 | Principle | What SHIKRA does | Evidence in the repo (file path + metric/test name) | How to check (command) |
 |---|---|---|---|
-| **Reliable** | Conformal-calibrated RUL prediction bands bounding uncertainty | `MODEL_CARD.md`; `results/rul_cmapss.csv` (`coverage_80`, `coverage_90`) | `python scripts/check_reproduce.py` |
-| **Reliable** | Held-out conformal calibration of multi-step readiness forecast | `results/readiness_calib.csv` (`shikra_conformal coverage_80`, `mae`, `brier`) | `python scripts/check_reproduce.py` |
-| **Reliable** | 30-seed paired bootstrap confidence intervals under Common Random Numbers | `results/policy_summary.csv` (`serviceability`, `ci_lo`, `ci_hi`) | `python scripts/check_reproduce.py` |
-| **Reliable** | Automated bitwise reproduction verifying every committed result | `Makefile` (`verify`); `scripts/verify.ps1` | `powershell -File scripts/verify.ps1` |
-| **Robust** | Degraded model error and systematic RUL bias sensitivity stress tests | `results/heatmap.csv` (`quality` multiplier rows); `results/bias.csv` (`bias_cycles` sweep) | `python scripts/check_reproduce.py` |
-| **Robust** | 180-day foreign supply halt stress test evaluating fleet resilience and recovery | `results/supply_shock.csv` (`loss_pp_shock_window`, `peak_extra_grounded`, `recovery_days`) | `python scripts/check_reproduce.py` |
-| **Robust** | Data-quality quarantine isolating malformed or anomalous ingested records | `results/dq_detection.csv` (`quarantined_rows`, `detection_rate`); `tests/test_ingest.py` (`test_quarantine_catches_missing_key`, `test_quarantine_catches_mismatched_sn`) | `pytest -q tests/test_ingest.py` |
-| **Transparent** | Open-source reproducible codebase, structured model card, and data card | `MODEL_CARD.md`; `DATA_CARD.md`; `README.md` | Codebase inspection |
-| **Transparent** | Explicit disclosure of negative findings and scope boundaries | `results/FINDINGS_A10.md`; `results/FINDINGS_T14.md`; `results/FINDINGS_CPSAT.md`; `README.md` ("What is not claimed") | Document inspection |
-| **Transparent** | Perfect-prediction oracle ceiling included as reference in every evaluation | `results/policy_summary.csv` (`oracle_v2` vs `shikra_v2` and `reactive`) | `python scripts/check_reproduce.py` |
-| **Resilient** | Fully air-gapped deployment architecture with zero cloud connectivity or telemetry | `.streamlit/config.toml` (`gatherUsageStats = false`, `serverAddress = "localhost"`); `Dockerfile` | Document inspection; `docker run --network none shikra` |
-| **Resilient** | Cryptographic SHA-256 HMAC hash chaining and daily Merkle roots for audit trails | `app/lib/audit.py`; `tests/test_audit_chain.py` (`test_five_appends_verify_ok`, `test_edit_detected_at_row`, `test_root_tamper_hmac_mismatch`) | `python -m app.lib.audit verify` or `pytest -q tests/test_audit_chain.py` |
-| **Resilient** | Offline advisory decision support requiring human engineering sign-off | `README.md`; `LIMITATIONS.md`; `app/pages/2_Engineering_Officer.py` | Code and UI inspection |
-| **Accountable / Human-in-the-loop** | Engineering Officer queue for approving, deferring, or overriding recommendations | `app/pages/2_Engineering_Officer.py`; `app/lib/audit.py` (mandatory reason capture, append-only record) | `pytest -q tests/test_audit_chain.py` |
+| **Reliability & Robustness** | Conformal-calibrated RUL prediction bands bounding uncertainty | `results/coverage.csv` (`empirical`, `nominal`, `calibrated`); `MODEL_CARD.md` | `python scripts/check_reproduce.py` |
+| **Reliability & Robustness** | Held-out conformal calibration of multi-step readiness forecast | `results/readiness_calib.csv` (`coverage_80`, `mae`, `brier`) | `python scripts/check_reproduce.py` |
+| **Reliability & Robustness** | 30-seed paired bootstrap confidence intervals under Common Random Numbers | `results/policy_summary.csv` (`metric == 'serviceability'`, `mean`, `ci_lo`, `ci_hi`) | `python scripts/check_reproduce.py` |
+| **Reliability & Robustness** | Automated bitwise reproduction verifying every committed result | `Makefile` (`verify`); `scripts/verify.ps1` | `powershell -File scripts/verify.ps1` |
+| **Reliability & Robustness** | Degraded model error and systematic RUL bias sensitivity stress tests | `results/heatmap.csv` (`quality` multiplier rows); `results/bias.csv` (`bias_cycles` sweep) | `python scripts/check_reproduce.py` |
+| **Reliability & Robustness** | 180-day foreign supply halt stress test evaluating fleet resilience and recovery | `results/supply_shock.csv` (`loss_pp_shock_window`, `peak_extra_grounded`, `recovery_days`) | `python scripts/check_reproduce.py` |
+| **Reliability & Robustness** | Data-quality quarantine isolating malformed or anomalous ingested records | `results/dq_detection.csv` (`fault_type`, `detected`, `precision`, `recall`); `tests/test_ingest.py` (`test_quarantine_catches_missing_key`, `test_quarantine_catches_mismatched_sn`) | `pytest -q tests/test_ingest.py` |
+| **Safety & Security** | Fully air-gapped deployment architecture with zero cloud connectivity or telemetry | `.streamlit/config.toml` (`gatherUsageStats = false`, `serverAddress = "localhost"`); `Dockerfile` | Document inspection; `docker run --network none shikra` |
+| **Safety & Security** | Cryptographic SHA-256 HMAC hash chaining and daily Merkle roots for audit trails | `app/lib/audit.py`; `tests/test_audit_chain.py` (`test_five_appends_verify_ok`, `test_edit_detected_at_row`, `test_root_tamper_hmac_mismatch`) | `python -m app.lib.audit verify` or `pytest -q tests/test_audit_chain.py` |
+| **Safety & Security** | Human-in-the-loop decision control: Engineering Officer page has only Approve and Defer buttons; recommendations are advisory only, never autonomous | `app/pages/2_Engineering_Officer.py`; `LIMITATIONS.md` | Code and UI inspection |
+| **Transparency** | Open-source reproducible codebase, structured model card, and data card | `MODEL_CARD.md`; `DATA_CARD.md`; `README.md` | Codebase inspection |
+| **Transparency** | Explicit disclosure of negative findings and scope boundaries | `results/FINDINGS_A10.md`; `results/FINDINGS_T14.md`; `results/FINDINGS_CPSAT.md`; `README.md` ("What did not work") | Document inspection |
+| **Transparency** | Perfect-prediction oracle ceiling included as reference in every evaluation | `results/policy_summary.csv` (`policy == 'oracle_v2'`) | `python scripts/check_reproduce.py` |
+| **Fairness** | Not applicable in the usual sense: no personal data or people are scored; same parameters for all four policies; the perfect-prediction ceiling is always reported. | `results/policy_summary.csv`; `config/wing.yaml` | Code and results inspection |
+| **Privacy** | No personal data processed; air-gapped; no telemetry. | `.streamlit/config.toml`; `Dockerfile`; `DATA_CARD.md` | Code and config inspection |
 
 ---
 
@@ -37,5 +39,5 @@ SHIKRA maps its existing, tested artefacts to these principles. This is NOT a co
 
 ## 3. Reference Sources
 
-- "DRDO releases guidelines for Evaluating Trustworthy AI (ETAI)", as reported by Press Information Bureau (PIB), Ministry of Defence, Government of India, October 2024.
-- "Evaluating Trustworthy AI framework launched to assess defence systems", as reported by The Hindu / PTI, October 2024.
+- https://drdo.gov.in/drdo/sites/default/files/drdo-news-documents/NPC18Oct2024.pdf
+- https://indiaai.gov.in/news/trustworthy-ai-framework-launched-for-critical-defence-operations
