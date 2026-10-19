@@ -32,6 +32,7 @@ st.set_page_config(
 )
 st.title("Logistics View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 config = load_config()
 shock_df = load_supply_shock()

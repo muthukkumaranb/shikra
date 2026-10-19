@@ -204,7 +204,7 @@ def test_pages_without_readiness_fallback(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(rd_mod, "is_readiness_available", lambda: False)
 
     # 1. Engineering Officer page fallback
-    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    at_eo = AppTest.from_file(str(ROOT / "app/pages/2_Engineering_Officer.py")).run(timeout=20)
     assert len(at_eo.exception) == 0
     all_eo_text = " ".join(
         [c.value for c in at_eo.caption]
@@ -215,7 +215,7 @@ def test_pages_without_readiness_fallback(monkeypatch: pytest.MonkeyPatch):
     assert "rul_true" not in all_eo_text
 
     # 2. Scenario page step 5 fallback
-    at_sc = AppTest.from_file("app/pages/5_Scenario.py")
+    at_sc = AppTest.from_file(str(ROOT / "app/pages/5_Scenario.py"))
     at_sc.session_state["scenario_step"] = 5
     at_sc.run(timeout=20)
     assert len(at_sc.exception) == 0
@@ -231,7 +231,7 @@ def test_pages_without_readiness_fallback(monkeypatch: pytest.MonkeyPatch):
 
 def test_eo_page_with_readiness_available():
     """Verify that with readiness available, EO page shows no 'after T1.7 merge' text and no 'rul_true'."""
-    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    at_eo = AppTest.from_file(str(ROOT / "app/pages/2_Engineering_Officer.py")).run(timeout=20)
     assert len(at_eo.exception) == 0
     all_eo_text = " ".join(
         [c.value for c in at_eo.caption]
@@ -276,7 +276,7 @@ def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
                 del sys.modules[mod_name]
 
     # 1. Engineering Officer page with readiness
-    at_eo = AppTest.from_file("app/pages/2_Engineering_Officer.py").run(timeout=20)
+    at_eo = AppTest.from_file(str(ROOT / "app/pages/2_Engineering_Officer.py")).run(timeout=20)
     assert len(at_eo.exception) == 0
     all_eo_text = " ".join(
         [c.value for c in at_eo.caption]
@@ -296,7 +296,7 @@ def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
             assert "q90 RUL" in df.columns
 
     # 2. Scenario step 5 with readiness
-    at_sc = AppTest.from_file("app/pages/5_Scenario.py")
+    at_sc = AppTest.from_file(str(ROOT / "app/pages/5_Scenario.py"))
     at_sc.session_state["scenario_step"] = 5
     at_sc.run(timeout=25)
     assert len(at_sc.exception) == 0
@@ -316,7 +316,7 @@ def test_pages_with_readiness_wired(monkeypatch: pytest.MonkeyPatch):
 def test_no_rul_true_reaches_any_page():
     """Verify that rul_true is never exposed or rendered on any dashboard page."""
     for page_path in PAGE_FILES:
-        at = AppTest.from_file(page_path).run(timeout=20)
+        at = AppTest.from_file(str(ROOT / page_path)).run(timeout=20)
         assert len(at.exception) == 0
 
         # Inspect all text/caption/markdown
@@ -357,7 +357,7 @@ def test_scenario_step3_rstar_dynamic_caption():
     params = load_params()
     r_star = int(params["R_star"])
 
-    at = AppTest.from_file("app/pages/5_Scenario.py")
+    at = AppTest.from_file(str(ROOT / "app/pages/5_Scenario.py"))
     at.session_state["scenario_step"] = 3
     at.run(timeout=20)
     assert len(at.exception) == 0
@@ -411,4 +411,97 @@ def test_aircraft_detail_svg_valid_xml():
                 )
                 dom = xml.dom.minidom.parseString(svg)
                 assert dom.documentElement.tagName == "svg"
+
+
+def test_all_pages_with_readiness_live_no_exceptions_no_merge_stubs():
+    """With readiness available: every page runs with 0 exceptions and no 'after T1.7 merge' or 'rul_true'."""
+    for page_path in PAGE_FILES:
+        at = AppTest.from_file(str(ROOT / page_path), default_timeout=40).run(timeout=40)
+        assert len(at.exception) == 0, f"Page {page_path} raised exceptions: {[e.value for e in at.exception]}"
+        all_text = " ".join(
+            [c.value for c in at.caption]
+            + [m.value for m in at.markdown]
+            + [i.value for i in at.info]
+            + [w.value for w in at.warning]
+        ).lower()
+        assert "after t1.7 merge" not in all_text, f"'after T1.7 merge' found on {page_path}"
+        assert "after merge of t1.7" not in all_text, f"'after merge of T1.7' found on {page_path}"
+        assert "after t1.6 merge" not in all_text, f"'after T1.6 merge' found on {page_path}"
+        assert "rul_true" not in all_text, f"'rul_true' found on {page_path}"
+        for df_elem in at.dataframe:
+            assert "rul_true" not in df_elem.value.columns, f"'rul_true' column found on {page_path}"
+
+
+def test_commander_readiness_coverage_caption():
+    """Commander shows the coverage caption, and its numbers equal results/readiness_calib.csv."""
+    import pandas as pd
+
+    calib_csv = ROOT / "results" / "readiness_calib.csv"
+    assert calib_csv.exists(), "results/readiness_calib.csv must exist"
+    calib = pd.read_csv(calib_csv)
+    conf_row = calib[(calib["lead_days"] == 3) & (calib["method"] == "shikra_conformal")].iloc[0]
+    fc_row = calib[(calib["lead_days"] == 3) & (calib["method"] == "shikra_forecast")].iloc[0]
+    pe_row = calib[(calib["lead_days"] == 3) & (calib["method"] == "persistence")].iloc[0]
+
+    conf_cov = float(conf_row["coverage_80"])
+    fc_mae = float(fc_row["mae"])
+    pe_mae = float(pe_row["mae"])
+
+    at = AppTest.from_file(str(ROOT / "app/pages/1_Commander.py"), default_timeout=40).run(timeout=40)
+    assert len(at.exception) == 0
+
+    all_text = " ".join([c.value for c in at.caption] + [m.value for m in at.markdown])
+    assert "Calibrated band covers" in all_text
+    assert (f"{conf_cov:.4f}" in all_text) or (f"{conf_cov * 100:.1f}%" in all_text)
+    assert f"{fc_mae:.4f}" in all_text
+    assert f"{pe_mae:.4f}" in all_text
+    assert "does not yet beat persistence" in all_text
+    assert "Synthetic wing." in all_text
+
+
+def test_commander_one_page_brief():
+    """The brief: AppTest clicks 'Open one-page brief' and asserts title, top-3 indigenisation list, audit line appear."""
+    at = AppTest.from_file(str(ROOT / "app/pages/1_Commander.py"), default_timeout=40).run(timeout=40)
+    assert len(at.exception) == 0
+
+    # Click the open brief button
+    at.button(key="open_brief_btn").click().run(timeout=40)
+    assert len(at.exception) == 0
+
+    all_text = " ".join([m.value for m in at.markdown] + [c.value for c in at.caption])
+
+    # Assert title
+    assert "SHIKRA · Commander's brief · Day 485 · synthetic wing" in all_text
+
+    # Top-3 indigenisation list equal to supply_shock.csv order
+    shock = load_supply_shock()
+    top3_lrus = shock[shock["lru_id"] != "all_foreign"].sort_values(
+        "loss_pp_shock_window", ascending=False
+    ).head(3)["lru_id"].tolist()
+
+    for lru in top3_lrus:
+        assert lru in all_text, f"Top indigenisation item {lru} not found in brief"
+
+    pos0 = all_text.find(top3_lrus[0])
+    pos1 = all_text.find(top3_lrus[1])
+    pos2 = all_text.find(top3_lrus[2])
+    assert -1 < pos0 < pos1 < pos2, "Top 3 indigenisation items not in expected ranking order"
+
+    # Audit status line
+    assert "Audit chain: intact" in all_text or "Audit chain: BROKEN" in all_text
+
+
+def test_eo_page_rstar_owner_label():
+    """The EO page shows the R* owner label with the value from policy_params.json."""
+    params = load_params()
+    r_star = params["R_star"]
+
+    at = AppTest.from_file(str(ROOT / "app/pages/2_Engineering_Officer.py"), default_timeout=40).run(timeout=40)
+    assert len(at.exception) == 0
+
+    all_text = " ".join([m.value for m in at.markdown] + [c.value for c in at.caption])
+    expected_label = (
+        f"Removal threshold R* = {r_star} cycles · set by the Engineering Officer · changes are audit-logged"
+    )
+    assert expected_label in all_text, f"Expected R* owner label not found: {expected_label}"
 
