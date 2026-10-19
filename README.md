@@ -27,6 +27,18 @@ against a synthetic 54-aircraft wing.
 
 ## Results
 
+### Highlights
+
+| What | Result | Evidence |
+|---|---|---|
+| RUL accuracy | FD001 RMSE (capped) 11.64 vs 18.45 (Babu 2016 CNN); FD003 14.50 vs 19.82 | [results/rul_cmapss.csv](results/rul_cmapss.csv) |
+| Calibrated uncertainty | Held-out empirical coverage 81.0% (FD001) and 79.0% (FD003) at 80% nominal | [results/coverage.csv](results/coverage.csv) |
+| Which lever buys readiness | At 0.5x pipeline (fastest): reactive 87.4%, SHIKRA 88.3%, oracle 88.7%; at 1.9x (slowest): reactive 53.6%, SHIKRA 52.9%, oracle 53.4% | [results/heatmap.csv](results/heatmap.csv) |
+| Unscheduled engine removals | Reactive 72.7 vs SHIKRA 0.0 per year | [results/policy_summary.csv](results/policy_summary.csv) |
+| What to make in India first | Top-2 LRUs: apu_start (21.2 pp), ecs_valve (7.9 pp); foreign halt grounds up to 32 extra aircraft, recovery in 45 days | [results/supply_shock.csv](results/supply_shock.csv) |
+| Readiness forecast | Held-out conformal coverage 86.3% (D+3) and 86.5% (D+7) at 80% nominal; MAE does NOT beat persistence (D+7: 2.274 vs 1.552) | [results/readiness_calib.csv](results/readiness_calib.csv) |
+| Hangar scheduling | CP-SAT vs earliest-due-date heuristic: zero availability gain on the simulated wing | [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |
+
 ### RUL Model (LightGBM quantile ensemble, 5 seeds)
 
 Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (piecewise convention) and uncapped.
@@ -49,13 +61,13 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 | SHIKRA (ablation: without lead-time-aware prepositioning) | 56.2% | [55.6%, 56.8%] | 0.0 |
 | Oracle (ablation: without lead-time-aware prepositioning) | 56.5% | [56.0%, 57.1%] | 0.0 |
 
-> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see A11).
+> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see lever map below).
 
-> **A12 Supply Shock (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.1 pp over the halt); recovery takes 45 days after supply resumes. Ranking: apu_start (21.2 pp), ecs_valve (7.9 pp). Parameters are synthetic; the method is the claim.
+> **Supply-shock stress test (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.1 pp over the halt); recovery takes 45 days after supply resumes. Ranking: apu_start (21.2 pp), ecs_valve (7.9 pp). Parameters are synthetic; the method is the claim.
 
-> **Systematic Bias Robustness (§3.2b, at 1.0× pipeline speed):** −10 cycles wastes 2019 cycles; +10 raises unscheduled removals from 0 to 97.8.
+> **Prediction-bias stress test (at 1.0× pipeline speed):** −10 cycles wastes 2019 cycles; +10 raises unscheduled removals from 0 to 97.8.
 
-> **A10 Readiness Forecast:** At lead 7, forecast MAE is 2.274 vs 1.552 for persistence and Brier is 0.132 vs 0.117; action gains are forecast-estimated and not validated in simulation.
+> **Readiness forecast:** At lead 7, forecast MAE is 2.274 vs 1.552 for persistence and Brier is 0.132 vs 0.117; action gains are forecast-estimated and not validated in simulation.
 
 ---
 

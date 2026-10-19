@@ -1,9 +1,8 @@
 """Generate the results table for README.md from results CSVs.
 
-Reads results/policy_summary.csv and results/rul_cmapss.csv and prints
-a markdown table that can be pasted into README.md.
+Reads results CSVs and updates the auto-generated Results section in README.md.
 
-Never edit README.md by hand — run this script.
+Never edit README.md results by hand — run this script.
 """
 
 from __future__ import annotations
@@ -17,8 +16,116 @@ RESULTS_DIR = ROOT / "results"
 README_PATH = ROOT / "README.md"
 
 
+def generate_highlights() -> list[str]:
+    lines = [
+        "### Highlights\n",
+        "| What | Result | Evidence |",
+        "|---|---|---|",
+    ]
+
+    # 1. RUL accuracy
+    rul_path = RESULTS_DIR / "rul_cmapss.csv"
+    if rul_path.exists():
+        rul_df = pd.read_csv(rul_path)
+        babu_cnn = {"FD001": 18.45, "FD003": 19.82}
+        fd1_sub = rul_df[rul_df["subset"] == "FD001"]
+        fd3_sub = rul_df[rul_df["subset"] == "FD003"]
+        if not fd1_sub.empty and not fd3_sub.empty:
+            fd1_rmse = fd1_sub.iloc[0]["rmse_capped125"]
+            fd3_rmse = fd3_sub.iloc[0]["rmse_capped125"]
+            lines.append(
+                f"| RUL accuracy | FD001 RMSE (capped) {fd1_rmse:.2f} vs {babu_cnn['FD001']:.2f} (Babu 2016 CNN); "
+                f"FD003 {fd3_rmse:.2f} vs {babu_cnn['FD003']:.2f} | [results/rul_cmapss.csv](results/rul_cmapss.csv) |"
+            )
+
+    # 2. Calibrated uncertainty
+    cov_path = RESULTS_DIR / "coverage.csv"
+    if cov_path.exists():
+        cov_df = pd.read_csv(cov_path)
+        t_cal = cov_df[(cov_df["split"] == "test") & (cov_df["calibrated"])]
+        t80_1 = t_cal[(t_cal["nominal"] == 0.8) & (t_cal["subset"] == "FD001")]
+        t80_3 = t_cal[(t_cal["nominal"] == 0.8) & (t_cal["subset"] == "FD003")]
+        if not t80_1.empty and not t80_3.empty:
+            c1 = t80_1.iloc[0]["empirical"]
+            c3 = t80_3.iloc[0]["empirical"]
+            lines.append(
+                f"| Calibrated uncertainty | Held-out empirical coverage {c1:.1%} (FD001) and {c3:.1%} (FD003) at 80% nominal | "
+                f"[results/coverage.csv](results/coverage.csv) |"
+            )
+
+    # 3. Which lever buys readiness
+    hm_path = RESULTS_DIR / "heatmap.csv"
+    if hm_path.exists():
+        hm_df = pd.read_csv(hm_path)
+        fast_mult = hm_df["pipeline_mult"].min()
+        slow_mult = hm_df["pipeline_mult"].max()
+        f_r = hm_df[(hm_df["pipeline_mult"] == fast_mult) & (hm_df["quality"] == 1.0)]["reactive_serviceability_mean"].iloc[0]
+        f_s = hm_df[(hm_df["pipeline_mult"] == fast_mult) & (hm_df["quality"] == 1.0)]["serviceability_mean"].iloc[0]
+        f_o = hm_df[(hm_df["pipeline_mult"] == fast_mult) & (hm_df["quality"] == 0.0)]["serviceability_mean"].iloc[0]
+        s_r = hm_df[(hm_df["pipeline_mult"] == slow_mult) & (hm_df["quality"] == 1.0)]["reactive_serviceability_mean"].iloc[0]
+        s_s = hm_df[(hm_df["pipeline_mult"] == slow_mult) & (hm_df["quality"] == 1.0)]["serviceability_mean"].iloc[0]
+        s_o = hm_df[(hm_df["pipeline_mult"] == slow_mult) & (hm_df["quality"] == 0.0)]["serviceability_mean"].iloc[0]
+        lines.append(
+            f"| Which lever buys readiness | At {fast_mult:.1f}x pipeline (fastest): reactive {f_r:.1%}, SHIKRA {f_s:.1%}, oracle {f_o:.1%}; "
+            f"at {slow_mult:.1f}x (slowest): reactive {s_r:.1%}, SHIKRA {s_s:.1%}, oracle {s_o:.1%} | "
+            f"[results/heatmap.csv](results/heatmap.csv) |"
+        )
+
+    # 4. Unscheduled engine removals
+    sim_path = RESULTS_DIR / "policy_summary.csv"
+    if sim_path.exists():
+        pol_df = pd.read_csv(sim_path)
+        uns = pol_df[pol_df["metric"] == "unscheduled_removals"].set_index("policy")
+        if "reactive" in uns.index:
+            r_uns = uns.loc["reactive"]["mean"]
+            s_key = "shikra_v2" if "shikra_v2" in uns.index else ("shikra" if "shikra" in uns.index else "")
+            s_uns = uns.loc[s_key]["mean"] if s_key in uns.index else 0.0
+            lines.append(
+                f"| Unscheduled engine removals | Reactive {r_uns:.1f} vs SHIKRA {s_uns:.1f} per year | "
+                f"[results/policy_summary.csv](results/policy_summary.csv) |"
+            )
+
+    # 5. What to make in India first
+    shock_path = RESULTS_DIR / "supply_shock.csv"
+    if shock_path.exists():
+        shock_df = pd.read_csv(shock_path)
+        af_row = shock_df[shock_df["lru_id"] == "all_foreign"].iloc[0]
+        top2 = shock_df[shock_df["lru_id"] != "all_foreign"].sort_values("rank").head(2)
+        top2_items = [f"{r['lru_id']} ({r['loss_pp_shock_window']:.1f} pp)" for _, r in top2.iterrows()]
+        top2_str = ", ".join(top2_items)
+        lines.append(
+            f"| What to make in India first | Top-2 LRUs: {top2_str}; foreign halt grounds up to {af_row['peak_extra_grounded']:.0f} extra aircraft, recovery in {af_row['recovery_days']:.0f} days | "
+            f"[results/supply_shock.csv](results/supply_shock.csv) |"
+        )
+
+    # 6. Readiness forecast
+    readiness_path = RESULTS_DIR / "readiness_calib.csv"
+    if readiness_path.exists():
+        calib_df = pd.read_csv(readiness_path)
+        d3_cov = calib_df[(calib_df["lead_days"] == 3) & (calib_df["method"] == "shikra_conformal")]["coverage_80"].iloc[0]
+        d7_cov = calib_df[(calib_df["lead_days"] == 7) & (calib_df["method"] == "shikra_conformal")]["coverage_80"].iloc[0]
+        d7_fc_mae = calib_df[(calib_df["lead_days"] == 7) & (calib_df["method"] == "shikra_forecast")]["mae"].iloc[0]
+        d7_pers_mae = calib_df[(calib_df["lead_days"] == 7) & (calib_df["method"] == "persistence")]["mae"].iloc[0]
+        lines.append(
+            f"| Readiness forecast | Held-out conformal coverage {d3_cov:.1%} (D+3) and {d7_cov:.1%} (D+7) at 80% nominal; "
+            f"MAE does NOT beat persistence (D+7: {d7_fc_mae:.3f} vs {d7_pers_mae:.3f}) | "
+            f"[results/readiness_calib.csv](results/readiness_calib.csv) |"
+        )
+
+    # 7. Hangar scheduling
+    lines.append(
+        "| Hangar scheduling | CP-SAT vs earliest-due-date heuristic: zero availability gain on the simulated wing | "
+        "[results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |"
+    )
+    lines.append("")
+    return lines
+
+
 def generate_table() -> str:
     lines = ["## Results\n"]
+
+    # ── Highlights table ─────────────────────────────────────────────────
+    lines.extend(generate_highlights())
 
     # ── RUL model table ──────────────────────────────────────────────────
     rul_path = RESULTS_DIR / "rul_cmapss.csv"
@@ -117,10 +224,10 @@ def generate_table() -> str:
         lines.append(
             f"> **Key Finding:** SHIKRA removes all unscheduled engine removals ({s_uns:.0f} vs {r_uns:.1f} per year) but, "
             f"in this wing, serviceability is unchanged ({s_svc:.1%} vs {r_svc:.1%}), "
-            f"because the engine-spare pipeline, not warning time, is the binding constraint (see A11).\n"
+            f"because the engine-spare pipeline, not warning time, is the binding constraint (see lever map below).\n"
         )
 
-        # A12 supply shock interpretation
+        # Supply shock interpretation
         shock_path = RESULTS_DIR / "supply_shock.csv"
         if shock_path.exists():
             shock_df = pd.read_csv(shock_path)
@@ -132,7 +239,7 @@ def generate_table() -> str:
             ranking_items = [f"{row['lru_id']} ({row['loss_pp_shock_window']:.1f} pp)" for _, row in top_lrus.head(2).iterrows()]
             ranking_str = ", ".join(ranking_items)
             lines.append(
-                f"> **A12 Supply Shock (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to {peak_ac:.0f} extra aircraft of 54 "
+                f"> **Supply-shock stress test (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to {peak_ac:.0f} extra aircraft of 54 "
                 f"({loss_sw:.1f} pp over the halt); recovery takes {rec_days:.0f} days after supply resumes. "
                 f"Ranking: {ranking_str}. Parameters are synthetic; the method is the claim.\n"
             )
@@ -146,7 +253,7 @@ def generate_table() -> str:
             pess_sub = bias_df[bias_df["bias_cycles"] == -10]
             m_wasted = pess_sub["wasted_life_cycles_mean"].iloc[0] if not pess_sub.empty else 1993.0
             lines.append(
-                f"> **Systematic Bias Robustness (§3.2b, at 1.0× pipeline speed):** −10 cycles wastes {m_wasted:.0f} cycles; "
+                f"> **Prediction-bias stress test (at 1.0× pipeline speed):** −10 cycles wastes {m_wasted:.0f} cycles; "
                 f"+10 raises unscheduled removals from 0 to {n_uns:.1f}.\n"
             )
 
@@ -157,7 +264,7 @@ def generate_table() -> str:
             fc = lead7[lead7["method"] == "shikra_forecast"].iloc[0]
             pers = lead7[lead7["method"] == "persistence"].iloc[0]
             lines.append(
-                f"> **A10 Readiness Forecast:** At lead 7, forecast MAE is {fc['mae']:.3f} vs "
+                f"> **Readiness forecast:** At lead 7, forecast MAE is {fc['mae']:.3f} vs "
                 f"{pers['mae']:.3f} for persistence and Brier is {fc['brier']:.3f} vs "
                 f"{pers['brier']:.3f}; action gains are forecast-estimated and not validated in simulation.\n"
             )
