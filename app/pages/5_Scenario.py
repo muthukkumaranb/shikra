@@ -13,7 +13,6 @@ import time
 from pathlib import Path
 
 import altair as alt
-import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -21,6 +20,7 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.lib import theme  # noqa: E402
 from app.lib.audit import append as audit_append  # noqa: E402
 from app.lib.audit import get_recent as audit_recent  # noqa: E402
 from app.lib.data import load_config, load_params  # noqa: E402
@@ -41,9 +41,15 @@ st.set_page_config(
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
-st.title("Scenario Walkthrough — Failure Injection")
-st.caption("Deterministic demonstration of predictive advisory workflow. Synthetic wing.")
-st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+strip = theme.apply("scenario")
+theme.header(
+    "Scenario · failure-injection walkthrough",
+    "What happens, step by step, when one engine starts to degrade faster than expected?",
+    "Deterministic demonstration of predictive advisory workflow: injection, RUL band crossing, "
+    "removal-probability rise, pre-positioning and hangar plan, then officer sign-off. Synthetic wing.",
+    "artifacts/replay_rul.parquet · artifacts/policy_params.json · config/wing.yaml · "
+    "readiness snapshot day 485 (shikra_v2, seed 1) · app_data audit log",
+)
 
 config = load_config()
 params = load_params()
@@ -60,6 +66,7 @@ h_horizon = (depot_to_base_days + planned_days) * pm * sortie_p
 DAY = 485
 sim_res = get_sim_result("shikra_v2", seed=1)
 tail_mc = sim_res.tail_mc[DAY]
+theme.status_strip(strip, day=DAY, mc=int(tail_mc.sum()))
 
 # Determine first MC tail in S2 (tails 18 to 35)
 s2_mc_tails = [t for t in range(18, 36) if tail_mc[t]]
@@ -86,12 +93,15 @@ step_names = [
     "6. EO Sign-Off",
 ]
 
-step_cols = st.columns(6)
-for i, name in enumerate(step_names, 1):
-    active_style = "font-weight:bold; color:#38bdf8;" if st.session_state.scenario_step == i else "color:#94a3b8;"
-    step_cols[i - 1].markdown(f"<div style='font-size:0.85rem; {active_style}'>{name}</div>", unsafe_allow_html=True)
-
-st.divider()
+_cur = st.session_state.scenario_step
+theme.html(
+    '<div class="sk-steps">'
+    + "".join(
+        f'<div class="sk-step{" sk-on" if _cur == i else (" sk-past" if i < _cur else "")}">{name}</div>'
+        for i, name in enumerate(step_names, 1)
+    )
+    + "</div>"
+)
 
 # ── Deterministic Replay Unit Selection Rule ──────────────────────────────────
 # Deterministic injection rule:
@@ -110,11 +120,12 @@ if st.session_state.scenario_step == 1:
     mc_s3 = int(sum(tail_mc[36:54]))
     total_mc = mc_s1 + mc_s2 + mc_s3
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Squadron 1 (S1)", f"{mc_s1} / 18 MC")
-    c2.metric("Squadron 2 (S2)", f"{mc_s2} / 18 MC")
-    c3.metric("Squadron 3 (S3)", f"{mc_s3} / 18 MC")
-    c4.metric("Total Fleet MC", f"{total_mc} / 54 MC")
+    theme.kpi_row([
+        theme.kpi("Squadron 1 (S1)", f"{mc_s1}", unit="/ 18 MC", extra=theme.bar(mc_s1 / 18 * 100)),
+        theme.kpi("Squadron 2 (S2)", f"{mc_s2}", unit="/ 18 MC", extra=theme.bar(mc_s2 / 18 * 100)),
+        theme.kpi("Squadron 3 (S3)", f"{mc_s3}", unit="/ 18 MC", extra=theme.bar(mc_s3 / 18 * 100)),
+        theme.kpi("Total Fleet MC", f"{total_mc}", unit="/ 54 MC", tone="blue", sub=f"day {DAY}"),
+    ])
 
     st.markdown("#### Select Aircraft and Engine for Injection")
     tail_options = [f"T{i + 1:02d}" for i in range(18, 36) if tail_mc[i]]
@@ -208,7 +219,7 @@ elif st.session_state.scenario_step == 3:
 
     rul_chart = (band + median + r_rule).properties(height=320)
     st.altair_chart(rul_chart, use_container_width=True)
-    st.caption(f"Red dashed line: R* = {R_star} cycles. Note: Ground-truth RUL is never displayed — only calibrated quantiles.")
+    st.caption(f"Red dashed line: R* = {R_star} cycles. Only calibrated predictive quantiles are displayed.")
 
     col_nav1, col_nav2 = st.columns([1, 1])
     if col_nav1.button("⬅️ Previous"):
@@ -255,7 +266,7 @@ elif st.session_state.scenario_step == 4:
     st.markdown(
         f"**Expected demand surge:** Removal probability increases from **{curr_p:.1%}** at Day {DAY} "
         f"to **{future_p:.1%}**, exceeding squadron on-hand spare threshold. "
-        f"Pre-positioning transfer is automatically triggered."
+        f"A pre-positioning transfer is recommended for officer sign-off."
     )
 
     col_nav1, col_nav2 = st.columns([1, 1])
@@ -290,25 +301,19 @@ elif st.session_state.scenario_step == 5:
         transfer_status_html = '<span style="color:#f59e0b; font-weight:bold;">request raised; pending EO approval</span>'
         transfer_note = "Depot stock: available after T1.7 merge"
 
-    st.markdown(
+    theme.html(
         f"""
-        <div style="background: #1e293b; border-left: 6px solid #38bdf8; border-radius: 8px;
-                    padding: 1.2rem; margin-bottom: 1.5rem; color: #cbd5e1;">
-            <h4 style="margin-top:0; color: #38bdf8;">Pre-Positioning Transfer Order</h4>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; color: #cbd5e1;">
-                <div><strong style="color: #cbd5e1;">Source:</strong> Central Depot</div>
-                <div><strong style="color: #cbd5e1;">Destination:</strong> Squadron 2 Base (S2)</div>
-                <div><strong style="color: #cbd5e1;">Item:</strong> Serviceable Spare Engine</div>
-                <div><strong style="color: #cbd5e1;">Transit Time:</strong> {transit_days} days ({depot_to_base_days}d × {pm}× pipeline)</div>
-                <div><strong style="color: #cbd5e1;">Estimated Arrival:</strong> Day {arrival_day}</div>
-                <div><strong style="color: #cbd5e1;">Status:</strong> {transfer_status_html}</div>
-            </div>
-            <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #cbd5e1;">
-                <strong style="color: #cbd5e1;">Depot Status:</strong> {transfer_note}
-            </div>
+        <div class="sk-advisory">
+          <div class="sk-ah">Pre-Positioning Transfer Order</div>
+          <div class="sk-kv"><span>Source</span><b>Central Depot</b></div>
+          <div class="sk-kv"><span>Destination</span><b>Squadron 2 Base (S2)</b></div>
+          <div class="sk-kv"><span>Item</span><b>Serviceable Spare Engine</b></div>
+          <div class="sk-kv"><span>Transit Time</span><b>{transit_days} days ({depot_to_base_days}d × {pm}× pipeline)</b></div>
+          <div class="sk-kv"><span>Estimated Arrival</span><b>Day {arrival_day}</b></div>
+          <div class="sk-kv"><span>Status</span><b>{transfer_status_html}</b></div>
+          <div class="sk-kv"><span>Depot Status</span><b>{transfer_note}</b></div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     st.markdown("#### Squadron 2 Hangar Plan (3 Slots Available)")
@@ -469,33 +474,23 @@ elif st.session_state.scenario_step == 5:
             q10_a = float(row_a["mc_q10"])
             q90_a = float(row_a["mc_q90"])
 
-            target_n = int(np.clip(round(exp_b), 6, 18))
-            p_n_b = float(row_b.get(f"p_ge_{target_n}", 0.0)) * 100.0
-            p_n_a = float(row_a.get(f"p_ge_{target_n}", 0.0)) * 100.0
-
-            fc_cols = st.columns(2)
-            with fc_cols[0]:
-                st.markdown(
-                    f'<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
-                    f'<div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600;">BEFORE INJECTION (Baseline S2 at D+3)</div>'
-                    f'<div style="font-size: 1.5rem; font-weight: 700; color: #38bdf8; margin: 0.25rem 0;">{exp_b:.2f} MC</div>'
-                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_b:.1f}, {q90_b:.1f}] MC</div>'
-                    f'<div style="font-size: 0.85rem; color: #fde047; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_b:.1f}%</b></div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            with fc_cols[1]:
-                delta_exp = exp_a - exp_b
-                delta_p = p_n_a - p_n_b
-                st.markdown(
-                    f'<div style="background: #1e293b; border: 1px solid #0284c7; border-radius: 8px; padding: 1rem; color: #f8fafc;">'
-                    f'<div style="color: #38bdf8; font-size: 0.85rem; font-weight: 600;">AFTER INJECTED CHANGE (Mitigated S2 at D+3)</div>'
-                    f'<div style="font-size: 1.5rem; font-weight: 700; color: #4ade80; margin: 0.25rem 0;">{exp_a:.2f} MC <span style="font-size: 0.95rem; color: #4ade80;">({delta_exp:+.2f})</span></div>'
-                    f'<div style="font-size: 0.8rem; color: #cbd5e1;">Forecast band (q10–q90): [{q10_a:.1f}, {q90_a:.1f}] MC</div>'
-                    f'<div style="font-size: 0.85rem; color: #4ade80; margin-top: 0.5rem;">P(≥{target_n} MC): <b>{p_n_a:.1f}%</b> ({delta_p:+.1f} pp)</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
+            delta_exp = exp_a - exp_b
+            theme.kpi_row([
+                theme.kpi(
+                    "BEFORE INJECTION (Baseline S2 at D+3)",
+                    f"{exp_b:.2f}",
+                    unit="MC",
+                    tone="blue",
+                    sub=f"Forecast band (q10–q90): [{q10_b:.1f}, {q90_b:.1f}] MC",
+                ),
+                theme.kpi(
+                    "AFTER INJECTED CHANGE (Mitigated S2 at D+3)",
+                    f"{exp_a:.2f}",
+                    unit=f"MC ({delta_exp:+.2f})",
+                    tone="green" if delta_exp >= 0 else "red",
+                    sub=f"Forecast band (q10–q90): [{q10_a:.1f}, {q90_a:.1f}] MC",
+                ),
+            ])
 
             cov_x = load_readiness_calib_coverage()
             if cov_x:
@@ -505,12 +500,8 @@ elif st.session_state.scenario_step == 5:
         else:
             st.info("Readiness forecast computation pending.")
     else:
-        st.markdown(
-            '<div style="background: #374151; border-radius: 8px; padding: 0.8rem; '
-            'color: #9ca3af; text-align: center; margin: 1rem 0;">'
-            "Readiness forecast: available after merge of T1.7"
-            "</div>",
-            unsafe_allow_html=True,
+        theme.html(
+            '<div class="sk-panel"><p class="sk-note">Readiness forecast: available after merge of T1.7</p></div>'
         )
 
 
@@ -529,15 +520,14 @@ elif st.session_state.scenario_step == 6:
 
     rec_id = f"REC-SCENARIO-{st.session_state.selected_tail}-ENG{st.session_state.selected_eng}"
 
-    st.markdown(
+    theme.html(
         f"""
-        <div style="background: #1e293b; border-radius: 8px; padding: 1.2rem; margin-bottom: 1.5rem;">
-            <h4 style="margin-top:0; color: #f8fafc;">Decision Package: {rec_id}</h4>
-            <p><strong>Action:</strong> Dispatch spare engine from Depot to S2 + Schedule hangar slot 2 for {st.session_state.selected_tail}.</p>
-            <p><strong>Trigger:</strong> Predictive RUL q10 crossed R*={R_star} cycles.</p>
+        <div class="sk-advisory">
+          <div class="sk-ah">Decision Package: {rec_id}</div>
+          <p><strong>Action:</strong> Dispatch spare engine from Depot to S2 + Schedule hangar slot 2 for {st.session_state.selected_tail}.</p>
+          <p><strong>Trigger:</strong> Predictive RUL q10 crossed R*={R_star} cycles.</p>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
     btn_col1, btn_col2 = st.columns(2)
@@ -577,3 +567,4 @@ elif st.session_state.scenario_step == 6:
 # ── Performance Measurement ──────────────────────────────────────────────────
 elapsed = time.perf_counter() - start_time
 st.caption(f"Measured scenario execution time: {elapsed:.2f} s (< 20.0 s target). Synthetic wing.")
+theme.footer()
