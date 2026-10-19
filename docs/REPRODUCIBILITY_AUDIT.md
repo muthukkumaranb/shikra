@@ -1,7 +1,7 @@
-# JUDGE READINESS AUDIT REPORT
+# Reproducibility Audit
 
 **Date:** 2026-10-18  
-**Branch:** `t2/judge-ready`  
+**Audit Scope:** Verification and reproducibility audit  
 **Base Commit (origin/main):** `ef9cad8`  
 **Status:** All verification targets passed; negative tests verified; pushed to origin.
 
@@ -11,14 +11,14 @@
 
 `git log --oneline origin/main..HEAD`:
 ```
-4e104b8 docs(readme): ensure Quickstart header precedes Judge quickstart for table script
+4e104b8 docs(readme): ensure Quickstart header precedes quickstart for table script
 e636dc7 build: add pre-execution check to verify target and scripts/verify.ps1
 8953f87 build: make verify.ps1 memory-safe on windows and add deck_figures
-ed7bebb docs(readme): add Judge quickstart, non-claims, and repository map
+ed7bebb docs(readme): add quickstart, non-claims, and repository map
 5c2ea97 build: declare supported Python versions
 5363348 chore: add *.webm to .gitignore
-47c449f merge: merge origin/main into t2/judge-ready
-620c876 docs(readme): add 60-second summary, judge quickstart, and non-claims
+47c449f merge: merge origin/main into audit branch
+620c876 docs(readme): add summary, quickstart, and non-claims
 91f8016 docs(datacard): fix relative paths for synthetic mock exports
 2eb7125 chore: add audit.key to .gitignore
 2d801be build: add verify target to Makefile and scripts/verify.ps1
@@ -42,14 +42,14 @@ ed7bebb docs(readme): add Judge quickstart, non-claims, and repository map
 
 ---
 
-## 3. Measured Benchmark Runtimes (Clean Fresh Clone to `D:\judge-test-2`)
+## 3. Measured Benchmark Runtimes (Clean Fresh Clone to `D:\shikra-fresh`)
 
 | Operation | Command | Measured Runtime | Notes |
 |---|---|---|---|
-| **Git Clone** | `git clone https://github.com/muthukkumaranb/shikra.git D:\judge-test-2` | **16.35s** | Fresh clone from GitHub |
-| **Virtualenv Creation** | `& python.exe -m venv D:\judge-test-2\.venv` | **26.65s** | CPython 3.11.16 |
+| **Git Clone** | `git clone https://github.com/muthukkumaranb/shikra.git D:\shikra-fresh` | **16.35s** | Fresh clone from GitHub |
+| **Virtualenv Creation** | `& python.exe -m venv D:\shikra-fresh\.venv` | **26.65s** | CPython 3.11.16 |
 | **Dependency Installation** | `pip install -r requirements.txt` | **253.61s** (4m 13.6s) | Complete installation from cache |
-| **Test Suite** | `pytest -q -m "not data"` | **85.92s** (1m 25.9s) | 88 passed, 5 deselected on `t2/judge-ready` |
+| **Test Suite** | `pytest -q -m "not data"` | **85.92s** (1m 25.9s) | 88 passed, 5 deselected in audit run |
 | **Fleet Simulation** | `sim.runner (n_jobs=2)` | **160.63s** (2m 40.6s) | 180 runs (6 policies × 30 seeds) |
 | **Summary & Gates** | `python scripts/summary.py` | **3.47s** | Generates `policy_summary.csv` |
 | **Lever Heatmap** | `python scripts/heatmap.py` | **39.82s** | 180 seed-cells across 7 multipliers |
@@ -158,21 +158,21 @@ All 7 pages were tested end-to-end via `streamlit.testing.v1.AppTest`:
 
 1. **Python 3.13 / 3.14 Binary Wheels:**
    - *Error:* `Using cached numpy-1.26.4.tar.gz ... error: Microsoft Visual C++ 14.0 or greater is required.`
-   - *Resolution:* Documented strict Python 3.11 requirement in `README.md` under `## Judge quickstart`.
+   - *Resolution:* Documented strict Python 3.11 requirement in `README.md` under `## Reproduce`.
 2. **Merge Conflict in Makefile:**
    - *Error:* Merge conflict on `.PHONY` line between `HEAD` (`verify`) and `origin/main` (`deck-figures`).
    - *Resolution:* Combined both targets in `.PHONY` line; committed and pushed.
 3. **`test_pages_without_readiness_fallback` on origin/main:**
    - *Error:* `AssertionError: assert 'engine detail after T1.7 merge' in ...`
    - *Cause:* `origin/main` commit `ef9cad8` merged T1.10 app Phase 2, which had a test expecting fallback text when `shikra.strategy.readiness` is absent. Because `shikra/strategy/readiness.py` is present on disk (merged in 3c611cd), `del sys.modules["shikra.strategy.readiness"]` does not prevent `AppTest` from re-importing the real module. Fixed on main in 42303b1 (simulated missing readiness).
-   - *Resolution:* Fixed on main in 42303b1 (simulated missing readiness). Merged cleanly from origin/main into `t2/judge-ready`.
+   - *Resolution:* Fixed on main in 42303b1 (simulated missing readiness). Merged cleanly from origin/main into audit branch.
 4. **Memory Constraint / WinError 1455 / ArrowMemoryError:**
    - *Error:* `pyarrow.lib.ArrowMemoryError: malloc of size 64 failed` and PowerShell `800705af` (commit limit exceeded).
    - *Cause:* On a 12-thread CPU with ~3 GB available RAM, launching 11 worker processes simultaneously importing pyarrow and pandas exhausts page file commit limit.
    - *Resolution:* Updated `scripts/verify.ps1` to invoke `sim.runner` with `n_jobs=2`, completing in ~2m 40s reliably without memory error.
 5. **`scripts/readme_table.py` Section Header Requirement:**
-   - *Error:* `readme_table.py` specifically requires `end_marker = "\n## Quickstart"`. Replacing `## Quickstart` with `## Judge quickstart` truncated the README after the generated table.
-   - *Resolution:* Preserved `## Quickstart` followed by `## Judge quickstart`.
+   - *Error:* `readme_table.py` specifically requires `end_marker = "\n## Quickstart"`. Renaming `## Quickstart` truncated the README after the generated table.
+   - *Resolution:* Preserved `## Quickstart` marker.
 6. **Browser Subagent Driver Download:**
    - *Error:* `failed to create browser context: failed to run playwright manager: failed to install playwright: could not install driver: error: got non 200 status code: 404 (404 Not Found) from https://playwright.azureedge.net/builds/driver/playwright-1.57.0-win32_x64.zip`
    - *Resolution:* Playwright driver binary is blocked/unavailable from external CDN in this environment. Streamlit pages were verified programmatically via `streamlit.testing.v1.AppTest`, rendering with 0 exceptions across all 7 pages.
