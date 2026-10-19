@@ -20,6 +20,7 @@ ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from app.lib import theme  # noqa: E402
 from app.lib.audit import verify as audit_verify  # noqa: E402
 from app.lib.data import (  # noqa: E402
     get_result_figures,
@@ -36,13 +37,34 @@ st.set_page_config(
     page_icon=str(ICON_PATH) if ICON_PATH.exists() else None,
     layout="wide",
 )
-st.title("Evidence & Reproducibility")
-st.caption("Verification gates, simulation results, model benchmarks, and audit trail.")
-
-st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+strip = theme.apply("evidence")
+# This page reads result files only: no simulation day, no snapshot.
+theme.status_strip(strip)
+theme.header(
+    "Evidence · reproducibility",
+    "Can every number in this app be traced to a file and reproduced offline?",
+    "Verification gates, simulation results, model benchmarks, and audit trail.",
+    "results/GATES.md · results/policy_summary.csv · results/rul_cmapss*.csv · results/FINDINGS_*.md · "
+    "results/*.png · artifacts/replay_rul.parquet · app_data audit log",
+)
 
 # Audit chain integrity line at top
 _chain_top = audit_verify()
+_fig_paths = get_result_figures()
+_policy_df = load_policy_summary()
+_n_findings = sum(1 for f in ("FINDINGS_A10.md", "FINDINGS_T14.md", "FINDINGS_CPSAT.md") if (ROOT / "results" / f).exists())
+theme.kpi_row([
+    theme.kpi(
+        "Audit chain",
+        "intact" if _chain_top["ok"] else "broken",
+        tone="green" if _chain_top["ok"] else "red",
+        sub=f"{_chain_top.get('n_rows', 0)} records · SHA-256 chain + daily HMAC roots",
+        alert=not _chain_top["ok"],
+    ),
+    theme.kpi("Policy summary rows", f"{len(_policy_df)}", sub="results/policy_summary.csv · mean with 95% CI"),
+    theme.kpi("Result figures", f"{len(_fig_paths)}", sub="PNG files in results/"),
+    theme.kpi("Findings documents", f"{_n_findings}", sub="results/FINDINGS_*.md"),
+])
 if _chain_top["ok"]:
     _top_root = (_chain_top["latest_root"] or "none")[:12]
     st.markdown(f":green[Audit chain: intact · {_chain_top['n_rows']} records · root `{_top_root}`]")
@@ -83,29 +105,20 @@ replay_df = load_replay_rul()
 model_id = str(replay_df["model_id"].iloc[0]) if "model_id" in replay_df.columns and not replay_df.empty else "unknown"
 calib_id = str(replay_df["calib_id"].iloc[0]) if "calib_id" in replay_df.columns and not replay_df.empty else "unknown"
 
-st.markdown(
+theme.html(
     f"""
-    <div style="background: #0f172a; border: 1px solid #3b82f6; border-radius: 10px;
-                padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; color: #e2e8f0;">
-        <h4 style="margin-top:0; color: #60a5fa;">🔒 Provenance & Environment</h4>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-            <div><strong>Git Commit:</strong> <code>{git_hash}</code></div>
-            <div><strong>Model ID:</strong> <code>{model_id}</code></div>
-            <div><strong>Calibration ID:</strong> <code>{calib_id}</code></div>
-        </div>
-        <div>
-            <strong>Reproduction Commands:</strong>
-            <pre style="background: #1e293b; padding: 0.8rem; border-radius: 6px; margin-top: 0.5rem; color: #38bdf8;">
-# Run simulation reproduction (no raw NASA download needed):
-make reproduce-sim
-
-# Or run offline container:
-docker compose up app
-            </pre>
-        </div>
+    <div class="sk-panel">
+      {theme.panel_title("Provenance & Environment", "identifiers of the code, model and calibration behind every page")}
+      <div class="sk-kv"><span>Git Commit</span><b>{theme.esc(git_hash)}</b></div>
+      <div class="sk-kv"><span>Model ID</span><b>{theme.esc(model_id)}</b></div>
+      <div class="sk-kv"><span>Calibration ID</span><b>{theme.esc(calib_id)}</b></div>
+      <div class="sk-label" style="font-size:10px;color:var(--outline);text-transform:uppercase;letter-spacing:.08em;margin:.8rem 0 .3rem 0;">Reproduction Commands</div>
+      <div class="sk-mono sk-t-blue" style="background:var(--surface-container-lowest);border-radius:var(--rounded-lg);padding:.75rem;font-size:12px;line-height:20px;">
+        <span class="sk-t-muted"># Run simulation reproduction (no raw NASA download needed):</span><br>make reproduce-sim<br><br>
+        <span class="sk-t-muted"># Or run offline container:</span><br>docker compose up app
+      </div>
     </div>
-    """,
-    unsafe_allow_html=True,
+    """
 )
 
 st.divider()
@@ -198,3 +211,4 @@ else:
 # ── Performance ──────────────────────────────────────────────────────────────
 elapsed = time.perf_counter() - start_time
 st.caption(f"Page load: {elapsed:.2f} s. SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+theme.footer()
