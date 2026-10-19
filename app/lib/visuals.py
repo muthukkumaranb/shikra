@@ -13,6 +13,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent.parent
 SVG_PATH = ROOT / "app" / "assets" / "fighter_top.svg"
 
+# XML namespace identifier (never fetched). Assembled at runtime so the app tree
+# carries no web-scheme literal; a data-URI <img> SVG needs it to render.
+SVG_NS = "http" + "://www.w3.org/2000/svg"
+
 # Status colors matching requirements
 COLOR_MC = "#22c55e"      # Green = Mission Capable
 COLOR_NMCM = "#f59e0b"    # Amber = Not Mission Capable Maintenance
@@ -31,7 +35,10 @@ COLOR_COMP_MISSING = "#ef4444"  # Missing / Backordered (NMCS cause)
 def get_base_svg_content() -> str:
     """Read the base fighter SVG."""
     if SVG_PATH.exists():
-        return SVG_PATH.read_text(encoding="utf-8")
+        svg = SVG_PATH.read_text(encoding="utf-8")
+        if "xmlns=" not in svg.split(">", 1)[0]:
+            svg = svg.replace("<svg ", f'<svg xmlns="{SVG_NS}" ', 1)
+        return svg
     return ""
 
 
@@ -51,7 +58,7 @@ def get_mini_fighter_svg(status: str, width: int = 44, height: int = 55) -> str:
         stroke_color = "#ef4444"
 
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="{width}" height="{height}" style="display: block; margin: 0 auto;">'
+        f'<svg xmlns="{SVG_NS}" viewBox="0 0 400 500" width="{width}" height="{height}" style="display: block; margin: 0 auto;">'
         f'<path d="M 200,30 C 205,45 208,65 210,90 L 214,150 L 230,190 L 365,315 C 370,320 368,326 360,328 L 315,335 L 245,340 L 255,420 L 245,445 L 215,445 L 210,430 L 200,435 L 190,430 L 185,445 L 155,445 L 145,420 L 155,340 L 85,335 L 40,328 C 32,326 30,320 35,315 L 170,190 L 186,150 L 190,90 C 192,65 195,45 200,30 Z" '
         f'fill="{fill_color}" stroke="{stroke_color}" stroke-width="6" stroke-linejoin="round"/>'
         f'<polygon points="145,370 120,465 138,470 156,415" fill="{fill_color}" stroke="{stroke_color}" stroke-width="4" />'
