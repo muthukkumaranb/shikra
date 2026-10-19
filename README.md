@@ -7,9 +7,9 @@ Offline, advisory fleet-availability decision support, evaluated on public NASA 
 Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defence (DSSC)
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![LightGBM](https://img.shields.io/badge/LightGBM-4.3.0-blue)](https://lightgbm.readthedocs.io/)
-[![OR-Tools](https://img.shields.io/badge/OR--Tools-9.9-orange)](https://developers.google.com/optimization)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.40-FF4B4B)](https://streamlit.io/)
+[![LightGBM](https://img.shields.io/badge/LightGBM-blue)](https://lightgbm.readthedocs.io/)
+[![OR-Tools](https://img.shields.io/badge/OR--Tools-orange)](https://developers.google.com/optimization)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B)](https://streamlit.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml)
 [![Full Reproduction](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml)
