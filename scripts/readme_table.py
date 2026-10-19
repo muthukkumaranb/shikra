@@ -275,7 +275,7 @@ def generate_table() -> str:
 def update_readme(table: str) -> None:
     content = README_PATH.read_text(encoding="utf-8")
     start_marker = "<!-- AUTO-GENERATED — do not edit by hand; run `python scripts/readme_table.py` -->"
-    end_marker = "\n## Quickstart"
+    end_marker = "\n## What did not work"
 
     start_idx = content.find(start_marker)
     if start_idx == -1:
