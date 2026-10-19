@@ -84,6 +84,14 @@ def test_every_page_applies_theme(page: Path):
     assert src.index("theme.apply(") > src.index("st.set_page_config(")
 
 
+def test_name_expansion_and_namesake():
+    from app.lib import theme
+
+    assert theme.EXPANSION
+    assert theme.BIRD
+    assert "Health-Integrated Knowledge for Readiness Advisory" in (ROOT / "README.md").read_text(encoding="utf-8")
+
+
 def test_fonts_are_bundled_with_licences():
     fonts = APP / "assets" / "fonts"
     assert list(fonts.glob("inter-latin-*-normal.woff2"))
