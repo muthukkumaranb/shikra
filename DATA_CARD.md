@@ -1,4 +1,4 @@
-# DATA CARD — SHIKRA
+# DATA CARD: SHIKRA
 
 ## 1. NASA C-MAPSS Turbofan Degradation Dataset
 

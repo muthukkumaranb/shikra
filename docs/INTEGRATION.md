@@ -46,7 +46,7 @@ flowchart TD
 SHIKRA ingests read-only exports; e-MMS and IMMOLS remain the authoritative enterprise systems of record. SHIKRA does not create primary maintenance records, issue dispatch authorizations, or alter stock ledgers:
 
 - **Authoritative Records**: e-MMS remains the sole record of flight hours, airframe life, defect logs, and scheduled inspection sign-offs. IMMOLS remains the sole system of record for spares provisioning, depot holdings, and requisition workflows.
-- **Health Index Ingestion**: SHIKRA can ingest external component health summaries—such as the turbofan health monitoring and diagnostics research developed by IAF and IIT Bombay (reported in May 2026)—as an input feature for remaining useful life estimation. SHIKRA has no formal connection to, partnership with, or endorsement by that research programme; it is designed to ingest standard comma-separated condition indicators from any diagnostic source.
+- **Health Index Ingestion**: SHIKRA can ingest external component health summaries, such as the turbofan health monitoring and diagnostics research developed by IAF and IIT Bombay (reported in May 2026), as an input feature for remaining useful life estimation. SHIKRA has no formal connection to, partnership with, or endorsement by that research programme; it is designed to ingest standard comma-separated condition indicators from any diagnostic source.
 - **Unidirectional Data Flow**: Ingestion scripts parse CSV or tabular exports dropped into a secure drop directory. Under no circumstances does SHIKRA establish write channels back into e-MMS, IMMOLS, or flightline networks.
 
 ---
