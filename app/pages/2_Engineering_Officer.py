@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import base64
 import sys
+import time
 from pathlib import Path
 
 import altair as alt
 import pandas as pd
 import streamlit as st
+
+start_time = time.perf_counter()
 
 ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
@@ -32,6 +35,7 @@ st.set_page_config(
 )
 st.title("Engineering Officer's View")
 st.caption("Synthetic wing · advisory — all recommendations require officer sign-off")
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 # ── Load data ────────────────────────────────────────────────────────────────
 config = load_config()
@@ -120,6 +124,9 @@ if snap is not None:
         st.markdown(f"- **Assigned Squadron:** S{(tail_idx // 18) + 1}")
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
+        st.markdown(
+            f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
+        )
 
         st.markdown("##### Propulsion Subsystems")
         for i, eng in enumerate(tail_engs[:2]):
@@ -149,7 +156,7 @@ if snap is not None:
         else:
             st.success("All 10 tracked LRU components serviceable.")
 else:
-    # Before T1.7 merge: show tail-level status only, captioned "engine detail after T1.7 merge"
+    # Snapshot not available: show tail-level status only
     with c_img:
         st.caption("engine detail after T1.7 merge")
         svg_detail = render_aircraft_detail_svg(
@@ -166,9 +173,12 @@ else:
         st.markdown(f"- **Aircraft Status:** `{tail_st}` on Day {selected_day}")
         st.markdown(f"- **Removal Threshold R*:** `{R_star}` cycles")
         st.markdown(
+            f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
+        )
+        st.markdown(
             '<div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 1rem; color: #94a3b8; margin-top: 1rem;">'
-            "<b>Subsystem Health:</b> Live per-engine RUL quantiles (q10/q50/q90) and individual LRU component markers "
-            "are available after T1.7 merge."
+            "<b>Subsystem Health:</b> Per-engine RUL quantiles (q10/q50/q90) and LRU component markers "
+            "require a live snapshot (snapshot_at not available)."
             "</div>",
             unsafe_allow_html=True,
         )
@@ -301,6 +311,9 @@ else:
 
 
 st.markdown(f"**R* (removal threshold):** {R_star} cycles")
+st.markdown(
+    f"Removal threshold R* = {R_star} cycles · set by the Engineering Officer · changes are audit-logged"
+)
 st.markdown("**Note:** Ground-truth RUL is never shown — only predictive quantiles (q10/q50/q90).")
 
 st.divider()
@@ -421,6 +434,10 @@ if recent:
     st.dataframe(audit_df, use_container_width=True, hide_index=True)
 else:
     st.info("No audit entries yet.")
+
 st.divider()
 from app.lib.explain_panel import render_for_tail  # noqa: E402, I001
 render_for_tail(snap, tail_idx, R_star)
+# ── Performance ──────────────────────────────────────────────────────────────
+elapsed = time.perf_counter() - start_time
+st.caption(f"Page load: {elapsed:.2f} s. SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")

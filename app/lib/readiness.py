@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import streamlit as st
 
 ROOT = Path(__file__).parent.parent.parent
 RESULTS_DIR = ROOT / "results"
@@ -36,6 +37,7 @@ def is_readiness_available() -> bool:
     return get_readiness_module() is not None
 
 
+@st.cache_data
 def get_snapshot(policy: str = "shikra_v2", seed: int = 1, day: int = 485) -> dict | None:
     """Return a deepcopied simulation snapshot for the specified day if available."""
     mod = get_readiness_module()
@@ -47,6 +49,7 @@ def get_snapshot(policy: str = "shikra_v2", seed: int = 1, day: int = 485) -> di
         return None
 
 
+@st.cache_data
 def get_forecast(
     snapshot: dict,
     config: dict,

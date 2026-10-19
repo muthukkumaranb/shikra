@@ -43,6 +43,7 @@ st.set_page_config(
 )
 st.title("Scenario Walkthrough — Failure Injection")
 st.caption("Deterministic demonstration of predictive advisory workflow. Synthetic wing.")
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
 
 config = load_config()
 params = load_params()

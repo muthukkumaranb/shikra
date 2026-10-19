@@ -28,6 +28,8 @@ st.set_page_config(
     layout="wide",
 )
 
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+
 # ── Pre-warm Simulation Cache ──────────────────────────────────────────────
 with st.spinner("Pre-warming wing simulation cache..."):
     _ = get_sim_result("shikra_v2", seed=1)

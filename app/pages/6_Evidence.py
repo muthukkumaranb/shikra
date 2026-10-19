@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 import streamlit as st
+
+start_time = time.perf_counter()
 
 ROOT = Path(__file__).parent.parent.parent
 if str(ROOT) not in sys.path:
@@ -35,6 +38,30 @@ st.set_page_config(
 )
 st.title("Evidence & Reproducibility")
 st.caption("Verification gates, simulation results, model benchmarks, and audit trail.")
+
+st.sidebar.caption("SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
+
+# Audit chain integrity line at top
+_chain_top = audit_verify()
+if _chain_top["ok"]:
+    _top_root = (_chain_top["latest_root"] or "none")[:12]
+    st.markdown(f":green[Audit chain: intact · {_chain_top['n_rows']} records · root `{_top_root}`]")
+else:
+    st.markdown(f":red[Audit chain: BROKEN at row id={_chain_top['first_bad_id']}]")
+
+# ── Findings Sections ───────────────────────────────────────────────────────
+FINDINGS_FILES = ["FINDINGS_A10.md", "FINDINGS_T14.md", "FINDINGS_CPSAT.md"]
+_any_findings = False
+for _fname in FINDINGS_FILES:
+    _fpath = ROOT / "results" / _fname
+    if _fpath.exists():
+        if not _any_findings:
+            st.markdown("### Findings")
+            _any_findings = True
+        with st.expander(f"📋 {_fname}", expanded=False):
+            st.markdown(_fpath.read_text(encoding="utf-8"))
+
+st.divider()
 
 # ── Reproducibility Box ──────────────────────────────────────────────────────
 st.markdown("### Reproducibility Verification")
@@ -167,3 +194,7 @@ if fig_paths:
             st.image(str(fpath), caption=fpath.name, use_column_width=True)
 else:
     st.info("No PNG figures found in results/.")
+
+# ── Performance ──────────────────────────────────────────────────────────────
+elapsed = time.perf_counter() - start_time
+st.caption(f"Page load: {elapsed:.2f} s. SHIKRA · advisory · offline · synthetic wing + NASA C-MAPSS")
