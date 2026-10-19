@@ -18,12 +18,19 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.lib import theme  # noqa: E402
-from app.lib.data import load_config, load_heatmap, load_params, load_supply_shock  # noqa: E402
+from app.lib.data import (  # noqa: E402
+    load_config,
+    load_heatmap,
+    load_params,
+    load_policy_summary,
+    load_supply_shock,
+)
 from app.lib.readiness import (  # noqa: E402
     get_forecast,
     get_readiness_module,
     get_snapshot,
 )
+from app.lib.utilisation import display_table, utilisation_table  # noqa: E402
 
 start_time = time.perf_counter()
 
@@ -42,6 +49,7 @@ heatmap_raw = load_heatmap()
 config = load_config()
 params = load_params()
 shock_df = load_supply_shock()
+util_df = utilisation_table(load_policy_summary())
 
 pipeline_mult = config.get("pipeline_mult", 1.7)
 
@@ -137,7 +145,30 @@ if snap_mc is not None:
             badge=theme.chip(f"day {SNAP_DAY}", "blue"),
         )
     )
+util_shikra = util_df[util_df["policy"] == "shikra_v2"]
+util_reactive = util_df[util_df["policy"] == "reactive"]
+if not util_shikra.empty and not util_reactive.empty:
+    us, ur = util_shikra.iloc[0], util_reactive.iloc[0]
+    tiles.append(
+        theme.kpi(
+            "Flying task met",
+            f"{us['task_mean'] * 100:.1f}%",
+            sub=f"95% CI [{us['task_ci_lo'] * 100:.1f}, {us['task_ci_hi'] * 100:.1f}]% · "
+            f"reactive {ur['task_mean'] * 100:.1f}%",
+            badge=theme.chip("SHIKRA", "blue"),
+            extra=theme.bar(us["task_mean"] * 100),
+        )
+    )
 theme.kpi_row(tiles)
+
+UTIL_CAPTION = (
+    "Utilisation = sorties flown ÷ sorties demanded (0.8 per mission-capable tail per day, "
+    "config/wing.yaml). Synthetic wing, 30 seeds, today's pipeline."
+)
+if not util_df.empty:
+    st.markdown("### Utilisation — flying task met")
+    st.dataframe(display_table(util_df), use_container_width=True, hide_index=True)
+    st.caption(UTIL_CAPTION)
 
 col_main, col_rail = st.columns([2.15, 1], gap="medium")
 
