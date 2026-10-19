@@ -252,7 +252,10 @@ The interactive dashboard provides role-tailored pages:
 ## Scope
 
 - **Advisory, never autonomous**: SHIKRA provides decision support and risk bounds for technical officers; it never issues autonomous dispatch directives or replaces maintenance authority.
-- **Air-gapped operation**: Designed for standalone deployment with zero external internet connectivity or telemetry.
+- **Air-gapped, network-ready**: air-gapped from the internet; designed to run as a central
+  instance on a closed defence network such as AFNET, with each base running a fully offline
+  node that keeps working when links fail. This prototype is that base node. (AFNET and
+  e-MMS integration have not been tested.)
 - **Synthetic wing, not IAF data**: All fleet structures, flight tempos, and maintenance capacities represent a synthetic 54-aircraft wing; no classified or operational Indian Air Force data is used.
 - **NASA turbofan data, not fighter-engine telemetry**: Degradation dynamics derive from public NASA C-MAPSS commercial turbofan simulations rather than operational combat aircraft engines.
 - **Consumes exports, never replaces source systems**: Operates strictly downstream of e-MMS and IMMOLS via read-only batch exports; source systems remain the sole enterprise systems of record.
