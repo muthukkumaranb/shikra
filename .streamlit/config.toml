@@ -4,3 +4,10 @@ serverAddress = "localhost"
 
 [server]
 headless = true
+
+[theme]
+base = "dark"
+backgroundColor = "#0b1326"
+secondaryBackgroundColor = "#131b2e"
+textColor = "#dae2fd"
+primaryColor = "#38bdf8"
