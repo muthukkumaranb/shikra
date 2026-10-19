@@ -18,7 +18,7 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 [![CI](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/ci.yml)
 [![Full Reproduction](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml/badge.svg)](https://github.com/muthukkumaranb/shikra/actions/workflows/reproduce-full.yml)
 
-**Contents:** [Problem statement](#problem-statement) · [Overview](#overview) · [Architecture](#architecture) · [Results](#results) · [What did not work](#what-did-not-work) · [Reproduce](#reproduce) · [Installation and usage](#installation-and-usage) · [Repository structure](#repository-structure) · [Documentation](#documentation) · [Scope](#scope) · [Acknowledgements and citation](#acknowledgements-and-citation) · [License](#license)
+**Contents:** [Problem statement](#problem-statement) · [Overview](#overview) · [Architecture](#architecture) · [Screenshots](#screenshots) · [Results](#results) · [What did not work](#what-did-not-work) · [Reproduce](#reproduce) · [Installation and usage](#installation-and-usage) · [Repository structure](#repository-structure) · [Documentation](#documentation) · [Scope](#scope) · [Acknowledgements and citation](#acknowledgements-and-citation) · [License](#license)
 
 ---
 
@@ -51,6 +51,18 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 ![SHIKRA workflow](docs/assets/shikra_workflow.png)
 
 Graphviz source: [docs/assets/shikra_workflow.dot](docs/assets/shikra_workflow.dot)
+
+---
+
+## Screenshots
+
+| Home | Commander |
+|---|---|
+| ![Home](docs/assets/screenshots/home.png)<br>Fleet overview: which of the 54 aircraft can fly today, and what holds the rest back | ![Commander](docs/assets/screenshots/commander.png)<br>Lever map: prediction quality × repair-and-supply speed |
+| **Engineering Officer** | **Technician** |
+| ![Engineering Officer](docs/assets/screenshots/engineering_officer.png)<br>Engine health, removal advice with q10 bands, Approve / Defer | ![Technician](docs/assets/screenshots/technician.png)<br>Flight-line snags as work cards, grouped by squadron |
+
+*Offline Streamlit app, dark theme, local fonts, no network calls. Synthetic wing; not IAF data.*
 
 ---
 
