@@ -25,6 +25,8 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 ## Problem statement
 
 - **ID**: `SIH26249`
+- **Team name**: NOT TODAY, HACKERS
+- **Team ID**: 178998
 - **Organization**: Ministry of Defence, Defence Services Staff College (DSSC)
 - **Theme**: Transportation & Logistics
 - **Category**: Software
