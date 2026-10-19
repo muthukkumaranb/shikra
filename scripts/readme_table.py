@@ -113,10 +113,26 @@ def generate_highlights() -> list[str]:
         )
 
     # 7. Hangar scheduling
-    lines.append(
-        "| Hangar scheduling | CP-SAT vs earliest-due-date heuristic: zero availability gain on the simulated wing | "
-        "[results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |"
-    )
+    cpsat_bench_path = RESULTS_DIR / "cpsat_benchmark.csv"
+    cpsat_wing_path = RESULTS_DIR / "cpsat_wing.csv"
+    if cpsat_bench_path.exists() and cpsat_wing_path.exists():
+        bench_df = pd.read_csv(cpsat_bench_path)
+        wing_df = pd.read_csv(cpsat_wing_path)
+        edf_mean = bench_df["edf_weighted_tardiness"].mean()
+        cpsat_mean = bench_df["cpsat_weighted_tardiness"].mean()
+        pct_red = (edf_mean - cpsat_mean) / edf_mean * 100
+        n_inst = len(bench_df)
+        k_ties = (wing_df["cpsat_wt"] == wing_df["edf_wt"]).sum()
+        m_total = len(wing_df)
+        lines.append(
+            f"| Hangar scheduling | CP-SAT cuts weighted tardiness {edf_mean:.1f} -> {cpsat_mean:.1f} (-{pct_red:.0f}%) "
+            f"on {n_inst} synthetic instances (never worse than EDF); ties EDF on {k_ties}/{m_total} wing snapshots: "
+            f"hangar bays are not the bottleneck | [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |"
+        )
+    else:
+        lines.append(
+            "| Hangar scheduling | CP-SAT vs earliest-due-date heuristic | [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |"
+        )
     lines.append("")
     return lines
 
@@ -224,7 +240,7 @@ def generate_table() -> str:
         lines.append(
             f"> **Key Finding:** SHIKRA removes all unscheduled engine removals ({s_uns:.0f} vs {r_uns:.1f} per year) but, "
             f"in this wing, serviceability is unchanged ({s_svc:.1%} vs {r_svc:.1%}), "
-            f"because the engine-spare pipeline, not warning time, is the binding constraint (see lever map below).\n"
+            f"because the engine-spare pipeline, not warning time, is the binding constraint (see the 'Which lever buys readiness' row in Highlights).\n"
         )
 
         # Supply shock interpretation

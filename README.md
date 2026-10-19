@@ -24,7 +24,7 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 - **Organization**: Ministry of Defence, Defence Services Staff College (DSSC)
 - **Theme**: Transportation & Logistics
 - **Category**: Software
-- **Problem**: Military aircraft fleet availability is severely degraded by fragmented, reactive maintenance workflows where health monitoring indicators, technical records, spares inventory, and base repair depot schedules remain unintegrated rather than driving coordinated forward decisions.
+- **Problem**: Low aircraft availability due to fragmented and largely reactive maintenance practices; data from health monitoring, technical records, spares and maintenance agencies is not adequately integrated.
 
 ---
 
@@ -33,7 +33,7 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 - **Inputs**: Ingests read-only nightly batch exports from e-MMS (technical records), IMMOLS (spares stock), HUMS or engine health indicators, and BRD-HAL repair status.
 - **Unified Tail & Serial Model**: Ingestion pipeline unifies airframe and component histories into a local SQLite store (`data/unified.db`) protected by an automated data-quality quarantine for malformed or conflicting records.
 - **Remaining-Life Model**: LightGBM quantile regression ensemble with conformal 80% prediction bands, planning proactively on the pessimistic edge ($q_{10}$).
-- **Wing Simulation**: Discrete-event simulation of a synthetic 54-aircraft wing comparing reactive, fixed-interval preventive, SHIKRA opportunistic, and perfect-prediction oracle policies across 30 seeds with common random numbers and paired bootstrap confidence intervals.
+- **Wing Simulation**: Discrete-event simulation of a synthetic 54-aircraft wing comparing reactive, fixed-interval preventive, SHIKRA (remove when q10 <= R*), and perfect-prediction oracle policies across 30 seeds with common random numbers and paired bootstrap confidence intervals.
 - **Decisions**: Advises removal timing ($q_{10} \le R^*$), spares inventory positioning via two-echelon VARI-METRIC, hangar bay scheduling via CP-SAT constraint programming, sensitivity lever mapping, and 180-day foreign supply halt vulnerability ranking.
 - **Officer Sign-off**: Engineering Officer workflow queue with Approve and Defer actions, generating a local cryptographic SHA-256 HMAC tamper-evident audit log (`app_data/audit.db`).
 - **Offline Streamlit App**: Air-gapped decision-support dashboard providing role-tailored interfaces for Commander, Engineering Officer, Logistics, Technician, Scenario, and Evidence views.
@@ -62,7 +62,7 @@ Graphviz source: [docs/assets/shikra_workflow.dot](docs/assets/shikra_workflow.d
 | Unscheduled engine removals | Reactive 72.7 vs SHIKRA 0.0 per year | [results/policy_summary.csv](results/policy_summary.csv) |
 | What to make in India first | Top-2 LRUs: apu_start (21.2 pp), ecs_valve (7.9 pp); foreign halt grounds up to 32 extra aircraft, recovery in 45 days | [results/supply_shock.csv](results/supply_shock.csv) |
 | Readiness forecast | Held-out conformal coverage 86.3% (D+3) and 86.5% (D+7) at 80% nominal; MAE does NOT beat persistence (D+7: 2.274 vs 1.552) | [results/readiness_calib.csv](results/readiness_calib.csv) |
-| Hangar scheduling | CP-SAT vs earliest-due-date heuristic: zero availability gain on the simulated wing | [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |
+| Hangar scheduling | CP-SAT cuts weighted tardiness 174.9 -> 62.3 (-64%) on 200 synthetic instances (never worse than EDF); ties EDF on 60/60 wing snapshots: hangar bays are not the bottleneck | [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md) |
 
 ### RUL Model (LightGBM quantile ensemble, 5 seeds)
 
@@ -86,7 +86,7 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 | SHIKRA (ablation: without lead-time-aware prepositioning) | 56.2% | [55.6%, 56.8%] | 0.0 |
 | Oracle (ablation: without lead-time-aware prepositioning) | 56.5% | [56.0%, 57.1%] | 0.0 |
 
-> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see lever map below).
+> **Key Finding:** SHIKRA removes all unscheduled engine removals (0 vs 72.7 per year) but, in this wing, serviceability is unchanged (56.3% vs 56.5%), because the engine-spare pipeline, not warning time, is the binding constraint (see the 'Which lever buys readiness' row in Highlights).
 
 > **Supply-shock stress test (at 1.0× pipeline speed):** A 180-day halt of foreign supply grounds up to 32 extra aircraft of 54 (28.1 pp over the halt); recovery takes 45 days after supply resumes. Ranking: apu_start (21.2 pp), ecs_valve (7.9 pp). Parameters are synthetic; the method is the claim.
 
@@ -98,10 +98,10 @@ Official test sets, last cycle only; RMSE shown against true RUL capped at 125 (
 
 ## What did not work
 
-- **Prediction alone does not raise serviceability in this wing**: SHIKRA eliminates all unscheduled engine removals (0 vs 72.7 per year), but fleet serviceability is unchanged (56.3% vs 56.5%) because the engine-spare pipeline, not warning time, is the binding constraint on readiness (see [results/policy_summary.csv](results/policy_summary.csv) and [results/FINDINGS_A10.md](results/FINDINGS_A10.md)).
+- **Prediction alone does not raise serviceability in this wing**: SHIKRA eliminates all unscheduled engine removals (0 vs 72.7 per year), but fleet serviceability is unchanged (56.3% vs 56.5%) because the engine-spare pipeline, not warning time, is the binding constraint on readiness (see [results/heatmap.csv](results/heatmap.csv) and [results/policy_summary.csv](results/policy_summary.csv)).
 - **Readiness forecast loses to persistence**: Multi-step readiness forecast MAE loses to a simple persistence baseline across evaluated horizons (at lead 7, forecast MAE is 2.274 vs 1.552 for persistence; see [results/readiness_calib.csv](results/readiness_calib.csv) and [results/FINDINGS_A10.md](results/FINDINGS_A10.md)).
 - **Attention-LSTM did not beat LightGBM**: The 2-layer temporal attention-LSTM comparison model achieved comparable RMSE but ~2x worse NASA penalty score on FD003 compared to the LightGBM quantile ensemble (see [results/FINDINGS_T14.md](results/FINDINGS_T14.md)).
-- **CP-SAT gave no gain on the simulated wing**: Exact constraint programming (OR-Tools CP-SAT) for hangar co-scheduling heuristics yielded zero availability gain over standard threshold-based removals on the simulated wing structure (see [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md)).
+- **CP-SAT on the simulated wing**: CP-SAT cuts weighted tardiness 174.9 -> 62.3 (-64%) on 200 synthetic instances (never worse than EDF); ties EDF on 60/60 wing snapshots: hangar bays are not the bottleneck (see [results/FINDINGS_CPSAT.md](results/FINDINGS_CPSAT.md)).
 - **Audit log is tamper-evident, not tamper-proof**: The SHA-256 HMAC cryptographic chain guarantees tamper-evidence and detection of post-hoc modifications, but is not tamper-proof against root adversaries because the signing key is stored locally in deployment (see [LIMITATIONS.md](LIMITATIONS.md)).
 
 ---
@@ -175,12 +175,12 @@ streamlit run app/Home.py
 ```
 
 The interactive dashboard provides role-tailored pages:
-- **Commander**: Fleet-wide readiness overview, availability forecasts, and operational summaries.
-- **Engineering Officer**: Component remaining useful life predictions, removal recommendation queues, and Approve / Defer sign-off controls.
-- **Logistics**: Spares inventory stocking, VARI-METRIC echelon allocation, and reorder alerts.
-- **Technician**: Serial-level engine sensor telemetry inspections and health condition records.
-- **Scenario**: What-if scenario exploration for flight tempos, pipeline delays, and spares shock.
-- **Evidence**: Calibration coverage plots, policy comparison figures, and empirical verification tables.
+- **Commander**: Lever map (interactive Altair heatmap), supply-shock ranking, readiness forecast panel, and one-page brief.
+- **Engineering Officer**: Engine health table, RUL band chart, and sign-off queue.
+- **Logistics**: Stock view (engines and 10 LRUs), supply-shock exposure per LRU, and VARI-METRIC allocation panel.
+- **Technician**: Snag list: prioritised flight-line snags per tail.
+- **Scenario**: Failure-injection walkthrough.
+- **Evidence**: Renders GATES.md, policy summary table with CIs, RUL C-MAPSS evaluations, key figures, and reproducibility box.
 
 ---
 
@@ -209,7 +209,7 @@ The interactive dashboard provides role-tailored pages:
 | [LIMITATIONS.md](LIMITATIONS.md) | Scope boundaries, synthetic assumptions, failure modes, and safety constraints |
 | [docs/ETAI_MAPPING.md](docs/ETAI_MAPPING.md) | Engineering self-assessment mapped to DRDO's Evaluating Trustworthy AI (ETAI) principles |
 | [docs/INTEGRATION.md](docs/INTEGRATION.md) | Read-only enterprise ingestion architecture, data boundaries, and 90-day shadow pilot specification |
-| [docs/REPRODUCIBILITY_AUDIT.md](docs/REPRODUCIBILITY_AUDIT.md) | Independent audit report verifying byte-identical reproduction, runtime benchmarks, and negative tests |
+| [docs/REPRODUCIBILITY_AUDIT.md](docs/REPRODUCIBILITY_AUDIT.md) | Reproducibility audit of a fresh clone: byte-identical results, runtimes and negative tests |
 | [AI_USAGE.md](AI_USAGE.md) | Transparent disclosure of AI assistance, verification protocols, and human design ownership |
 | [results/FINDINGS_A10.md](results/FINDINGS_A10.md) | Conformal readiness forecasting findings and persistence baseline comparison |
 | [results/FINDINGS_T14.md](results/FINDINGS_T14.md) | Temporal Attention-LSTM benchmark vs LightGBM quantile ensemble |
