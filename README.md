@@ -52,6 +52,16 @@ Smart India Hackathon 2026 · Problem Statement `SIH26249` · Ministry of Defenc
 
 Graphviz source: [docs/assets/shikra_workflow.dot](docs/assets/shikra_workflow.dot)
 
+### Detailed architecture
+
+![SHIKRA architecture](docs/assets/shikra_architecture.png)
+
+Detailed system architecture: data sources, ingestion and quarantine, remaining-life
+prediction, fleet simulation, decision optimisers, the offline role app, officer sign-off
+and the tamper-evident audit log, with the measured result of each stage.
+[PDF version](docs/assets/shikra_architecture.pdf) · source: `docs/assets/shikra_architecture.dot`
+(render with `dot -Tpng -Gdpi=150 docs/assets/shikra_architecture.dot -o docs/assets/shikra_architecture.png`).
+
 ---
 
 ## Screenshots
