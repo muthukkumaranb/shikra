@@ -1,0 +1,171 @@
+// SHIKRA (SIH26249) architecture v3: the system as built and submitted (code commit aa5a355, tag v1.0-submission).
+// Supersedes SIH26249_Architecture_v2.dot (plan of 16 Oct). Every number below comes from a committed results/*.csv.
+// Render:  dot -Tpng -Gdpi=150 SIH26249_Architecture_v3.dot -o SIH26249_Architecture_v3.png
+//          dot -Tpdf           SIH26249_Architecture_v3.dot -o SIH26249_Architecture_v3.pdf
+
+digraph shikra_v3 {
+  graph [rankdir=TB, splines=ortho, newrank=true, nodesep=0.3, ranksep=0.45, pad=0.3,
+         fontname="DejaVu Sans", fontsize=16, labelloc=t,
+         label=<<FONT POINT-SIZE="20"><B>SIH26249  |  SHIKRA – AI-Based Predictive Maintenance &amp; Fleet Availability Decision System</B></FONT><BR/><FONT POINT-SIZE="15">Smart Health-Integrated Knowledge for Readiness Advisory</FONT><BR/><FONT POINT-SIZE="11">advisory, air-gapped  ·  evaluated on public NASA C-MAPSS data and a synthetic 54-aircraft wing</FONT><BR/> >];
+  node  [shape=box, style=filled, fillcolor="#FFFFFF", color="#333333", fontname="DejaVu Sans", fontsize=9, margin="0.12,0.06"];
+  edge  [color="#555555", arrowsize=0.6, fontname="DejaVu Sans", fontsize=7];
+
+  legend [fillcolor="#F5F5F5", fontsize=8, label="LEGEND\nSolid box = built, tested and in the submitted repo\nDashed box = future work, not claimed as built\nDashed red arrow = evaluation only (uses true engine life); never shown to users\nTeal border = measured result (results/*.csv, 30 seeds, 95% CI where stated)\nOrange border = training and calibration only"];
+
+  // ---------------------------------------------------------------- Gate 0
+  subgraph cluster_gate0 {
+    label=<<B>Gate 0  -  Feasibility gates (checked before any dashboard work)</B>>; fontsize=11;
+    style=filled; fillcolor="#FFF2E0"; color="#C8A060";
+    g_rul [label="G0.1  RUL baseline reproduces\nFD001 RMSE <= 18.5 on engine-disjoint test\nG0.2  90% conformal band covers 85-95%\nof held-out replay engines"];
+    g_sim [label="G0.3  >= 40 held-out run-to-failure engines for replay\nG0.4  reactive baseline lands in a CAG-like band (55-65%)\nonly SHARED parameters may be calibrated\nG0.5  perfect prediction beats reactive by >= 5 pp\nelse: report as a finding, never tune to pass"];
+    g_res [color="#1F8A8A", penwidth=1.4,
+           label="Gate results (results/GATES.md)\nG0.1 PASS: FD001 RMSE 11.64   ·   G0.2 PASS: 90% replay coverage 0.927\nG0.3 PASS: 40 replay engines   ·   G0.4 PASS: reactive 56.5%\nG0.5 FAIL, kept as the headline finding: oracle - reactive = 0.2 pp\nat today's pipeline speed"];
+    {rank=same; g_rul -> g_sim [style=invis]}
+    g_rul -> g_res; g_sim -> g_res;
+  }
+
+  // ---------------------------------------------------------------- Input
+  subgraph cluster_input {
+    label=<<B>Input Data  -  the four sources named in the problem statement (read-only exports)</B>>; fontsize=11; style=solid; color="#333333";
+    hums  [fillcolor="#E6F0FA", label="Health monitoring (HUMS)\nper-engine sensor history per flight cycle\ndemo: NASA C-MAPSS FD001 + FD003\n(200 run-to-failure engines)"];
+    emms  [fillcolor="#E6F0FA", label="Technical records (e-MMS export)\nwork orders, removals, snags\ndemo: synthetic export with\ninjected faults"];
+    immols[fillcolor="#E6F0FA", label="Spares (IMMOLS export)\nstock by base and depot, lead times\nsource tag per part: domestic / foreign\ndemo: synthetic"];
+    brd   [fillcolor="#E6F0FA", label="Maintenance agencies (BRD / HAL)\nrepair orders and turnaround times\ndemo: synthetic, labelled synthetic\neverywhere"];
+    {rank=same; hums -> emms -> immols -> brd [style=invis]}
+  }
+
+  // ---------------------------------------------------------------- Ingest
+  subgraph cluster_ingest {
+    label=<<B>Data Engineering  -  unified tail &amp; serial model</B>>; fontsize=11;
+    style=filled; fillcolor="#E8F5EE"; color="#2E8B57";
+    ingest [label="Ingestion adapters (consume, never replace; write nothing back)\nparse CSV exports, normalise IDs and timestamps\njoin on tail number + engine / part serial number\nstore: local SQLite (data/unified.db)"];
+    dq     [label="Data-quality quarantine\nevery row is loaded OR quarantined with a reason\nchecks: missing key, mismatched serial,\nstale stock record\nnever silently filled"];
+    dq_res [color="#1F8A8A", penwidth=1.4,
+            label="Data-quality test (results/dq_detection.csv)\n124 faults injected across 5 exports\n124 detected  ·  0 false alarms\nprecision 1.0  ·  recall 1.0"];
+    ingest -> dq -> dq_res;
+  }
+
+  // ---------------------------------------------------------------- Training (orange)
+  subgraph cluster_train {
+    label=<<B>Training &amp; calibration only  (never touches the replay engines)</B>>; fontsize=11;
+    style="filled,dashed"; fillcolor="#FFFBEB"; color="#D97706";
+    split [label="Frozen engine-level split (artifacts/splits.json, seed 2026)\nTRAIN 120 engines  |  CALIBRATION 40  |  REPLAY POOL 40\nreplay engines are never trained or calibrated on\nofficial NASA test sets scored on the last cycle only"];
+    feat  [label="Causal features\nrolling mean / std / slope over the past 5, 10, 20, 30 cycles\nuses only cycles <= now (tested: no look-ahead)\nRUL target capped at 125 cycles"];
+    lgbm  [label="LightGBM quantile ensemble\nquantiles 0.05, 0.10, 0.50, 0.90, 0.95\n5 random seeds per quantile, averaged\nmonotonic quantiles enforced"];
+    cqr   [label="Conformal calibration (CQR)\nwidens the band on the 40 calibration engines,\ntruncated the same way as live data\n-> calibrated 80% band q10..q90"];
+    rstar [label="Removal threshold R* (artifacts/policy_params.json)\nsmallest R in 5..60 with <= 5% of CALIBRATION\nengines failing before removal  ->  R* = 5 cycles\nfixed-interval T_prev = 10th pct of TRAIN lives = 158"];
+    split -> feat -> lgbm -> cqr -> rstar;
+  }
+
+  // ---------------------------------------------------------------- Prediction runtime
+  subgraph cluster_pred {
+    label=<<B>Remaining-life prediction (runtime, per engine per flight cycle)</B>>; fontsize=11;
+    style=filled; fillcolor="#FFF4E5"; color="#C05621";
+    rul   [label="RUL estimate per engine\npessimistic q10  ·  median q50  ·  optimistic q90\nplanning uses the PESSIMISTIC edge (q10)\nstored: artifacts/replay_rul.parquet (model_id, calib_id)"];
+    rule  [label="Removal rule\nadvise removal when q10 <= R*\nR* owned by the Engineering Officer;\nevery change is audit-logged"];
+    shap  [label="Explanation (SHAP)\nper-engine contribution of each sensor feature\nto q10, labelled with the sensor name\nparts sum exactly to the model output (tested)"];
+    rul_res [color="#1F8A8A", penwidth=1.4,
+             label="RUL accuracy (results/rul_cmapss.csv, official test, 100 engines each)\nFD001 RMSE 11.64 vs CNN baseline 18.45\nFD003 RMSE 14.50 vs 19.82\nheld-out 80% band coverage: 81% (FD001), 79% (FD003)"];
+    rul -> rule; rul -> shap; rul -> rul_res [style=invis];
+    {rank=same; rule -> shap [style=invis]}
+  }
+
+  // ---------------------------------------------------------------- Simulation
+  subgraph cluster_sim {
+    label=<<B>Synthetic wing simulation  -  the test bench for every decision</B>>; fontsize=11;
+    style=filled; fillcolor="#F3EEFB"; color="#6B46C1";
+    wing   [label="SHIKRA-Wing (config/wing.yaml, all values synthetic)\n3 squadrons x 18 aircraft x 2 engines = 108 engines\n10 other part types (LRUs) with Weibull lives\n3 hangar slots per squadron  ·  base + depot spares\nrepair and lead times scaled by a pipeline multiplier (today 1.7x)"];
+    replay [color="#C0392B", penwidth=1.4,
+            label="Trajectory replay (honesty control)\neach simulated engine flies one HELD-OUT NASA engine\nits failure time is fixed by the data, not by our model\nSHIKRA sees only the sensor history up to 'now'"];
+    pol    [label="Four maintenance policies, always reported together\nReactive (fix when broken)  ·  Fixed-interval (T_prev)\nSHIKRA (q10 <= R*)  ·  Perfect prediction (oracle)\nidentical shared parameters  ·  common random numbers"];
+    runs   [label="Runs\n30 seeds x 365-day warm-up + 365 measured days\nmission-capable + in-maintenance + awaiting-spares = 54 every day (tested)\npaired bootstrap 95% confidence intervals"];
+    oracle [style="filled,dashed", color="#C0392B",
+            label="Oracle sees the TRUE remaining life\nused only as an upper bound in evaluation\nnever displayed in the app"];
+    wing -> pol; replay -> pol; pol -> runs; oracle -> pol [style=dashed, color="#C0392B"];
+    {rank=same; wing -> replay -> oracle [style=invis]}
+  }
+
+  // ---------------------------------------------------------------- Decisions
+  subgraph cluster_dec {
+    label=<<B>Decision layer  -  advice the officer signs off</B>>; fontsize=11;
+    style=filled; fillcolor="#FDECEC"; color="#C53030";
+    d_pull  [label="Which engine to pull\nq10 <= R* -> planned removal\nofficer approves or defers"];
+    d_spare [label="Where the spare goes\ntwo-echelon VARI-METRIC\nsame budget, base vs depot"];
+    d_hang  [label="Hangar order\nOR-Tools CP-SAT\nweighted lateness, EDF fallback\nnever worse than EDF"];
+    d_res   [color="#1F8A8A", penwidth=1.4,
+             label="Decision results\nunscheduled engine removals: 72.7 -> 0 per year\nVARI-METRIC: +0.45 pp serviceability on the same budget\nCP-SAT: weighted lateness 174.9 -> 62.3 (-64%) on 200 test cases;\nties EDF on 60/60 wing snapshots (hangars are not the bottleneck)"];
+    {rank=same; d_pull -> d_spare -> d_hang [style=invis]}
+    d_pull -> d_res; d_spare -> d_res; d_hang -> d_res;
+  }
+
+  // ---------------------------------------------------------------- Strategic
+  subgraph cluster_strat {
+    label=<<B>Strategic analyses for the commander</B>>; fontsize=11;
+    style=filled; fillcolor="#ECFDF5"; color="#059669";
+    lever  [label="Lever map\nprediction quality (oracle .. poor)\nx pipeline speed (0.5x .. 1.9x)\n30 seeds per cell"];
+    shock  [label="Supply-shock test\nstop all foreign supply for 180 days\nper part and all together\n-> what to make in India first"];
+    ready  [label="Readiness forecast\nmission-capable aircraft per squadron\nat D+3 and D+7, 150 Monte Carlo runs\nconformal band from held-out snapshots"];
+    util   [label="Utilisation\nflying task met =\nsorties flown / sorties demanded\n(0.8 per mission-capable aircraft per day)"];
+    s_res  [color="#1F8A8A", penwidth=1.4,
+            label="Headline findings (synthetic wing, 30 seeds)\nToday (1.7x): reactive 56.5%  ·  SHIKRA 56.3%  ·  perfect 56.6%  -> prediction alone barely moves readiness\nPipeline speed is worth +30.9 pp (~17 aircraft/day); at 0.5x SHIKRA captures 70% (95% CI 60-77%) of the perfect gain\nSupply halt: up to 32 extra aircraft grounded, ~45 days to recover; first to indigenise: APU starter (21.2 pp), ECS valve (7.9 pp)\nFlying task met: SHIKRA 56.3% vs reactive 56.5%   ·   readiness band coverage 0.86 (D+3 and D+7)"];
+    {rank=same; lever -> shock -> ready -> util [style=invis]}
+    lever -> s_res; shock -> s_res; ready -> s_res; util -> s_res;
+  }
+
+  // ---------------------------------------------------------------- Sign-off + audit
+  subgraph cluster_audit {
+    label=<<B>Human in the loop  -  officer sign-off and tamper-evident audit</B>>; fontsize=11;
+    style=filled; fillcolor="#FCE7F3"; color="#B83280";
+    signoff [label="Engineering Officer sign-off queue\nApprove or Defer each recommendation\nadvisory only: SHIKRA never acts on its own"];
+    chain   [label="Audit log (app_data/audit.db)\nSHA-256 hash chain: each row links to the previous\ndaily Merkle root, HMAC-signed with a local key\nverifier pinpoints any edit, deletion or truncation\ntamper-evident, not tamper-proof (key is local)"];
+    signoff -> chain;
+  }
+
+  // ---------------------------------------------------------------- App
+  app [fillcolor="#E8F4F8", color="#2C7A7B", penwidth=1.4,
+       label="Offline Streamlit app (no network calls, local fonts)  -  every number shows its source file\nHome: 54 aircraft today  ·  Commander: lever map, supply-shock ranking, readiness, utilisation, downloadable daily brief\nEngineering Officer: engine table, RUL bands, 'why flagged', sign-off queue  ·  Logistics: stock, exposure, spares allocation\nTechnician: snag work cards  ·  Health Replay: post-flight download replayed, removal alert (held-out engine: alert at cycle 184)\nScenario: failure-injection walkthrough  ·  Evidence: gates, policy table, reproducibility"];
+
+  // ---------------------------------------------------------------- Evaluation / reproducibility
+  subgraph cluster_eval {
+    label=<<B>Evaluation &amp; reproducibility</B>>; fontsize=11; style=solid; color="#333333";
+    verify [label="One command: make verify (Linux/macOS) or scripts/verify.ps1 (Windows)\nregenerates every results/*.csv and compares byte for byte"];
+    ci     [label="GitHub Actions on every change\nCI: ruff + 140 automated tests + quick reproduction\nFull Reproduction: complete pipeline on main"];
+    dock   [label="Docker image\nreproduction runs with network disabled\n(app on localhost:8501)"];
+    neg    [color="#1F8A8A", penwidth=1.4,
+            label="What did not work (reported, not hidden)\nreadiness forecast MAE does not beat persistence (D+3: 1.33 vs 0.98)\nattention-LSTM worse than LightGBM on FD001 (RMSE 14.66 vs 11.64)\nCP-SAT gives no gain on this wing  ·  perfect prediction adds only 0.2 pp today"];
+    {rank=same; verify -> ci -> dock [style=invis]}
+    verify -> neg; ci -> neg; dock -> neg;
+  }
+
+  // ---------------------------------------------------------------- Future work
+  subgraph cluster_future {
+    label=<<B>Future work  (not claimed as built)</B>>; fontsize=11; style=dashed; color="#888888";
+    f_net  [style="filled,dashed", color="#888888", label="Deployment on a closed defence network (e.g. AFNET)\ncentral instance + fully offline node at each base\nthis prototype = one base node (AFNET untested)"];
+    f_data [style="filled,dashed", color="#888888", label="90-day shadow pilot on one squadron's exports\nre-fit repair, lead times and stocks from real data\nretrain on unit HUMS data"];
+    f_hi   [style="filled,dashed", color="#888888", label="Consume an engine health index\n(e.g. the IAF - IIT Bombay index)\nas an input feature"];
+    f_nlp  [style="filled,dashed", color="#888888", label="Snag-text analytics on e-MMS defect records\n(ATA-chapter tagging, repeat defects)\nlocal sign-in and roles"];
+    {rank=same; f_net -> f_data -> f_hi -> f_nlp [style=invis]}
+  }
+
+  // ---------------------------------------------------------------- Flow
+  {rank=same; legend -> g_rul [style=invis]}
+  g_res -> hums [style=invis]; g_res -> emms [style=invis]; g_res -> immols [style=invis]; g_res -> brd [style=invis];
+  hums -> ingest; emms -> ingest; immols -> ingest; brd -> ingest;
+  dq -> split [color="#D97706", style=dashed, xlabel="engine histories"];
+  rstar -> rul [color="#D97706", style=dashed, xlabel="frozen model + R*"];
+  dq -> rul [xlabel="live sensor history"];
+  split -> replay [color="#D97706", style=dashed, xlabel="replay pool only"];
+  rul_res -> wing [style=invis];
+  rule -> pol [xlabel="SHIKRA policy"];
+  dq -> wing [xlabel="stock, lead times, TAT"];
+  runs -> d_pull; runs -> d_spare; runs -> d_hang;
+  runs -> lever; runs -> shock; runs -> ready; runs -> util;
+  d_res -> signoff [style=invis];
+  s_res -> signoff [style=invis];
+  rule -> signoff [xlabel="removal advice"];
+  shap -> app;
+  chain -> app;
+  d_res -> app; s_res -> app;
+  app -> verify [style=invis];
+  neg -> f_net [style=invis]; neg -> f_data [style=invis]; neg -> f_hi [style=invis]; neg -> f_nlp [style=invis];
+}
